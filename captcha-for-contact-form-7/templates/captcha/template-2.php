@@ -22,11 +22,11 @@
         <div class="c-data"><?php echo $captcha_data; ?></div>
         <div class="c-reload"><?php echo $captcha_reload; ?></div>
     </div>
-    <input type="hidden" id="<?php esc_attr_e( $hash_id ); ?>" name="<?php esc_attr_e( $hash_field_name ); ?>"
-           value="<?php esc_attr_e( $hash_value ); ?>"/>
-    <div class="<?php esc_attr_e( $wrapper_classes ); ?>" <?php esc_attr_e( $wrapper_attributes ); ?>>
-        <input class="f12c<?php esc_attr_e( $classes ); ?>" data-method="<?php esc_attr_e( $method ); ?>" <?php esc_attr_e( $attributes ); ?>
-               type="text" id="<?php esc_attr_e( $captcha_id ); ?>" name="<?php esc_attr_e( $field_name ); ?>"
-               placeholder="<?php esc_attr_e( $placeholder ); ?>" value=""/>
+    <input type="hidden" id="<?php echo esc_attr( $hash_id ); ?>" name="<?php echo esc_attr( $hash_field_name ); ?>"
+           value="<?php echo esc_attr( $hash_value ); ?>"/>
+    <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo esc_attr( $wrapper_attributes ); ?>>
+        <input class="f12c<?php echo esc_attr( $classes ); ?>" data-method="<?php echo esc_attr( $method ); ?>" <?php echo esc_attr( $attributes ); ?>
+               type="text" id="<?php echo esc_attr( $captcha_id ); ?>" name="<?php echo esc_attr( $field_name ); ?>"
+               placeholder="<?php echo esc_attr( $placeholder ); ?>" value=""/>
     </div>
 </div>

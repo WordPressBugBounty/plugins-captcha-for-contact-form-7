@@ -142,10 +142,11 @@ class Protection extends BaseModul
          * This hook can be used from developers to skip the validation for specific forms.
          *
          * @param bool $skip Skip validation, default: false
+         * @param array $args The Form Parameter
          *
          * @since 1.12.2
          */
-        if (apply_filters('f12-cf7-captcha-skip-validation', false)) {
+        if (apply_filters('f12-cf7-captcha-skip-validation', false, $args[0])) {
             return false;
         }
 

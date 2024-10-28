@@ -40,7 +40,7 @@ class Captcha_Validator extends BaseProtection {
 
 		$this->_Captcha_Cleaner = new CaptchaCleaner( $Controller );
 
-		$this->set_message( 'captcha-protection' );
+		$this->set_message( __( 'captcha-protection', 'captcha-for-contact-form-7' ));
 	}
 
 	/**
@@ -85,7 +85,7 @@ class Captcha_Validator extends BaseProtection {
 	protected function is_enabled(): bool {
 		$is_enabled = (int) $this->Controller->get_settings( 'protection_captcha_enable', 'global' ) === 1;
 
-		return apply_filters('f12-cf7-captcha-skip-validation-captcha', $is_enabled);
+		return apply_filters( 'f12-cf7-captcha-skip-validation-captcha', $is_enabled );
 	}
 
 	/**

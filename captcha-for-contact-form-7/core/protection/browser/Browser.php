@@ -81,9 +81,9 @@ class Browser extends BaseProtection {
 	 * @return bool Returns true if browser protection is enabled; otherwise, false.
 	 */
 	protected function is_enabled(): bool {
-		$is_enabled =  (int)$this->Controller->get_settings( 'protection_browser_enable', 'global' ) === 1;
+		$is_enabled = (int) $this->Controller->get_settings( 'protection_browser_enable', 'global' ) === 1;
 
-		return apply_filters('f12-cf7-captcha-skip-validation-browser', $is_enabled);
+		return apply_filters( 'f12-cf7-captcha-skip-validation-browser', $is_enabled );
 	}
 
 	/**
@@ -339,13 +339,13 @@ class Browser extends BaseProtection {
 		$browser_data = $this->get_browser();
 
 		if ( $this->is_bot() ) {
-			$this->set_message( 'bot-detected' );
+			$this->set_message( __( 'bot-detected', 'captcha-for-contact-form-7' ) );
 
 			return true;
 		}
 
 		if ( $this->is_default( $browser_data ) ) {
-			$this->set_message( 'crawler-detected' );
+			$this->set_message( __( 'crawler-detected', 'captcha-for-contact-form-7' ) );
 
 			return true;
 		}

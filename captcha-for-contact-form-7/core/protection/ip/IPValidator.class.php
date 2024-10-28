@@ -240,7 +240,7 @@ class IPValidator extends BaseProtection {
 			$IPBan->save();
 		}
 
-		$this->set_message( 'ip-protection' );
+		$this->set_message( __('ip-protection', 'captcha-for-contact-form-7' ) );
 
 		return false;
 	}

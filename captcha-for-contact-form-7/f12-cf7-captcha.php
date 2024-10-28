@@ -49,13 +49,13 @@ require_once( 'core/Support.class.php' );
  * Plugin Name: Captcha for WordPress
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: This plugin allows you to add captcha protection to forms, wordpress and woocommerce.
- * Version: 2.0.65
+ * Version: 2.0.66
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
  * Text Domain: captcha-for-contact-form-7
  * Domain Path: /languages
  */
-define( 'FORGE12_CAPTCHA_VERSION', '2.0.65' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.0.66' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -283,6 +283,60 @@ class CF7Captcha {
 
 		// Hook to the Settings page in the Plugin view
 		add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), [ $this, 'wp_plugin_action_links' ] );
+
+		// Skip all protection if whitelisted
+		add_filter( 'f12-cf7-captcha-skip-validation', [ $this, 'skip_whitelisted_emails_and_ips' ], 10, 2 );
+	}
+
+	/**
+	 * Determines whether to skip certain actions for whitelisted emails and IPs.
+	 *
+	 * This method checks if the current request should be skipped based on whitelisted emails
+	 * and IP addresses defined in the plugin settings. If the current user's IP address or any
+	 * provided argument matches an entry in the whitelist, the action will be skipped.
+	 *
+	 * @param bool  $skip Initial skip flag that indicates whether to skip protection.
+	 * @param array $args An array of arguments to be checked against the whitelisted emails.
+	 *
+	 * @return bool Returns true if the action should be skipped, otherwise false.
+	 */
+	function skip_whitelisted_emails_and_ips( $skip, $args = [] ):bool {
+		if ( $skip ) {
+			return $skip;
+		}
+
+		// Get the whitelist settings from the plugin options
+		$settings           = $this->get_settings();
+		$whitelisted_emails = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", $settings['global']['protection_whitelist_emails'] ) : [];
+		$whitelisted_ips    = isset( $settings['global']['protection_whitelist_ips'] ) ? explode( "\n", $settings['global']['protection_whitelist_ips'] ) : [];
+
+		// Get the current user's IP address
+		$user_ip = $_SERVER['REMOTE_ADDR'];
+
+		// Trim and clean whitelist values for comparison
+		$whitelisted_emails = array_map( 'trim', $whitelisted_emails );
+		$whitelisted_ips    = array_map( 'trim', $whitelisted_ips );
+
+		// Check if the user's IP is in the whitelist
+		if ( in_array( $user_ip, $whitelisted_ips ) ) {
+			error_log( 'skip ip' );
+
+			return true;
+		}
+
+		// Iterate through each $_POST variable to check if any match a whitelisted email
+		foreach ( $args as $value ) {
+			// Sanitize and trim the current POST value
+			$value = sanitize_text_field( trim( $value ) );
+
+			// If any $_POST value matches a whitelisted email, skip protection
+			if ( in_array( $value, $whitelisted_emails ) ) {
+
+				return true;
+			}
+		}
+
+		return $skip;
 	}
 
 	/**

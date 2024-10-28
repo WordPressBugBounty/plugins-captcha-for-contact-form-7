@@ -5,7 +5,7 @@ Tags: spam, antispam, captcha, honeypot, contact form 7 captcha
 Requires at least: 5.2
 Tested up to: 6.6.1
 Requires PHP: 8.0
-Stable tag: 2.0.65
+Stable tag: 2.0.66
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -137,6 +137,10 @@ The stored, encrypted data will be removed automatically every 2 month.
 No, everything can be managed from the WordPress Dashboard. Just enable the required functions and enjoy it.
 
 == Changelog ==
+= 2.0.66 =
+* New: Added Option for Whitelisting for IP and E-Mail Address
+* Improvement: Updated translation strings and escaping
+
 = 2.0.65 =
 * New: Added Hooks for disabling single protections using filter: "f12-cf7-captcha-skip-validation-{protection-method}".
 * New: Added additional Captcha Template (requested by bonaldi).

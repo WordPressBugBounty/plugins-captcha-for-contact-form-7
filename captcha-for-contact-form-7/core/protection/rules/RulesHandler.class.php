@@ -297,7 +297,7 @@ class RulesHandler extends BaseProtection {
 				foreach ( $value as $skey => $svalue ) {
 					if ( $Rule->is_spam( $svalue ) ) {
 						$message = $Rule->get_messages();
-						$this->set_message( 'rule-protection: ' . $message );
+						$this->set_message( sprintf( __( 'rule-protection: %s', 'captcha-for-contact-form-7' ), $message ) );
 						$this->spam[] = $Rule;
 
 						return true;
@@ -306,7 +306,7 @@ class RulesHandler extends BaseProtection {
 			} else {
 				if ( $Rule->is_spam( $value ) ) {
 					$message = $Rule->get_messages();
-					$this->set_message( 'rule-protection: ' . $message );
+					$this->set_message( sprintf( __( 'rule-protection: %s', 'captcha-for-contact-form-7' ), $message ) );
 					$this->spam[] = $Rule;
 
 					return true;

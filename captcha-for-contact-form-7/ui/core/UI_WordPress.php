@@ -153,7 +153,7 @@ namespace f12_cf7_captcha\ui {
 					$Menu_Page_Storage[] = $UI_Page;
 				}
 				?>
-                <div class="forge12-plugin <?php esc_attr_e( 'captcha-for-contact-form-7' ); ?>">
+                <div class="forge12-plugin <?php echo esc_attr( 'captcha-for-contact-form-7' ); ?>">
                     <div class="forge12-plugin-header">
                         <div class="forge12-plugin-header-inner">
                             <img src="<?php echo $this->get_ui_manager()->get_plugin_dir_url(); ?>ui/assets/icon-captcha-128x128.png"

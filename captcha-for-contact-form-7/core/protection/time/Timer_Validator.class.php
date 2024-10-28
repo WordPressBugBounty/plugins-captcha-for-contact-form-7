@@ -16,10 +16,10 @@ class Timer_Validator extends BaseProtection {
 	public function __construct( CF7Captcha $Controller ) {
 		parent::__construct( $Controller );
 
-		$this->set_message( 'timer-protection' );
+		$this->set_message( __( 'timer-protection', 'captcha-for-contact-form-7' ) );
 	}
 
-    /**
+	/**
 	 * Checks if the provided input is considered spam.
 	 *
 	 * @param mixed $args The arguments to check for spam.
@@ -31,7 +31,7 @@ class Timer_Validator extends BaseProtection {
 			return false;
 		}
 
-		if(!$this->is_enabled()){
+		if ( ! $this->is_enabled() ) {
 			return false;
 		}
 
@@ -88,7 +88,7 @@ class Timer_Validator extends BaseProtection {
 	 * @throws \Exception
 	 */
 	public function get_captcha( ...$args ): string {
-		if(!$this->is_enabled()){
+		if ( ! $this->is_enabled() ) {
 			return '';
 		}
 
@@ -140,9 +140,9 @@ class Timer_Validator extends BaseProtection {
 	 * @return bool Returns true if the feature is enabled, false otherwise.
 	 */
 	protected function is_enabled(): bool {
-		$is_enabled =  (int)$this->Controller->get_settings( 'protection_time_enable', 'global' ) === 1;
+		$is_enabled = (int) $this->Controller->get_settings( 'protection_time_enable', 'global' ) === 1;
 
-		return apply_filters('f12-cf7-captcha-skip-validation-timer', $is_enabled);
+		return apply_filters( 'f12-cf7-captcha-skip-validation-timer', $is_enabled );
 	}
 
 	public function success(): void {

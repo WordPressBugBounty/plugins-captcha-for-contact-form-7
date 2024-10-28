@@ -67,6 +67,8 @@ namespace f12_cf7_captcha {
 				'protection_browser_enable'                => 0,
 				'protection_javascript_enable'             => 0,
 				'protection_support_enable'                => 1,
+				'protection_whitelist_emails'              => '',
+				'protection_whitelist_ips'                 => ''
 			];
 
 			return $settings;
@@ -322,7 +324,7 @@ namespace f12_cf7_captcha {
 			 */
 			foreach ( $settings['global'] as $key => $value ) {
 				if ( isset( $_POST[ $key ] ) ) {
-					if ( $key == 'protection_rules_blacklist_value' ) {
+					if ( $key == 'protection_rules_blacklist_value' || $key == 'protection_whitelist_emails' || $key == 'protection_whitelist_ips' ) {
 						$settings['global'][ $key ] = sanitize_textarea_field( $_POST[ $key ] );
 					} else {
 						$settings['global'][ $key ] = sanitize_text_field( $_POST[ $key ] );
@@ -1427,6 +1429,45 @@ namespace f12_cf7_captcha {
                                 </p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container">
+                <!-- Whitelist Section -->
+                <h3><?php _e( 'Whitelist Settings', 'captcha-for-contact-form-7' ); ?></h3>
+                <div class="section-wrapper">
+                    <div class="section">
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_whitelist_emails"><strong><?php _e( 'Whitelist Email Addresses', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p><?php _e( 'Add email addresses that should bypass all CAPTCHA checks, one per line.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <textarea
+                                        rows="10"
+                                        id="protection_whitelist_emails"
+                                        name="protection_whitelist_emails"
+                                ><?php echo esc_textarea( $settings['protection_whitelist_emails'] ); ?></textarea>
+                            </div>
+                        </div>
+
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_whitelist_ips"><strong><?php _e( 'Whitelist IP Addresses', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p><?php _e( 'Add IP addresses that should bypass all CAPTCHA checks, one per line.', 'captcha-for-contact-form-7' ); ?></p>
+                                <label><strong><?php _e('Your Current IP Address', 'captcha-for-contact-form-7'); ?></strong></label>
+                                <p><?php echo esc_html($_SERVER['REMOTE_ADDR']); ?></p>
+                            </div>
+                            <div class="input">
+                                <textarea
+                                        rows="10"
+                                        id="protection_whitelist_ips"
+                                        name="protection_whitelist_ips"
+                                ><?php echo esc_textarea( $settings['protection_whitelist_ips'] ); ?></textarea>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>

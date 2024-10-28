@@ -24,7 +24,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 		 */
 		new CaptchaTimerCleaner( $Controller );
 
-		$this->set_message( 'multiple-submission-protection' );
+		$this->set_message( __( 'multiple-submission-protection', 'captcha-for-contact-form-7' ) );
 	}
 
 	/**
@@ -51,7 +51,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 	protected function is_enabled(): bool {
 		$is_enabled = (int) $this->Controller->get_settings( 'protection_multiple_submission_enable', 'global' ) === 1;
 
-		return apply_filters('f12-cf7-captcha-skip-validation-multiple_submission', $is_enabled);
+		return apply_filters( 'f12-cf7-captcha-skip-validation-multiple_submission', $is_enabled );
 	}
 
 	/**
@@ -134,7 +134,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 		/**
 		 * @var Timer_Controller $Timer_Controller
 		 */
-		$Timer_Controller = $this->Controller->get_modul('timer');
+		$Timer_Controller = $this->Controller->get_modul( 'timer' );
 
 		$hash = $Timer_Controller->add_timer();
 

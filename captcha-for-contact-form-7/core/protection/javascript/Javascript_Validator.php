@@ -320,7 +320,7 @@ class Javascript_Validator extends BaseProtection
         }
 
         if (!$this->is_human()) {
-            $this->set_message('javascript-protection');
+            $this->set_message(__('javascript-protection', 'captcha-for-contact-form-7' ));
 
             return true;
         }
