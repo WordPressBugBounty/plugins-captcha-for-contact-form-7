@@ -49,13 +49,13 @@ require_once( 'core/Support.class.php' );
  * Plugin Name: Captcha for WordPress
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: This plugin allows you to add captcha protection to forms, wordpress and woocommerce.
- * Version: 2.0.68
+ * Version: 2.0.681
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
  * Text Domain: captcha-for-contact-form-7
  * Domain Path: /languages
  */
-define( 'FORGE12_CAPTCHA_VERSION', '2.0.68' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.0.681' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -250,20 +250,22 @@ class CF7Captcha {
 		// Remove Filter which will not work with our filter list
 		add_action( 'init', function () {
 			remove_filter( 'wpcf7_spam', 'wpcf7_disallowed_list', 10 );
-			load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 		} );
+		load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 
 		// Filter for Blacklist
 		add_filter( 'f12-cf7-captcha_settings_loaded', [ $this, 'wp_load_blacklist' ] );
 
-		$UI_Manager = UI_Manager::register_instance( 'f12-cf7-captcha',
-			plugin_dir_url( __FILE__ ),
-			plugin_dir_path( __FILE__ ),
-			__NAMESPACE__,
-			'Captcha',
-			'manage_options',
-			plugins_url( 'ui/assets/icon-captcha-20x20.png', __FILE__ )
-		);
+		add_action( 'after_setup_theme', function () {
+			$UI_Manager = UI_Manager::register_instance( 'f12-cf7-captcha',
+				plugin_dir_url( __FILE__ ),
+				plugin_dir_path( __FILE__ ),
+				__NAMESPACE__,
+				'Captcha',
+				'manage_options',
+				plugins_url( 'ui/assets/icon-captcha-20x20.png', __FILE__ )
+			);
+		} );
 
 		// Load assets
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_admin_assets' ) );
@@ -299,14 +301,14 @@ class CF7Captcha {
 	 *
 	 * @return bool Returns true if the action should be skipped, otherwise false.
 	 */
-	function skip_whitelisted_emails_and_ips( $skip, $args = [] ):bool {
+	function skip_whitelisted_emails_and_ips( $skip, $args = [] ): bool {
 		if ( $skip ) {
 			return $skip;
 		}
 
 		// Get the whitelist settings from the plugin options
 		$settings           = $this->get_settings();
-		$whitelisted_emails = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", trim($settings['global']['protection_whitelist_emails']) ) : [];
+		$whitelisted_emails = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", trim( $settings['global']['protection_whitelist_emails'] ) ) : [];
 		$whitelisted_ips    = isset( $settings['global']['protection_whitelist_ips'] ) ? explode( "\n", $settings['global']['protection_whitelist_ips'] ) : [];
 
 		// Get the current user's IP address
@@ -316,7 +318,7 @@ class CF7Captcha {
 		$whitelisted_emails = array_map( 'trim', $whitelisted_emails );
 		$whitelisted_ips    = array_map( 'trim', $whitelisted_ips );
 
-		$whitelisted_emails = array_filter($whitelisted_emails);
+		$whitelisted_emails = array_filter( $whitelisted_emails );
 
 		// Check if the user's IP is in the whitelist
 		if ( in_array( $user_ip, $whitelisted_ips ) ) {
@@ -325,7 +327,7 @@ class CF7Captcha {
 
 		// Iterate through each $_POST variable to check if any match a whitelisted email
 		foreach ( $args as $value ) {
-			if($this->is_whitelisted_email($value,$whitelisted_emails)){
+			if ( $this->is_whitelisted_email( $value, $whitelisted_emails ) ) {
 				return true;
 			}
 		}
@@ -344,29 +346,30 @@ class CF7Captcha {
 	 *
 	 * @return bool Returns true if the provided email(s) are found in the whitelist, otherwise false.
 	 */
-	private function is_whitelisted_email($arg, $whitelisted_emails = []): bool {
-		if(empty($whitelisted_emails)) {
+	private function is_whitelisted_email( $arg, $whitelisted_emails = [] ): bool {
+		if ( empty( $whitelisted_emails ) ) {
 			return false;
 		}
 
-		if (is_array($arg)) {
-			foreach ($arg as $value) {
-				if ($this->is_whitelisted_email($value, $whitelisted_emails)) {
+		if ( is_array( $arg ) ) {
+			foreach ( $arg as $value ) {
+				if ( $this->is_whitelisted_email( $value, $whitelisted_emails ) ) {
 					return true;
 				}
 			}
+
 			return false; // Wenn keine der E-Mail-Adressen in der Whitelist ist
 		}
 
 		// Sanitize and trim the current POST value
-		$value = sanitize_text_field(trim($arg));
+		$value = sanitize_text_field( trim( $arg ) );
 
-		if(empty($value)){
+		if ( empty( $value ) ) {
 			return false;
 		}
 
 		// If any $_POST value matches a whitelisted email, skip protection
-		return in_array($value, $whitelisted_emails);
+		return in_array( $value, $whitelisted_emails );
 	}
 
 	/**

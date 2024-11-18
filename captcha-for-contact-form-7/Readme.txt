@@ -5,7 +5,7 @@ Tags: spam, antispam, captcha, honeypot, contact form 7 captcha
 Requires at least: 5.2
 Tested up to: 6.7
 Requires PHP: 8.0
-Stable tag: 2.0.68
+Stable tag: 2.0.681
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -137,7 +137,7 @@ The stored, encrypted data will be removed automatically every 2 month.
 No, everything can be managed from the WordPress Dashboard. Just enable the required functions and enjoy it.
 
 == Changelog ==
-= 2.0.67 =
+= 2.0.681 =
 * Fixed: Resolved warning when loading the text domain
 
 = 2.0.67 =
