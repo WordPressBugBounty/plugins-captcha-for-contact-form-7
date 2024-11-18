@@ -23,7 +23,7 @@ namespace f12_cf7_captcha {
 	 */
 	class UI_Dashboard extends UI_Page_Form {
 		public function __construct( UI_Manager $UI_Manager ) {
-			parent::__construct( $UI_Manager, 'f12-cf7-captcha', __( 'Dashboard', 'captcha-for-contact-form-7' ), 0 );
+			parent::__construct( $UI_Manager, 'f12-cf7-captcha', 'Dashboard', 0 );
 
 			add_filter( $UI_Manager->get_domain() . '_ui_f12-cf7-captcha_before_on_save', array(
 				$this,

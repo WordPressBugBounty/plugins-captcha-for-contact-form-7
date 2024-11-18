@@ -169,7 +169,8 @@ namespace f12_cf7_captcha\ui {
                 $this->UI_Menu               = new UI_Menu( $this );
 
                 // Called after all Pages have been initialized
-                do_action( $this->get_domain() . '_ui_after_load_pages', $this );
+
+	            do_action( $this->get_domain() . '_ui_after_load_pages', $this );
 
                 // Add Filter to get all settings
                 add_filter( $this->get_domain() . '_get_settings', [ $this, 'get_settings' ] );

@@ -49,13 +49,13 @@ require_once( 'core/Support.class.php' );
  * Plugin Name: Captcha for WordPress
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: This plugin allows you to add captcha protection to forms, wordpress and woocommerce.
- * Version: 2.0.681
+ * Version: 2.0.682
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
  * Text Domain: captcha-for-contact-form-7
  * Domain Path: /languages
  */
-define( 'FORGE12_CAPTCHA_VERSION', '2.0.681' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.0.682' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -256,16 +256,14 @@ class CF7Captcha {
 		// Filter for Blacklist
 		add_filter( 'f12-cf7-captcha_settings_loaded', [ $this, 'wp_load_blacklist' ] );
 
-		add_action( 'after_setup_theme', function () {
-			$UI_Manager = UI_Manager::register_instance( 'f12-cf7-captcha',
-				plugin_dir_url( __FILE__ ),
-				plugin_dir_path( __FILE__ ),
-				__NAMESPACE__,
-				'Captcha',
-				'manage_options',
-				plugins_url( 'ui/assets/icon-captcha-20x20.png', __FILE__ )
-			);
-		} );
+		$UI_Manager = UI_Manager::register_instance( 'f12-cf7-captcha',
+			plugin_dir_url( __FILE__ ),
+			plugin_dir_path( __FILE__ ),
+			__NAMESPACE__,
+			'Captcha',
+			'manage_options',
+			plugins_url( 'ui/assets/icon-captcha-20x20.png', __FILE__ )
+		);
 
 		// Load assets
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_admin_assets' ) );
