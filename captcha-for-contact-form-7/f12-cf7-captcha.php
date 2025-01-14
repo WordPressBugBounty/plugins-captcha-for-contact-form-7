@@ -49,13 +49,13 @@ require_once( 'core/Support.class.php' );
  * Plugin Name: Captcha for WordPress
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: This plugin allows you to add captcha protection to forms, wordpress and woocommerce.
- * Version: 2.0.682
+ * Version: 2.0.700
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
  * Text Domain: captcha-for-contact-form-7
  * Domain Path: /languages
  */
-define( 'FORGE12_CAPTCHA_VERSION', '2.0.682' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.0.700' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -305,9 +305,28 @@ class CF7Captcha {
 		}
 
 		// Get the whitelist settings from the plugin options
-		$settings           = $this->get_settings();
-		$whitelisted_emails = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", trim( $settings['global']['protection_whitelist_emails'] ) ) : [];
-		$whitelisted_ips    = isset( $settings['global']['protection_whitelist_ips'] ) ? explode( "\n", $settings['global']['protection_whitelist_ips'] ) : [];
+		$settings               = $this->get_settings();
+		$whitelisted_emails     = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", trim( $settings['global']['protection_whitelist_emails'] ) ) : [];
+		$whitelisted_ips        = isset( $settings['global']['protection_whitelist_ips'] ) ? explode( "\n", $settings['global']['protection_whitelist_ips'] ) : [];
+		$whitelisted_admin_role = isset( $settings['global']['protection_whitelist_role_admin'] ) ? (int)$settings['global']['protection_whitelist_role_admin'] : 0;
+		$whitelisted_logged_in = isset( $settings['global']['protection_whitelist_role_logged_in'] ) ? (int)$settings['global']['protection_whitelist_role_logged_in'] : 0;
+
+		if(is_user_logged_in() && $whitelisted_logged_in){
+			return true;
+		}
+
+		if(is_user_logged_in() && $whitelisted_admin_role){
+
+			// Get the current user
+			$current_user = wp_get_current_user();
+
+			// Check if the user has the 'administrator' role
+			if (in_array('administrator', $current_user->roles)) {
+				return true;
+			} else {
+				return false;
+			}
+		}
 
 		// Get the current user's IP address
 		$user_ip = $_SERVER['REMOTE_ADDR'];

@@ -267,7 +267,9 @@ class Backend {
         if ( class_exists( '\WPCF7_TagGenerator' ) ) {
             $tag_generator = \WPCF7_TagGenerator::get_instance();
             $tag_generator->add( 'f12_captcha', __( 'Captcha', 'captcha-for-contact-form-7' ),
-                array( $this, 'captchaCallback' ) );
+                array( $this, 'captchaCallback' ), [
+                        'version' => '2'
+                ] );
         }
     }
 }

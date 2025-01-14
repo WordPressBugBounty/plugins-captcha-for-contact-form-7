@@ -68,7 +68,9 @@ namespace f12_cf7_captcha {
 				'protection_javascript_enable'             => 0,
 				'protection_support_enable'                => 1,
 				'protection_whitelist_emails'              => '',
-				'protection_whitelist_ips'                 => ''
+				'protection_whitelist_ips'                 => '',
+				'protection_whitelist_role_admin'          => '',
+				'protection_whitelist_role_logged_in'      => '',
 			];
 
 			return $settings;
@@ -324,7 +326,7 @@ namespace f12_cf7_captcha {
 			 */
 			foreach ( $settings['global'] as $key => $value ) {
 				if ( isset( $_POST[ $key ] ) ) {
-					if ( $key == 'protection_rules_blacklist_value' || $key == 'protection_whitelist_emails' || $key == 'protection_whitelist_ips' ) {
+					if ( $key == 'protection_rules_blacklist_value' || $key == 'protection_whitelist_emails' || $key == 'protection_whitelist_ips' || $key == 'protection_whitelist_role_admin' || $key == 'protection_whitelist_role_logged_in' ) {
 						$settings['global'][ $key ] = sanitize_textarea_field( $_POST[ $key ] );
 					} else {
 						$settings['global'][ $key ] = sanitize_text_field( $_POST[ $key ] );
@@ -336,7 +338,7 @@ namespace f12_cf7_captcha {
 				}
 			}
 
-			$settings['global']['protection_support_enable'] = 1;
+			$settings['global']['protection_support_enable'] = isset( $_POST['protection_support_enable'] ) && (int) $_POST['protection_support_enabled'] == 1 ? 1 : 0;
 
 			$blacklist                                              = $settings['global']['protection_rules_blacklist_value'];
 			$settings['global']['protection_rules_blacklist_value'] = '';
@@ -1456,8 +1458,8 @@ namespace f12_cf7_captcha {
                             <div class="label">
                                 <label for="protection_whitelist_ips"><strong><?php _e( 'Whitelist IP Addresses', 'captcha-for-contact-form-7' ); ?></strong></label>
                                 <p><?php _e( 'Add IP addresses that should bypass all CAPTCHA checks, one per line.', 'captcha-for-contact-form-7' ); ?></p>
-                                <label><strong><?php _e('Your Current IP Address', 'captcha-for-contact-form-7'); ?></strong></label>
-                                <p><?php echo esc_html($_SERVER['REMOTE_ADDR']); ?></p>
+                                <label><strong><?php _e( 'Your Current IP Address', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p><?php echo esc_html( $_SERVER['REMOTE_ADDR'] ); ?></p>
                             </div>
                             <div class="input">
                                 <textarea
@@ -1468,9 +1470,102 @@ namespace f12_cf7_captcha {
                             </div>
                         </div>
 
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_whitelist_role_admin"><strong><?php _e( 'Whitelist for Administrator Role', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php _e( 'Enable this option to automatically whitelist all administrators while they are logged into the website.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <!-- SEPARATOR -->
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'protection_whitelist_role_admin';
+											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+											$name       = __( 'Activate Whitelist for Administrator Role', 'captcha-for-contact-form-7' );
+											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php esc_attr_e( $name ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_whitelist_role_logged_in"><strong><?php _e( 'Whitelist for Logged-In Users', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php _e( 'Enable this option to automatically whitelist all Logged-in Users.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <!-- SEPARATOR -->
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'protection_whitelist_role_logged_in';
+											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+											$name       = __( 'Activate Whitelist for Logged-In Users', 'captcha-for-contact-form-7' );
+											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php esc_attr_e( $name ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
+
+            <div class="section-container">
+                <!-- Whitelist Section -->
+                <h3><?php _e( 'Support', 'captcha-for-contact-form-7' ); ?></h3>
+                <div class="section-wrapper">
+                    <div class="section">
+                        <div class="option">
+                            <div class="label">
+                                <label for="support"><strong><?php _e( 'Support us', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php _e( 'Enable this option to support us developing and updating the plugin.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <!-- SEPARATOR -->
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'protection_support_enable';
+											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+											$name       = __( 'Activate Support', 'captcha-for-contact-form-7' );
+											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php esc_attr_e( $name ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
 			<?php
 		}
 
