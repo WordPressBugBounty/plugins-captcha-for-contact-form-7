@@ -66,7 +66,7 @@ namespace f12_cf7_captcha {
 				'protection_rules_error_message_blacklist' => __( 'The word %s is blacklisted.', 'captcha-for-contact-form-7' ),
 				'protection_browser_enable'                => 0,
 				'protection_javascript_enable'             => 0,
-				'protection_support_enable'                => 1,
+				'support'                => 1,
 				'protection_whitelist_emails'              => '',
 				'protection_whitelist_ips'                 => '',
 				'protection_whitelist_role_admin'          => '',
@@ -338,7 +338,7 @@ namespace f12_cf7_captcha {
 				}
 			}
 
-			$settings['global']['protection_support_enable'] = isset( $_POST['protection_support_enable'] ) && (int) $_POST['protection_support_enabled'] == 1 ? 1 : 0;
+			$settings['global']['support'] = isset( $_POST['support'] ) && (int) $_POST['support'] == 1 ? 1 : 0;
 
 			$blacklist                                              = $settings['global']['protection_rules_blacklist_value'];
 			$settings['global']['protection_rules_blacklist_value'] = '';
@@ -410,7 +410,7 @@ namespace f12_cf7_captcha {
 
 									$field_name = sprintf( 'protection_%s_enable', $id );
 
-									$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+									$is_checked = isset($settings[$field_name]) && $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
 
 									?>
                                     <div class="toggle-item-wrapper">
@@ -1545,7 +1545,7 @@ namespace f12_cf7_captcha {
                                     <div class="f12-checkbox-toggle">
                                         <div class="toggle-container">
 											<?php
-											$field_name = 'protection_support_enable';
+											$field_name = 'support';
 											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
 											$name       = __( 'Activate Support', 'captcha-for-contact-form-7' );
 											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );

@@ -39,9 +39,9 @@ class Support extends BaseModul
     public function maybe_load_link(): string
     {
         $link = '';
-        //if ($this->Controller->get_settings('support', 'global') == 1) {
+        if ($this->Controller->get_settings('support', 'global') == 1) {
             $link = $this->get_link();
-        //}
+        }
         return $link;
     }
 
