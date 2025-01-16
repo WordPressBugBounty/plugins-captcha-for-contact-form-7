@@ -48,7 +48,7 @@ class ControllerWordpressRegistration extends BaseController {
 		$this->name = __('WordPress Registration', 'captcha-for-contact-form-7');
 
 		add_action( 'register_form', array( $this, 'wp_add_spam_protection' ) );
-		add_filter( 'register_post', array( $this, 'wp_is_spam' ), 10, 3 );
+		add_filter( 'registration_errors', array( $this, 'wp_is_spam' ), 10, 3 );
 	}
 
 	/**
@@ -78,19 +78,21 @@ class ControllerWordpressRegistration extends BaseController {
 	 * @throws \Exception
 	 */
 	public function wp_is_spam( ...$args ) {
-		$user = $args[0];
+		/**
+		 * @var \WP_Error $error
+		 */
+		$error = $args[0];
 
 		$array_post_data = $_POST;
 
 		if ( apply_filters( 'f12_cf7_captcha_login_login_validator', false ) ) {
-			return $user;
+			return $error;
 		}
 
 		$Protection = $this->Controller->get_modul( 'protection' );
 		if ( $Protection->is_spam( $array_post_data ) ) {
-			return new \WP_Error( '500', sprintf( 'Captcha not correct: %s', $Protection->get_message() ) );
+			$error->add(500,  sprintf( 'Captcha not correct: %s', $Protection->get_message() ) );
 		}
-
-		return $user;
+		return $error;
 	}
 }

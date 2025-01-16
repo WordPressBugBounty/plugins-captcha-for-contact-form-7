@@ -5,7 +5,7 @@ Tags: spam, antispam, captcha, honeypot, contact form 7 captcha
 Requires at least: 5.2
 Tested up to: 6.7.1
 Requires PHP: 8.1
-Stable tag: 2.0.701
+Stable tag: 2.0.702
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -137,6 +137,9 @@ The stored, encrypted data will be removed automatically every 2 month.
 No, everything can be managed from the WordPress Dashboard. Just enable the required functions and enjoy it.
 
 == Changelog ==
+= 2.0.702 =
+* Fixed: Resolved an issue with the captcha protection for the wordpress registration.
+
 = 2.0.701 =
 * Fixed: Resolved an issue where the support link was always visible.
 * Fixed: Resolved a PHP warning related to an undefined array key protection_wordpress_comments_enable in UI_Dashboard.php (line 413). The fix adds proper checks to ensure the array index is defined before usage, thereby preventing the warning.

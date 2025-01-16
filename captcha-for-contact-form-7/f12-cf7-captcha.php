@@ -49,13 +49,13 @@ require_once( 'core/Support.class.php' );
  * Plugin Name: Captcha for WordPress
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: This plugin allows you to add captcha protection to forms, wordpress and woocommerce.
- * Version: 2.0.701
+ * Version: 2.0.702
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
  * Text Domain: captcha-for-contact-form-7
  * Domain Path: /languages
  */
-define( 'FORGE12_CAPTCHA_VERSION', '2.0.701' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.0.702' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
