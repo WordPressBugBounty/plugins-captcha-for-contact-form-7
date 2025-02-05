@@ -5,7 +5,7 @@ Tags: spam, antispam, captcha, honeypot, contact form 7 captcha
 Requires at least: 5.2
 Tested up to: 6.7.1
 Requires PHP: 8.1
-Stable tag: 2.0.702
+Stable tag: 2.1.2
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -30,6 +30,7 @@ seconds.1
 
 = ⭐ Features ⭐ =
 
+* Supports WP Job Manager Applications
 * Supports WPForms
 * Supports Avada Forms
 * Supports Contact Form 7
@@ -137,6 +138,10 @@ The stored, encrypted data will be removed automatically every 2 month.
 No, everything can be managed from the WordPress Dashboard. Just enable the required functions and enjoy it.
 
 == Changelog ==
+= 2.1.0 =
+* New: Added WP Job Manager Applications support
+* Fixed: Fixed an issue that caused a problem while saving the settings
+
 = 2.0.702 =
 * Fixed: Resolved an issue with the captcha protection for the wordpress registration.
 

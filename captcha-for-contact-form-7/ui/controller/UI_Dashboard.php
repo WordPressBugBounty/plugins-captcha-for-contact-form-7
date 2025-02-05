@@ -66,7 +66,7 @@ namespace f12_cf7_captcha {
 				'protection_rules_error_message_blacklist' => __( 'The word %s is blacklisted.', 'captcha-for-contact-form-7' ),
 				'protection_browser_enable'                => 0,
 				'protection_javascript_enable'             => 0,
-				'support'                => 1,
+				'support'                                  => 1,
 				'protection_whitelist_emails'              => '',
 				'protection_whitelist_ips'                 => '',
 				'protection_whitelist_role_admin'          => '',
@@ -319,6 +319,11 @@ namespace f12_cf7_captcha {
 				'protection_browser_enable'             => 0,
 				'protection_javascript_enable'          => 0,
 				'protection_captcha_template'           => 0,
+				'support'                               => 0,
+				'protection_whitelist_emails'           => '',
+				'protection_whitelist_ips'              => '',
+				'protection_whitelist_role_admin'       => 0,
+				'protection_whitelist_role_logged_in'   => 0,
 			];
 
 			/**
@@ -326,7 +331,7 @@ namespace f12_cf7_captcha {
 			 */
 			foreach ( $settings['global'] as $key => $value ) {
 				if ( isset( $_POST[ $key ] ) ) {
-					if ( $key == 'protection_rules_blacklist_value' || $key == 'protection_whitelist_emails' || $key == 'protection_whitelist_ips' || $key == 'protection_whitelist_role_admin' || $key == 'protection_whitelist_role_logged_in' ) {
+					if ( $key == 'protection_rules_blacklist_value' || $key == 'protection_whitelist_emails' || $key == 'protection_whitelist_ips' ) {
 						$settings['global'][ $key ] = sanitize_textarea_field( $_POST[ $key ] );
 					} else {
 						$settings['global'][ $key ] = sanitize_text_field( $_POST[ $key ] );
@@ -410,7 +415,7 @@ namespace f12_cf7_captcha {
 
 									$field_name = sprintf( 'protection_%s_enable', $id );
 
-									$is_checked = isset($settings[$field_name]) && $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+									$is_checked = isset( $settings[ $field_name ] ) && $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
 
 									?>
                                     <div class="toggle-item-wrapper">
