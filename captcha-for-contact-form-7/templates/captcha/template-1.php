@@ -19,7 +19,7 @@
 <div class="f12-captcha template-1">
     <label for="<?php echo esc_attr( $captcha_id ); ?>">
 		<?php if ( $method != 'image' ): ?>
-			<div class="c-label"><?php esc_attr_e( $label ); ?></div>
+            <div class="c-label"><label for="<?php echo esc_attr( $captcha_id ); ?>"><?php esc_attr_e( $label ); ?></label></div>
 		<?php endif; ?>
 
         <div class="c-header">

@@ -98,6 +98,19 @@ class Javascript_Validator extends BaseProtection
             }
         }
 
+	    if(isset($_POST['data']) && defined('FLUENTFORM')) {
+		    $decodedFormData = urldecode($_POST['data']);
+		    parse_str($decodedFormData, $form_data);
+
+		    if(isset($form_data['js_start_time'])) {
+			    $start = (float)$form_data['js_start_time'];
+		    }
+
+		    if(isset($form_data['js_end_time'])) {
+			    $end = (float)$form_data['js_end_time'];
+		    }
+	    }
+
         $this->set_start_time('js', $start);
         $this->set_end_time('js', $end);
     }
@@ -161,6 +174,16 @@ class Javascript_Validator extends BaseProtection
                 $start = (float)$form_data['php_start_time'];
             }
         }
+
+		// Fluentform
+	    if(isset($_POST['data']) && defined('FLUENTFORM')) {
+		    $decodedFormData = urldecode($_POST['data']);
+		    parse_str($decodedFormData, $form_data);
+
+			if(isset($form_data['php_start_time'])) {
+				$start = (float)$form_data['php_start_time'];
+			}
+	    }
 
         $this->set_start_time('php', $start);
 
@@ -251,7 +274,6 @@ class Javascript_Validator extends BaseProtection
     private function get_difference(string $type = 'php', string $output = 'ms'): string
     {
         $difference = $this->get_end_time($type) - $this->get_start_time($type);
-
         if ($output == 'ms') {
             return round($difference * 1000);
         }

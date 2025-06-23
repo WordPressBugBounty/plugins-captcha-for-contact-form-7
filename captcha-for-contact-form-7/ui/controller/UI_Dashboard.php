@@ -1607,7 +1607,7 @@ namespace f12_cf7_captcha {
                         <strong><?php _e( "This hook can be used to disable the protection for a plugin:", 'captcha-for-contact-form-7' ); ?></strong>
                     </p>
                     <p>
-						<?php _e( "Supported ids: avada, elementor, cf7, wpforms, ultimatemember, gravityforms, wordpress_comments, wordpress, woocommerce.", 'captcha-for-contact-form-7' ); ?>
+						<?php _e( "Supported ids: avada, fluentform, elementor, cf7, wpforms, ultimatemember, gravityforms, wordpress_comments, wordpress, woocommerce.", 'captcha-for-contact-form-7' ); ?>
                     </p>
                     <div class="option">
                         <div class="input">

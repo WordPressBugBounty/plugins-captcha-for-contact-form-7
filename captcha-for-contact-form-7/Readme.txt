@@ -5,7 +5,7 @@ Tags: spam, antispam, captcha, honeypot, contact form 7 captcha
 Requires at least: 5.2
 Tested up to: 6.7.1
 Requires PHP: 8.1
-Stable tag: 2.1.2
+Stable tag: 2.2.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -43,6 +43,7 @@ seconds.1
 * Supports Image Captcha
 * Supports IP Ban/Blocking
 * Supports Ultimate Member Registration
+* Supports FluentForms
 * Browser Detection for Crawler and Bots
 * URL Filter to limit the number of Links in forms
 * BB Code filter integrated
@@ -138,6 +139,10 @@ The stored, encrypted data will be removed automatically every 2 month.
 No, everything can be managed from the WordPress Dashboard. Just enable the required functions and enjoy it.
 
 == Changelog ==
+= 2.2.0 =
+* New: Added Fluent Form Support
+* Fix: Added Label Tags for Captchas (Accessibility)
+
 = 2.1.0 =
 * New: Added WP Job Manager Applications support
 * Fixed: Fixed an issue that caused a problem while saving the settings

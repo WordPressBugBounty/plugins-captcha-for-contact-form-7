@@ -177,7 +177,6 @@ class Compatibility extends BaseModul {
 			# Add the component
 			$name = '\\f12_cf7_captcha\\compatibility\\Controller' . $matches[1];
 
-
 			$this->components[ $name ] = [ 'name' => $name, 'path' => $current_directory ];
 		}
 	}

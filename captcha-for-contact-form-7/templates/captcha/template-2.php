@@ -18,7 +18,7 @@
 ?>
 <div class="f12-captcha template-2">
     <div class="c-header">
-        <div class="c-label"><?php esc_attr_e( $label ); ?></div>
+        <div class="c-label"><label for="<?php echo esc_attr( $captcha_id ); ?>"><?php esc_attr_e( $label ); ?></label></div>
         <div class="c-data"><?php echo $captcha_data; ?></div>
         <div class="c-reload"><?php echo $captcha_reload; ?></div>
     </div>
