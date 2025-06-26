@@ -1,18 +1,18 @@
-== Captcha for WordPress ==
+== Captcha for WordPress (CF7, FluentForm, WPForms, Elementor and many more) ==
 Contributors: forge12
 Donate link: https://www.paypal.com/donate?hosted_button_id=MGZTVZH3L5L2G
-Tags: spam, antispam, captcha, honeypot, contact form 7 captcha
+Tags: captcha, honeypot, contact form 7, fluentform, hcaptcha
 Requires at least: 5.2
-Tested up to: 6.7.1
+Tested up to: 6.8.1
 Requires PHP: 8.1
-Stable tag: 2.2.0
+Stable tag: 2.2.1
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
-Stop Spam by adding honeypots, captchas and IP based spam protection to your forms.
+A unified CAPTCHA and honeypot solution for multiple plugins – compatible with Contact Form 7, Fluent Forms, WPForms, Elementor, WooCommerce, and many more.
 
 == Description ==
-**Captcha/Honeypot (CF7, Avada, Elementor, Comments, UltimateMember, WooCommerce, WPForms)** allows you to easily activate custom rules, captchas and ip based protection settings which will stop unwanted spam.
+**Captcha/Honeypot (CF7, Avada, Elementor, Comments, UltimateMember, WooCommerce, WPForms, and many more)** allows you to easily activate custom rules, captchas and ip based protection settings which will stop unwanted spam.
 You can decide which captcha you prefer. Either use a honeypot, an arithmetical or an image cgitaptcha to protect your forms.
 
 > Did you find this plugin helpful? Please consider [leaving a 5-star review](http://wordpress.org/support/view/plugin-reviews/captcha-for-contact-form-7).
@@ -139,6 +139,9 @@ The stored, encrypted data will be removed automatically every 2 month.
 No, everything can be managed from the WordPress Dashboard. Just enable the required functions and enjoy it.
 
 == Changelog ==
+= 2.2.1 =
+* Fix: TypeError Fix for Fluent Form using Javascript Validator
+
 = 2.2.0 =
 * New: Added Fluent Form Support
 * Fix: Added Label Tags for Captchas (Accessibility)

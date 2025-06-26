@@ -176,7 +176,7 @@ class Javascript_Validator extends BaseProtection
         }
 
 		// Fluentform
-	    if(isset($_POST['data']) && defined('FLUENTFORM')) {
+	    if(isset($_POST['data']) && defined('FLUENTFORM') && is_string($_POST['data'])) {
 		    $decodedFormData = urldecode($_POST['data']);
 		    parse_str($decodedFormData, $form_data);
 
