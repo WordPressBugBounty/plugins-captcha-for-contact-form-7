@@ -18,15 +18,44 @@
 ?>
 <div class="f12-captcha template-2">
     <div class="c-header">
-        <div class="c-label"><label for="<?php echo esc_attr( $captcha_id ); ?>"><?php esc_attr_e( $label ); ?></label></div>
-        <div class="c-data"><?php echo $captcha_data; ?></div>
-        <div class="c-reload"><?php echo $captcha_reload; ?></div>
+        <!-- Label korrekt mit `for` verknüpfen -->
+        <div class="c-label">
+            <label for="<?php echo esc_attr( $captcha_id ); ?>">
+				<?php esc_html_e( $label ); ?>
+            </label>
+        </div>
+
+        <!-- CAPTCHA-Daten mit Aria LIVE markieren -->
+        <div class="c-data" aria-live="polite" aria-atomic="true" aria-describedby="captcha-instructions">
+			<?php echo $captcha_data; ?>
+        </div>
+
+        <!-- CAPTCHA Reload mit Tastenzugänglichkeit -->
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'CAPTCHA neu laden', 'captcha-for-contact-form-7' ); ?>">
+			<?php echo $captcha_reload; ?>
+        </div>
     </div>
-    <input type="hidden" id="<?php echo esc_attr( $hash_id ); ?>" name="<?php echo esc_attr( $hash_field_name ); ?>"
+
+    <!-- Versteckte Eingabewerte -->
+    <input type="hidden" id="<?php echo esc_attr( $hash_id ); ?>"
+           name="<?php echo esc_attr( $hash_field_name ); ?>"
            value="<?php echo esc_attr( $hash_value ); ?>"/>
-    <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo esc_attr( $wrapper_attributes ); ?>>
-        <input class="f12c<?php echo esc_attr( $classes ); ?>" data-method="<?php echo esc_attr( $method ); ?>" <?php echo esc_attr( $attributes ); ?>
-               type="text" id="<?php echo esc_attr( $captcha_id ); ?>" name="<?php echo esc_attr( $field_name ); ?>"
-               placeholder="<?php echo esc_attr( $placeholder ); ?>" value=""/>
+
+    <!-- Eingabefeld mit Barrierefreiheitsattributen -->
+    <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo $wrapper_attributes; ?>>
+        <input class="f12c <?php echo esc_attr( $classes ); ?>"
+               data-method="<?php echo esc_attr( $method ); ?>" <?php echo esc_attr( $attributes ); ?>
+               type="text"
+               id="<?php echo esc_attr( $captcha_id ); ?>"
+               name="<?php echo esc_attr( $field_name ); ?>"
+               placeholder="<?php echo esc_attr( $placeholder ); ?>"
+               value=""
+               aria-required="true"
+               aria-describedby="captcha-instructions"/>
     </div>
+
+    <!-- Screenreader-Hinweise -->
+    <p id="captcha-instructions" class="screen-reader-text">
+		<?php esc_html_e( 'Bitte geben Sie die im CAPTCHA angezeigten Zeichen ein, um sicherzustellen, dass Sie ein Mensch sind.', 'captcha-for-contact-form-7' ); ?>
+    </p>
 </div>

@@ -18,16 +18,37 @@
 ?>
 <div class="f12-captcha template-0">
     <div class="c-header">
-        <div class="c-label"><?php esc_attr_e( $label ); ?></div>
-        <div class="c-data"><?php echo $captcha_data; ?></div>
-        <div class="c-reload"><?php echo $captcha_reload; ?></div>
+        <!-- Label korrekt mit `for` verknüpfen -->
+        <label for="<?php echo esc_attr( $captcha_id ); ?>" class="c-label"><?php echo esc_html( $label ); ?></label>
+
+        <!-- CAPTCHA-Daten mit Aria-Attributen für Screenreader kennzeichnen -->
+        <div class="c-data" aria-live="polite" aria-describedby="captcha-instructions">
+			<?php echo $captcha_data; ?>
+        </div>
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'CAPTCHA neu laden' ); ?>">
+			<?php echo $captcha_reload; ?>
+        </div>
+        <p id="captcha-instructions" class="screen-reader-text">
+			<?php esc_html_e( 'Bitte geben Sie die im CAPTCHA angezeigten Zeichen ein, um sicherzustellen, dass Sie ein Mensch sind.' ); ?>
+        </p>
     </div>
+
+    <!-- Versteckte Werte -->
     <input type="hidden" id="<?php echo esc_attr( $hash_id ); ?>" name="<?php echo esc_attr( $hash_field_name ); ?>"
            value="<?php echo esc_attr( $hash_value ); ?>"/>
-    <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo esc_attr( $wrapper_attributes ); ?>>
-        <label for="<?php echo esc_attr( $captcha_id ); ?>"><?php esc_attr_e( $label ); ?></label>
-        <input class="f12c<?php echo esc_attr( $classes ); ?>" data-method="<?php echo esc_attr( $method ); ?>" <?php echo esc_attr( $attributes ); ?>
-               type="text" id="<?php echo esc_attr( $captcha_id ); ?>" name="<?php echo esc_attr( $field_name ); ?>"
-               placeholder="<?php esc_attr_e( $placeholder ); ?>" value=""/>
+
+    <!-- Textfeld mit Aria-Hinweisen -->
+    <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo $wrapper_attributes; ?>>
+        <label for="<?php echo esc_attr( $captcha_id ); ?>"><?php echo esc_html( $label ); ?></label>
+        <input class="f12c <?php echo esc_attr( $classes ); ?>"
+               data-method="<?php echo esc_attr( $method ); ?>"
+			<?php echo $attributes; ?>
+               type="text"
+               id="<?php echo esc_attr( $captcha_id ); ?>"
+               name="<?php echo esc_attr( $field_name ); ?>"
+               placeholder="<?php echo esc_attr( $placeholder ); ?>"
+               value=""
+               aria-required="true"
+               aria-labelledby="captcha-instructions"/>
     </div>
 </div>

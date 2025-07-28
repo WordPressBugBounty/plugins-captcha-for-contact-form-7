@@ -17,33 +17,53 @@
  */
 ?>
 <div class="f12-captcha template-1">
-    <label for="<?php echo esc_attr( $captcha_id ); ?>">
-		<?php if ( $method != 'image' ): ?>
-            <div class="c-label"><label for="<?php echo esc_attr( $captcha_id ); ?>"><?php esc_attr_e( $label ); ?></label></div>
-		<?php endif; ?>
+	<?php if ( $method !== 'image' ): ?>
+        <!-- Label korrekt mit `for` verknüpfen -->
+        <label for="<?php echo esc_attr( $captcha_id ); ?>" class="c-label">
+			<?php esc_html_e( $label ); ?>
+        </label>
+	<?php endif; ?>
 
-        <div class="c-header">
-            <div class="c-input">
-                <div class="c-data"><?php echo $captcha_data; ?></div>
-
-                <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo esc_attr( $wrapper_attributes ); ?>>
-					<?php if ( $method === 'image' ): ?>
-                        <div class="c-hint">
-							<?php _e( 'Type the characters:', 'captcha-for-contact-form-7' ); ?>
-                        </div>
-					<?php endif; ?>
-                    <input class="f12c<?php echo esc_attr( $classes ); ?>"
-                           data-method="<?php echo esc_attr( $method ); ?>" <?php echo esc_attr( $attributes ); ?>
-                           type="text" id="<?php echo esc_attr( $captcha_id ); ?>"
-                           name="<?php echo esc_attr( $field_name ); ?>"
-                           placeholder="?" value=""/>
-                </div>
+    <div class="c-header">
+        <div class="c-input">
+            <!-- Dynamische CAPTCHA-Daten mit Aria LIVE aktualisieren -->
+            <div class="c-data" aria-live="polite" aria-atomic="true" aria-describedby="captcha-instructions">
+				<?php echo $captcha_data; ?>
             </div>
 
-            <div class="c-reload"><?php echo $captcha_reload; ?></div>
+            <div class="<?php echo esc_attr( $wrapper_classes ); ?>" <?php echo $wrapper_attributes; ?>>
+				<?php if ( $method === 'image' ): ?>
+                    <!-- CAPTCHA-Beschreibung für Screenreader -->
+                    <div class="c-hint" id="captcha-image-hint">
+						<?php esc_html_e( 'Geben Sie die im Bild gezeigten Zeichen ein:', 'captcha-for-contact-form-7' ); ?>
+                    </div>
+				<?php endif; ?>
+
+                <!-- Textfeld für Benutzereingabe -->
+                <input class="f12c <?php echo esc_attr( $classes ); ?>"
+                       data-method="<?php echo esc_attr( $method ); ?>" <?php echo $attributes; ?>
+                       type="text" id="<?php echo esc_attr( $captcha_id ); ?>"
+                       name="<?php echo esc_attr( $field_name ); ?>"
+                       placeholder="<?php echo esc_attr( $placeholder ); ?>"
+                       value="" aria-required="true"
+                       aria-labelledby="<?php echo $method === 'image' ? 'captcha-image-hint' : ''; ?>"
+                       aria-describedby="captcha-instructions"/>
+            </div>
         </div>
 
-        <input type="hidden" id="<?php echo esc_attr( $hash_id ); ?>" name="<?php echo esc_attr( $hash_field_name ); ?>"
-               value="<?php echo esc_attr( $hash_value ); ?>"/>
-    </label>
+        <!-- Schaltfläche für CAPTCHA-Neuladen -->
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'CAPTCHA neu laden', 'captcha-for-contact-form-7' ); ?>">
+			<?php echo $captcha_reload; ?>
+        </div>
+    </div>
+
+    <!-- Verstecktes Eingabefeld für HASH-Werte -->
+    <input type="hidden" id="<?php echo esc_attr( $hash_id ); ?>"
+           name="<?php echo esc_attr( $hash_field_name ); ?>"
+           value="<?php echo esc_attr( $hash_value ); ?>"/>
+
+    <!-- Screenreader-Beschreibung -->
+    <p id="captcha-instructions" class="screen-reader-text">
+		<?php esc_html_e( 'Dieser CAPTCHA hilft sicherzustellen, dass Sie ein Mensch sind. Bitte geben Sie die geforderten Zeichen ein.', 'captcha-for-contact-form-7' ); ?>
+    </p>
 </div>
