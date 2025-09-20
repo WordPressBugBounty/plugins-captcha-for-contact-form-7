@@ -3,6 +3,7 @@
 namespace f12_cf7_captcha\core;
 
 use f12_cf7_captcha\CF7Captcha;
+use Forge12\Shared\LoggerInterface;
 
 abstract class BaseModul {
 	protected string $message = '';
@@ -18,8 +19,15 @@ abstract class BaseModul {
 	 *
 	 * @return void
 	 */
-	public function __construct(CF7Captcha $Controller) {
+	public function __construct(CF7Captcha $Controller)
+	{
 		$this->Controller = $Controller;
+
+		$this->get_logger()->info('Konstruktor abgeschlossen.');
+	}
+
+	public function get_logger() : LoggerInterface {
+		return $this->Controller->get_logger();
 	}
 
 	/**
@@ -27,7 +35,14 @@ abstract class BaseModul {
 	 *
 	 * @return string The message stored in the object.
 	 */
-	public function get_message(): string {
+	public function get_message(): string
+	{
+		$this->get_logger()->debug('Rufe die Nachrichten-Eigenschaft ab.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'message' => $this->message,
+		]);
+
 		return $this->message;
 	}
 
@@ -38,7 +53,17 @@ abstract class BaseModul {
 	 *
 	 * @return void
 	 */
-	protected function set_message( string $message ): void {
+	protected function set_message(string $message): void
+	{
+		$this->get_logger()->info('Setze die Nachrichteneigenschaft.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'old_message' => $this->message,
+			'new_message' => $message,
+		]);
+
 		$this->message = $message;
+
+		$this->get_logger()->debug('Nachricht erfolgreich gesetzt.');
 	}
 }

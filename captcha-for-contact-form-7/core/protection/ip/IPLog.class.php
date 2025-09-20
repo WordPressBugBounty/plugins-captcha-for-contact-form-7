@@ -3,6 +3,7 @@
 namespace f12_cf7_captcha\core\protection\ip;
 
 use f12_cf7_captcha\core\wpdb;
+use Forge12\Shared\LoggerInterface;
 use RuntimeException;
 
 if (!defined('ABSPATH')) {
@@ -18,6 +19,8 @@ require_once('IPLogCleaner.class.php');
  */
 class IPLog
 {
+	private LoggerInterface $logger;
+
     /**
      * The unique ID
      *
@@ -48,14 +51,37 @@ class IPLog
      *
      * @param $object
      */
-    public function __construct($params = array())
-    {
-        foreach ($params as $key => $value) {
-            if (isset($this->{$key})) {
-                $this->{$key} = $value;
-            }
-        }
-    }
+	public function __construct(LoggerInterface $logger, $params = array())
+	{
+		$this->logger = $logger;
+
+		foreach ($params as $key => $value) {
+			if (isset($this->{$key})) {
+				$oldValue = $this->{$key};
+				$this->{$key} = $value;
+
+				$this->get_logger()->debug('Parameter im Konstruktor gesetzt', [
+					'property'  => $key,
+					'old_value' => $oldValue,
+					'new_value' => $value,
+					'class'     => __CLASS__,
+					'method'    => __METHOD__,
+				]);
+			}
+		}
+
+		$this->get_logger()->info('Instanz erstellt', [
+			'params' => array_keys($params),
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+	}
+
+
+	public function get_logger():  LoggerInterface
+	{
+		return $this->logger;
+	}
 
     /**
      * Retrieves an array of timestamps for records matching the given hash and previous_hash.
@@ -70,10 +96,38 @@ class IPLog
      * @throws RuntimeException|\Exception If global $wpdb is not defined.
      * @deprecated
      */
-    public function get_timestamps(string $hash, string $previous_hash, int $seconds = 0): ?IPLog
-    {
-        return $this->get_last_entry_by_hash($hash, $previous_hash);
-    }
+	public function get_timestamps(string $hash, string $previous_hash, int $seconds = 0): ?IPLog
+	{
+		$this->get_logger()->debug('Hole Timestamps anhand Hashes', [
+			'hash'           => $hash,
+			'previous_hash'  => $previous_hash,
+			'seconds'        => $seconds,
+			'class'          => __CLASS__,
+			'method'         => __METHOD__,
+		]);
+
+		$entry = $this->get_last_entry_by_hash($hash, $previous_hash);
+
+		if ($entry === null) {
+			$this->get_logger()->info('Keine Einträge für Hashes gefunden', [
+				'hash'          => $hash,
+				'previous_hash' => $previous_hash,
+				'class'         => __CLASS__,
+				'method'        => __METHOD__,
+			]);
+		} else {
+			$this->get_logger()->debug('Eintrag für Hashes gefunden', [
+				'hash'          => $hash,
+				'previous_hash' => $previous_hash,
+				'entry_id'      => $entry->get_id() ?? null,
+				'class'         => __CLASS__,
+				'method'        => __METHOD__,
+			]);
+		}
+
+		return $entry;
+	}
+
 
     /**
      * Retrieves the last submitted entry by the given hash and previous hash.
@@ -86,38 +140,60 @@ class IPLog
      *         or null if no entry is found.
      * @throws RuntimeException If WPDB is not defined.
      */
-    public function get_last_entry_by_hash(string $hash, string $previous_hash, int $offset = 0): ?IPLog
-    {
-        global $wpdb;
+	public function get_last_entry_by_hash(string $hash, string $previous_hash, int $offset = 0): ?IPLog
+	{
+		global $wpdb;
 
-        if (!$wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (!$wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table = $this->get_table_name();
+		$table = $this->get_table_name();
+		$prepare_stmt = sprintf(
+			'SELECT * FROM %s WHERE (hash="%s" OR hash="%s") ORDER BY createtime DESC LIMIT %d,1',
+			$table,
+			esc_sql($hash),
+			esc_sql($previous_hash),
+			$offset
+		);
 
-        $prepare_stmt = sprintf('SELECT * FROM %s WHERE (hash="%s" OR hash="%s") ORDER BY createtime DESC LIMIT %d,1', $table, $hash, $previous_hash, $offset);
+		$this->get_logger()->debug('Führe Query aus', [
+			'query'          => $prepare_stmt,
+			'hash'           => $hash,
+			'previous_hash'  => $previous_hash,
+			'offset'         => $offset,
+			'class'          => __CLASS__,
+			'method'         => __METHOD__,
+		]);
 
-        $results = $wpdb->get_results($prepare_stmt);
+		$results = $wpdb->get_results($prepare_stmt);
 
-        if (!is_array($results) || !isset($results[0])) {
-            return null;
-        }
+		if (!is_array($results) || !isset($results[0])) {
+			$this->get_logger()->info('Kein Eintrag für Hashes gefunden', [
+				'hash'          => $hash,
+				'previous_hash' => $previous_hash,
+				'offset'        => $offset,
+				'class'         => __CLASS__,
+				'method'        => __METHOD__,
+			]);
+			return null;
+		}
 
-        return new IPLog($results[0]);
-    }
+		$this->get_logger()->debug('Eintrag für Hashes gefunden', [
+			'hash'          => $hash,
+			'previous_hash' => $previous_hash,
+			'offset'        => $offset,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
 
-    /**
-     * @param string $hash
-     * @param string $hashPrevious
-     *
-     * @return array<string> Timestamps|empty
-     * @deprecated
-     */
-    public static function getTimestamps($hash, $hashPrevious, $seconds = 0)
-    {
-        return (new IPLog())->get_timestamps($hash, $hashPrevious, $seconds);
-    }
+		return new IPLog($this->get_logger(), $results[0]);
+	}
+
 
     /**
      * Retrieves the count of entries based on the provided parameters.
@@ -130,55 +206,88 @@ class IPLog
      * @return int The count of entries that match the given criteria
      * @throws RuntimeException|\Exception When WPDB is not defined
      */
-    public function get_count(string $hash = '', string $previous_hash = '', int $submitted = -1, int $seconds = 0): int
-    {
-        global $wpdb;
+	public function get_count(string $hash = '', string $previous_hash = '', int $submitted = -1, int $seconds = 0): int
+	{
+		global $wpdb;
 
-        if (!$wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (!$wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table = $this->get_table_name();
+		$table = $this->get_table_name();
+		$results = null;
+		$prepare_stmt = '';
 
-        if (!empty($hash) && !empty($previous_hash) && $submitted != -1) {
-            $dt = new \DateTime();
-            $dt->sub(new \DateInterval('PT' . $seconds . 'S'));
-            $create_time = $dt->format('Y-m-d H:i:s');
+		if (!empty($hash) && !empty($previous_hash) && $submitted !== -1) {
+			$dt = new \DateTime();
+			$dt->sub(new \DateInterval('PT' . (int) $seconds . 'S'));
+			$create_time = $dt->format('Y-m-d H:i:s');
 
-            $prepare_stmt = sprintf('SELECT count(*) AS entries FROM %s WHERE (hash="%s" OR hash="%s") AND submitted="%d" AND createtime > "%s"', $table, $hash, $previous_hash, $submitted, $create_time);
+			$prepare_stmt = sprintf(
+				'SELECT count(*) AS entries FROM %s WHERE (hash="%s" OR hash="%s") AND submitted="%d" AND createtime > "%s"',
+				$table,
+				esc_sql($hash),
+				esc_sql($previous_hash),
+				(int) $submitted,
+				esc_sql($create_time)
+			);
+		} elseif (!empty($hash) && !empty($previous_hash) && $submitted === -1) {
+			$prepare_stmt = sprintf(
+				'SELECT count(*) AS entries FROM %s WHERE hash="%s" OR hash="%s"',
+				$table,
+				esc_sql($hash),
+				esc_sql($previous_hash)
+			);
+		} else {
+			$prepare_stmt = sprintf('SELECT count(*) AS entries FROM %s', $table);
+		}
 
-            $results = $wpdb->get_results($prepare_stmt);
-        } else if (!empty($hash) && !empty($previous_hash) && $submitted == -1) {
+		$this->get_logger()->debug('Führe Count-Query aus', [
+			'query'          => $prepare_stmt,
+			'hash'           => $hash,
+			'previous_hash'  => $previous_hash,
+			'submitted'      => $submitted,
+			'seconds'        => $seconds,
+			'class'          => __CLASS__,
+			'method'         => __METHOD__,
+		]);
 
-            $prepare_stmt = sprintf('SELECT count(*) AS entries FROM %s WHERE hash="%s" OR hash="%s"', $table, $hash, $previous_hash);
-            $results = $wpdb->get_results($prepare_stmt);
-        } else {
-            $prepare_stmt = sprintf('SELECT count(*) AS entries FROM %s', $table);
-            $results = $wpdb->get_results($prepare_stmt);
-        }
+		$results = $wpdb->get_results($prepare_stmt);
 
-        if (is_array($results) && isset($results[0])) {
-            return $results[0]->entries;
-        }
-        return 0;
-    }
+		if (is_array($results) && isset($results[0])) {
+			$count = (int) ($results[0]->entries ?? 0);
 
-    /**
-     * @param $hash
-     * @param $hashPrevious
-     * @param $submitted
-     * @param $seconds
-     *
-     * @return int
-     * @throws \Exception
-     * @deprecated
-     */
-    public static function getCount($hash = '', $hashPrevious = '', $submitted = -1, $seconds = 0)
-    {
-        return (new IPLog())->get_count($hash, $hashPrevious, $submitted, $seconds);
-    }
+			$this->get_logger()->info('Count-Query Ergebnis', [
+				'count'         => $count,
+				'hash'          => $hash,
+				'previous_hash' => $previous_hash,
+				'submitted'     => $submitted,
+				'seconds'       => $seconds,
+				'class'         => __CLASS__,
+				'method'        => __METHOD__,
+			]);
 
-    /**
+			return $count;
+		}
+
+		$this->get_logger()->warning('Count-Query lieferte kein Ergebnis', [
+			'hash'          => $hash,
+			'previous_hash' => $previous_hash,
+			'submitted'     => $submitted,
+			'seconds'       => $seconds,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return 0;
+	}
+
+
+	/**
      * Creates a table in the database.
      *
      * This method creates a table with the specified structure in the database using the WordPress dbDelta()
@@ -186,54 +295,90 @@ class IPLog
      *
      * @return void
      */
-    public function create_table(): void
-    {
-        $table = $this->get_table_name();
+	public function create_table(): void
+	{
+		global $wpdb;
 
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		if (!$wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $sql = sprintf("CREATE TABLE %s (
-                id int(11) NOT NULL auto_increment, 
-                hash varchar(255) NOT NULL,
-                createtime varchar(255) DEFAULT '',
-                submitted int(1) NOT NULL,
-                PRIMARY KEY  (id)
-            )", $table);
+		$table = $this->get_table_name();
 
-        dbDelta($sql);
-    }
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-    /**
-     * Create the database which saves the captcha codes
-     * for the validation to be wordpress conform
-     *
-     * @return void
-     * @deprecated
-     */
-    public static function createTable()
-    {
-        (new IPLog())->create_table();
-    }
+		$sql = sprintf(
+			"CREATE TABLE %s (
+            id int(11) NOT NULL auto_increment,
+            hash varchar(255) NOT NULL,
+            createtime varchar(255) DEFAULT '',
+            submitted int(1) NOT NULL,
+            PRIMARY KEY  (id)
+        )",
+			$table
+		);
 
-    /**
+		$this->get_logger()->debug('Erstelle/aktualisiere Tabelle via dbDelta', [
+			'table'  => $table,
+			'sql'    => $sql,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		$result = dbDelta($sql);
+
+		$this->get_logger()->info('dbDelta ausgeführt', [
+			'table'        => $table,
+			'statements'   => is_array($result) ? array_values($result) : $result,
+			'class'        => __CLASS__,
+			'method'       => __METHOD__,
+		]);
+	}
+
+
+	/**
      * Resets the table by deleting all rows.
      *
      * @return bool True if the table is successfully reset, false otherwise.
      * @throws RuntimeException If WPDB is not defined.
      * @global wpdb $wpdb The WordPress database object.
      */
-    public function reset_table(): bool
-    {
-        global $wpdb;
+	public function reset_table(): bool
+	{
+		global $wpdb;
 
-        if (null === $wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (null === $wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table = $this->get_table_name();
+		$table = $this->get_table_name();
 
-        return $wpdb->query(sprintf("DELETE FROM %s", $table));
-    }
+		$this->get_logger()->warning('Starte Reset der Tabelle', [
+			'table'  => $table,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		$result = $wpdb->query(sprintf("DELETE FROM %s", $table));
+
+		$this->get_logger()->info('Reset der Tabelle abgeschlossen', [
+			'table'         => $table,
+			'affected_rows' => $result,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return (bool) $result;
+	}
+
 
     /**
      * Delete the table from the database.
@@ -244,21 +389,39 @@ class IPLog
      * @global wpdb $wpdb The WordPress database object.
      *
      */
-    public function delete_table(): void
-    {
-        global $wpdb;
+	public function delete_table(): void
+	{
+		global $wpdb;
 
-        if (null === $wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (null === $wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table = $this->get_table_name();
+		$table = $this->get_table_name();
 
-        $wpdb->query(sprintf("DROP TABLE IF EXISTS %s", $table));
+		$this->get_logger()->warning('Lösche Tabelle, falls vorhanden', [
+			'table'  => $table,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-        # clear cron
-        wp_clear_scheduled_hook('weeklyIPClear');
-    }
+		$wpdb->query(sprintf("DROP TABLE IF EXISTS %s", $table));
+
+		$this->get_logger()->info('Tabelle gelöscht und Cron-Job entfernt', [
+			'table' => $table,
+			'hook'  => 'weeklyIPClear',
+			'class' => __CLASS__,
+			'method'=> __METHOD__,
+		]);
+
+		// clear cron
+		wp_clear_scheduled_hook('weeklyIPClear');
+	}
+
 
     /**
      * Deletes records older than the specified creation time.
@@ -268,38 +431,42 @@ class IPLog
      * @return int The number of deleted records.
      * @throws RuntimeException if WPDB is not defined.
      */
-    public function delete_older_than(string $create_time): int
-    {
-        global $wpdb;
+	public function delete_older_than(string $create_time): int
+	{
+		global $wpdb;
 
-        if (null === $wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (null === $wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table = $this->get_table_name();
+		$table = $this->get_table_name();
 
-        return $wpdb->query(sprintf('DELETE FROM %s WHERE createtime < "%s"', $table, $create_time));
-    }
+		$this->get_logger()->warning('Lösche Einträge älter als angegebenes Datum', [
+			'table'       => $table,
+			'create_time' => $create_time,
+			'class'       => __CLASS__,
+			'method'      => __METHOD__,
+		]);
 
-    /**
-     * @return void
-     * @deprecated
-     */
-    public static function deleteTable()
-    {
-        (new IPLog())->delete_table();
-    }
+		$result = $wpdb->query(
+			sprintf('DELETE FROM %s WHERE createtime < "%s"', $table, esc_sql($create_time))
+		);
 
-    /**
-     * Return the Table Name
-     *
-     * @return string
-     * @deprecated
-     */
-    public static function getTableName()
-    {
-        return (new IPLog())->get_table_name();
-    }
+		$this->get_logger()->info('Löschung älterer Einträge abgeschlossen', [
+			'table'         => $table,
+			'create_time'   => $create_time,
+			'affected_rows' => $result,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return (int) $result;
+	}
+
 
     /**
      * Retrieves the table name for storing CF7 IP data.
@@ -310,45 +477,45 @@ class IPLog
      *
      * @throws RuntimeException If WPDB global variable is null.
      */
-    public function get_table_name(): string
-    {
-        global $wpdb;
+	public function get_table_name(): string
+	{
+		global $wpdb;
 
-        if (null === $wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (null === $wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        return $wpdb->prefix . 'f12_cf7_ip';
-    }
+		$table = $wpdb->prefix . 'f12_cf7_ip';
 
-    /**
-     * @return int
-     * @deprecated
-     */
-    public function getId()
-    {
-        return $this->get_id();
-    }
+		$this->get_logger()->debug('Tabellenname ermittelt', [
+			'table'  => $table,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		return $table;
+	}
 
     /**
      * Get the id of the object.
      *
      * @return int The id of the object as an integer.
      */
-    public function get_id(): int
-    {
-        return $this->id;
-    }
+	public function get_id(): int
+	{
+		$this->get_logger()->debug('ID abgefragt', [
+			'id'     => $this->id,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-    /**
-     * @param int $id
-     *
-     * @deprecated
-     */
-    private function setId($id)
-    {
-        $this->set_id($id);
-    }
+		return $this->id;
+	}
+
 
     /**
      * Sets the ID value.
@@ -357,38 +524,36 @@ class IPLog
      *
      * @return void
      */
-    private function set_id(int $id): void
-    {
-        $this->id = $id;
-    }
+	private function set_id(int $id): void
+	{
+		$oldId = $this->id ?? null;
+		$this->id = $id;
 
-    /**
-     * @return string
-     * @deprecated
-     */
-    public function getHash()
-    {
-        return $this->get_hash();
-    }
+		$this->get_logger()->info('ID gesetzt', [
+			'old_id' => $oldId,
+			'new_id' => $id,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+	}
+
 
     /**
      * Returns the hash value associated with this object.
      *
      * @return string The hash value.
      */
-    public function get_hash(): string
-    {
-        return $this->hash;
-    }
+	public function get_hash(): string
+	{
+		$this->get_logger()->debug('Hash abgefragt', [
+			'hash'   => $this->hash,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-    /**
-     * @return string
-     * @deprecated
-     */
-    public function getCreatetime()
-    {
-        return $this->get_create_time();
-    }
+		return $this->hash;
+	}
+
 
     /**
      * Returns the create time associated with this object.
@@ -398,49 +563,67 @@ class IPLog
      *
      * @return string The create time in the format 'Y-m-d H:i:s'.
      */
-    public function get_create_time(): string
-    {
-        if (empty($this->createtime)) {
-            $dt = new \DateTime();
-            $dt->setTimezone(wp_timezone());
-            $this->createtime = $dt->format('Y-m-d H:i:s');
-        }
-        return $this->createtime;
-    }
+	public function get_create_time(): string
+	{
+		if (empty($this->createtime)) {
+			$dt = new \DateTime();
+			$dt->setTimezone(wp_timezone());
+			$this->createtime = $dt->format('Y-m-d H:i:s');
+
+			$this->get_logger()->warning('Create-Time war leer, neuer Wert gesetzt', [
+				'new_value' => $this->createtime,
+				'class'     => __CLASS__,
+				'method'    => __METHOD__,
+			]);
+		} else {
+			$this->get_logger()->debug('Create-Time abgefragt', [
+				'value'  => $this->createtime,
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+		}
+
+		return $this->createtime;
+	}
+
 
     /**
      * Returns the submitted value associated with this object.
      *
      * @return int 0 or 1
      */
-    public function get_submitted(): int
-    {
-        return (int)$this->submitted;
-    }
+	public function get_submitted(): int
+	{
+		$this->get_logger()->debug('Submitted abgefragt', [
+			'submitted' => $this->submitted,
+			'class'     => __CLASS__,
+			'method'    => __METHOD__,
+		]);
 
-    /**
-     * Update the createtime with the current timestamp
-     *
-     * @param string $createtime
-     *
-     * @deprecated
-     */
-    public function setCreatetime()
-    {
-        $this->set_create_time();
-    }
+		return (int) $this->submitted;
+	}
 
     /**
      * Sets the create time for the object.
      *
      * @return void
      */
-    public function set_create_time(): void
-    {
-        $dt = new \DateTime();
-        $dt->setTimezone(wp_timezone());
-        $this->createtime = $dt->format('Y-m-d H:i:s');
-    }
+	public function set_create_time(): void
+	{
+		$oldValue = $this->createtime ?? null;
+
+		$dt = new \DateTime();
+		$dt->setTimezone(wp_timezone());
+		$this->createtime = $dt->format('Y-m-d H:i:s');
+
+		$this->get_logger()->info('Create-Time gesetzt', [
+			'old_value' => $oldValue,
+			'new_value' => $this->createtime,
+			'class'     => __CLASS__,
+			'method'    => __METHOD__,
+		]);
+	}
+
 
     /**
      * Deletes records from the specified table based on provided hash values and submitted flag.
@@ -451,20 +634,49 @@ class IPLog
      *
      * @return int The number of rows affected by the delete operation.
      */
-    public function delete($hash, $previous_hash, $submitted = 0): int
-    {
-        global $wpdb;
+	public function delete($hash, $previous_hash, $submitted = 0): int
+	{
+		global $wpdb;
 
-        if (null === $wpdb) {
-            throw new RuntimeException("WPDB not defined");
-        }
+		if (null === $wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table_name = $this->get_table_name();
+		$table_name = $this->get_table_name();
 
-        $prepare_stmt = sprintf('DELETE FROM %s WHERE (hash="%s" OR hash="%s") AND submitted="%d"', $table_name, $hash, $previous_hash, $submitted);
+		$prepare_stmt = sprintf(
+			'DELETE FROM %s WHERE (hash="%s" OR hash="%s") AND submitted="%d"',
+			$table_name,
+			esc_sql($hash),
+			esc_sql($previous_hash),
+			(int) $submitted
+		);
 
-        return $wpdb->query($prepare_stmt);
-    }
+		$this->get_logger()->warning('Lösche Einträge anhand Hashes', [
+			'table'         => $table_name,
+			'hash'          => $hash,
+			'previous_hash' => $previous_hash,
+			'submitted'     => $submitted,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		$result = $wpdb->query($prepare_stmt);
+
+		$this->get_logger()->info('Löschung abgeschlossen', [
+			'table'         => $table_name,
+			'affected_rows' => $result,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return (int) $result;
+	}
+
 
     /**
      * Saves the object to the database.
@@ -473,42 +685,88 @@ class IPLog
      * @throws RuntimeException if WPDB is not defined or if a database error occurs.
      *
      */
-    public function save(): int
-    {
-        global $wpdb;
+	public function save(): int
+	{
+		global $wpdb;
 
-        if (!$wpdb) {
-            throw new RuntimeException('WPDB not defined');
-        }
+		if (!$wpdb) {
+			$this->get_logger()->error('WPDB not defined', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			throw new \RuntimeException('WPDB not defined');
+		}
 
-        $table_name = $this->get_table_name();
+		$table_name = $this->get_table_name();
 
-        if ($this->id !== 0) {
-            return 0;
-        }
+		if ($this->id !== 0) {
+			$this->get_logger()->warning('Speichern übersprungen: ID bereits gesetzt', [
+				'id'     => $this->id,
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+			return 0;
+		}
 
-        $result = $wpdb->insert($table_name, array(
-            'hash' => $this->get_hash(),
-            'createtime' => $this->get_create_time(),
-            'submitted' => $this->submitted,
-        ));
+		$data = [
+			'hash'       => $this->get_hash(),
+			'createtime' => $this->get_create_time(),
+			'submitted'  => $this->submitted,
+		];
 
-        if ($result === false) {
-            throw new RuntimeException('Database error occurred. Reactivate the plugin to create missing tables.');
-        }
+		$this->get_logger()->debug('Versuche Insert in Tabelle', [
+			'table'  => $table_name,
+			'data'   => $data,
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-        return $result;
-    }
+		$result = $wpdb->insert($table_name, $data);
 
-    /**
+		if ($result === false) {
+			$this->get_logger()->error('Insert fehlgeschlagen', [
+				'table'           => $table_name,
+				'data'            => $data,
+				'wpdb_last_error' => $wpdb->last_error ?? null,
+				'class'           => __CLASS__,
+				'method'          => __METHOD__,
+			]);
+			throw new \RuntimeException('Database error occurred. Reactivate the plugin to create missing tables.');
+		}
+
+		$this->id = (int) $wpdb->insert_id;
+
+		$this->get_logger()->info('Insert erfolgreich', [
+			'table'         => $table_name,
+			'insert_id'     => $this->id,
+			'affected_rows' => (int) $result,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return (int) $result;
+	}
+
+
+	/**
      * Returns the submission timestamp associated with this object.
      *
      * @return int The submission timestamp as a Unix timestamp.
      * @throws \Exception
      */
-    public function get_submission_timestamp(): int
-    {
-        $dt = new \DateTime($this->get_create_time());
-        return $dt->getTimestamp();
-    }
+	public function get_submission_timestamp(): int
+	{
+		$dt = new \DateTime($this->get_create_time());
+		$timestamp = $dt->getTimestamp();
+
+		$this->get_logger()->debug('Submission-Timestamp abgefragt', [
+			'create_time' => $this->get_create_time(),
+			'timestamp'   => $timestamp,
+			'class'       => __CLASS__,
+			'method'      => __METHOD__,
+		]);
+
+		return $timestamp;
+	}
+
 }

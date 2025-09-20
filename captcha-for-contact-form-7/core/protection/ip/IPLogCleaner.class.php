@@ -14,11 +14,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * as defined by the user settings.
  */
 class IPLogCleaner extends BaseModul {
-	public function __construct( CF7Captcha $Controller ) {
-		parent::__construct( $Controller );
+	public function __construct(CF7Captcha $Controller)
+	{
+		parent::__construct($Controller);
 
-		add_action( 'weeklyIPClear', array( $this, 'clean' ) );
+		add_action('weeklyIPClear', [$this, 'clean']);
+
+		$this->get_logger()->info('Instanz erstellt und Hook registriert', [
+			'hook'   => 'weeklyIPClear',
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 	}
+
 
 
 	/**
@@ -26,20 +34,30 @@ class IPLogCleaner extends BaseModul {
 	 *
 	 * @return int The number of records deleted.
 	 */
-	public function clean(): int {
-		$date_time           = new \DateTime( '-3 Weeks' );
-		$date_time_formatted = $date_time->format( 'Y-m-d H:i:s' );
+	public function clean(): int
+	{
+		$date_time = new \DateTime('-3 Weeks');
+		$date_time_formatted = $date_time->format('Y-m-d H:i:s');
 
-		return ( new IPLog() )->delete_older_than( $date_time_formatted );
+		$this->get_logger()->info('Starte Cleanup älterer Logs', [
+			'threshold' => $date_time_formatted,
+			'class'     => __CLASS__,
+			'method'    => __METHOD__,
+		]);
+
+		$deleted = (new IPLog($this->Controller->get_logger()))
+			->delete_older_than($date_time_formatted);
+
+		$this->get_logger()->info('Cleanup abgeschlossen', [
+			'threshold'     => $date_time_formatted,
+			'deleted_rows'  => $deleted,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return $deleted;
 	}
 
-	/**
-	 * @return bool|int
-	 * @deprecated
-	 */
-	public function resetTable() {
-		return $this->reset_table();
-	}
 
 	/**
 	 * Reset the table for IPLog records.
@@ -49,8 +67,21 @@ class IPLogCleaner extends BaseModul {
 	 *
 	 * @return int The number of affected rows after resetting the table.
 	 */
-	public function reset_table(): int {
-		return ( new IPLog() )->reset_table();
-	}
+	public function reset_table(): int
+	{
+		$this->get_logger()->warning('Starte Reset der IPLog-Tabelle', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
+		$result = (new IPLog($this->Controller->get_logger()))->reset_table();
+
+		$this->get_logger()->info('Reset der IPLog-Tabelle abgeschlossen', [
+			'affected_rows' => $result,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return $result;
+	}
 }

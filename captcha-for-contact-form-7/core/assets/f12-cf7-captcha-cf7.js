@@ -3,6 +3,20 @@
  * This will regenerate the Hash and the Captcha Value
  */
 window.f12cf7captcha_cf7 = {
+    showOverlay: function($container) {
+        if ($container.css('position') === 'static') {
+            $container.css('position', 'relative');
+        }
+        if ($container.find('.f12-captcha-overlay').length === 0) {
+            $container.append('<div class="f12-captcha-overlay"></div>');
+        }
+    },
+
+    hideOverlay: function($container) {
+        $container.find('.f12-captcha-overlay').remove();
+    },
+
+
     /**
      * Reload Captchas
      */
@@ -16,12 +30,15 @@ window.f12cf7captcha_cf7 = {
      * Reload Captchas
      */
     reloadCaptcha: function (e) {
-        e.closest('.f12-captcha').find('.f12c').each(function () {
+        var $container = e.closest('.f12-captcha');
+        this.showOverlay($container);
+
+        $container.find('.f12c').each(function () {
             var input_id = jQuery(this).attr('id');
             var hash_id = 'hash_' + input_id;
 
             var hash = jQuery('#' + hash_id);
-            var label = e.closest('.f12-captcha').find('.c-data');
+            var label = $container.find('.c-data');
             var method = jQuery(this).attr('data-method');
 
             jQuery.ajax({
@@ -31,7 +48,7 @@ window.f12cf7captcha_cf7 = {
                     action: 'f12_cf7_captcha_reload',
                     captchamethod: method
                 },
-                success: function (data, textStatus, XMLHttpRequest) {
+                success: function (data) {
                     data = JSON.parse(data);
 
                     if (method == 'image') {
@@ -42,12 +59,16 @@ window.f12cf7captcha_cf7 = {
                     }
                     hash.val(data.hash);
                 },
-                error: function (XMLHttpRequest, textstatus, errorThrown) {
+                complete: function () {
+                    window.f12cf7captcha_cf7.hideOverlay($container);
+                },
+                error: function (xhr, textstatus, errorThrown) {
                     console.log(errorThrown);
                 }
             });
         });
     },
+
 
     /**
      * Reload Timer

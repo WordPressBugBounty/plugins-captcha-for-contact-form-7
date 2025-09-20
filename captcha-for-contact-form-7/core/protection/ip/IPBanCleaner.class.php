@@ -22,10 +22,19 @@ class IPBanCleaner extends BaseModul {
 	 *
 	 * @return void
 	 */
-	public function __construct( CF7Captcha $Controller ) {
-		parent::__construct( $Controller );
-		add_action( 'weeklyIPClear', array( $this, 'clean' ) );
+	public function __construct(CF7Captcha $Controller)
+	{
+		parent::__construct($Controller);
+
+		add_action('weeklyIPClear', [$this, 'clean']);
+
+		$this->get_logger()->info('Instanz erstellt und Hook registriert', [
+			'hook'   => 'weeklyIPClear',
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
 	}
+
 
 	/**
 	 * Cleans IP bans.
@@ -36,27 +45,68 @@ class IPBanCleaner extends BaseModul {
 	 *
 	 * @return bool Returns true if the IP bans were successfully cleaned, false otherwise.
 	 */
-	public function clean() {
-		$date_time           = new \DateTime( '-3 Weeks' );
-		$date_time_formatted = $date_time->format( 'Y-m-d H:i:s' );
+	public function clean()
+	{
+		$date_time = new \DateTime('-3 Weeks');
+		$date_time_formatted = $date_time->format('Y-m-d H:i:s');
 
-		return ( new IPBan() )->delete_older_than( $date_time_formatted );
+		$this->get_logger()->info('Starte Cleanup älterer IP-Bans', [
+			'threshold' => $date_time_formatted,
+			'class'     => __CLASS__,
+			'method'    => __METHOD__,
+		]);
+
+		$ipBan = new IPBan($this->get_logger());
+		$deleted = $ipBan->delete_older_than($date_time_formatted);
+
+		$this->get_logger()->info('Cleanup abgeschlossen', [
+			'deleted_rows' => $deleted,
+			'threshold'    => $date_time_formatted,
+			'class'        => __CLASS__,
+			'method'       => __METHOD__,
+		]);
+
+		return $deleted;
 	}
+
 
 	/**
 	 * Resets the table in the IPBan class.
 	 *
 	 * @return int The number of rows affected by the table reset.
 	 */
-	public function reset_table(): int {
-		return ( new IPBan() )->reset_table();
+	public function reset_table(): int
+	{
+		$this->get_logger()->warning('Starte Reset der IPBan-Tabelle', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		$ipBan = new IPBan($this->get_logger());
+		$result = $ipBan->reset_table();
+
+		$this->get_logger()->info('Reset der IPBan-Tabelle abgeschlossen', [
+			'affected_rows' => $result,
+			'class'         => __CLASS__,
+			'method'        => __METHOD__,
+		]);
+
+		return $result;
 	}
+
 
 	/**
 	 * @return int
 	 * @deprecated
 	 */
-	public function resetTable() {
+	public function resetTable()
+	{
+		$this->get_logger()->debug('resetTable() wurde aufgerufen (Alias von reset_table)', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
 		return $this->reset_table();
 	}
+
 }

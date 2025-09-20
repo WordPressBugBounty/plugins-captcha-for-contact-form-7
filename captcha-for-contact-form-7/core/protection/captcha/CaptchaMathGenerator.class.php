@@ -41,30 +41,27 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	/**
 	 * constructor.
 	 */
-	public function __construct( CF7Captcha $Controller ) {
-		parent::__construct( $Controller, 0 );
+	public function __construct(CF7Captcha $Controller)
+	{
+		parent::__construct($Controller, 0);
+
+		$this->get_logger()->debug(
+			"__construct(): Initialisierung gestartet",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
 
 		$this->init();
-	}
 
-	/**
-	 * Retrieves the value of number 1.
-	 *
-	 * @return int The value of number 1.
-	 */
-	public function get_number_1(): int {
-		return $this->_number_1;
-	}
-
-	/**
-	 * Gets the second number for the captcha.
-	 *
-	 * This method returns the second number used in the captcha calculation.
-	 *
-	 * @return int The second number for the captcha.
-	 */
-	public function get_number_2(): int {
-		return $this->_number_2;
+		$this->get_logger()->info(
+			"__construct(): Initialisierung abgeschlossen",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
 	}
 
 	/**
@@ -76,7 +73,28 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 *
 	 * @return string The method used for the captcha calculation. Defaults: +,-,*
 	 */
-	public function get_method(): string {
+	public function get_method(): string
+	{
+		if (empty($this->_method)) {
+			$this->get_logger()->warning(
+				"get_method(): Keine Methode gesetzt",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__
+				]
+			);
+			return '';
+		}
+
+		$this->get_logger()->debug(
+			"get_method(): Methode zurückgegeben",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__,
+				'method' => $this->_method
+			]
+		);
+
 		return $this->_method;
 	}
 
@@ -91,20 +109,36 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 *
 	 * @return int The randomly generated number.
 	 */
-	private function generate_number( $min, $max ) {
-		return rand( $min, $max );
+	private function generate_number($min, $max): int
+	{
+		$number = rand($min, $max);
+
+		$this->get_logger()->debug(
+			"generate_number(): Zufallszahl generiert",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__,
+				'min'    => $min,
+				'max'    => $max,
+				'result' => $number
+			]
+		);
+
+		return $number;
 	}
+
 
 	/**
 	 * Initializes the captcha by generating random numbers, selecting a method and calculating the result.
 	 */
-	private function init() {
-		$this->_number_1 = $this->generate_number( 5, 10 );
-		$this->_number_2 = $this->generate_number( 1, 5 );
+	private function init(): void
+	{
+		$this->_number_1 = $this->generate_number(5, 10);
+		$this->_number_2 = $this->generate_number(1, 5);
 
-		$this->_method = $this->_allowed_method[ $this->generate_number( 0, 2 ) ];
+		$this->_method = $this->_allowed_method[$this->generate_number(0, 2)];
 
-		switch ( $this->_method ) {
+		switch ($this->_method) {
 			case '*':
 				$this->_captcha = $this->_number_1 * $this->_number_2;
 				break;
@@ -116,25 +150,53 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 				$this->_captcha = $this->_number_1 + $this->_number_2;
 				break;
 		}
+
+		$this->get_logger()->debug(
+			"init(): Mathe-Captcha initialisiert",
+			[
+				'plugin'   => 'f12-cf7-captcha',
+				'class'    => __CLASS__,
+				'number_1' => $this->_number_1,
+				'number_2' => $this->_number_2,
+				'method'   => $this->_method,
+				'captcha'  => $this->_captcha
+			]
+		);
 	}
+
 
 	/**
 	 * Retrieves the value of captcha.
 	 *
 	 * @return string The value of captcha.
 	 */
-	public function get(): string {
-		return $this->_captcha;
-	}
+	public function get(): string
+	{
+		if (empty($this->_captcha)) {
+			$this->get_logger()->warning(
+				"get(): Kein Captcha gesetzt",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__
+				]
+			);
+			return '';
+		}
 
-	/**
-	 * Generate the Captcha
-	 *
-	 * @return string
-	 * @deprecated
-	 */
-	public function getCalculation() {
-		return $this->get_calculation();
+		// Maskierung: z. B. nur Länge anzeigen
+		$length = strlen((string) $this->_captcha);
+
+		$this->get_logger()->debug(
+			"get(): Captcha-Wert zurückgegeben",
+			[
+				'plugin'  => 'f12-cf7-captcha',
+				'class'   => __CLASS__,
+				'length'  => $length,
+				'type'    => is_numeric($this->_captcha) ? 'numeric' : 'string'
+			]
+		);
+
+		return (string) $this->_captcha;
 	}
 
 	/**
@@ -147,17 +209,25 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 *
 	 * @return string The calculation string for the captcha.
 	 */
-	public function get_calculation(): string {
-		return sprintf( '<span class="captcha-calculation">%d %s %d = ?</span>', $this->_number_1, $this->_method, $this->_number_2 );
-	}
+	public function get_calculation(): string
+	{
+		$calculation = sprintf(
+			'<span class="captcha-calculation">%d %s %d = ?</span>',
+			$this->_number_1,
+			$this->_method,
+			$this->_number_2
+		);
 
-	/**
-	 * @deprecated
-	 */
-	public static function validate( $captcha_code, $captcha_hash ) {
-		$Math_Generator = new CaptchaMathGenerator();
+		$this->get_logger()->debug(
+			"get_calculation(): Mathe-Captcha erstellt",
+			[
+				'plugin'   => 'f12-cf7-captcha',
+				'class'    => __CLASS__,
+				'formula'  => sprintf("%d %s %d = ?", $this->_number_1, $this->_method, $this->_number_2)
+			]
+		);
 
-		return $Math_Generator->is_valid( $captcha_code, $captcha_hash );
+		return $calculation;
 	}
 
 	/**
@@ -173,47 +243,78 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 *
 	 * @return bool Returns true if the captcha code is valid and the captcha is marked as validated, false
 	 *              otherwise.
+	 * @throws \Exception
 	 */
-	public function is_valid( string $captcha_code, string $captcha_hash ): bool {
-		/**
-		 * @var UserData $User_Data
-		 */
-		$User_Data  = $this->Controller->get_modul( 'user-data' );
+	public function is_valid(string $captcha_code, string $captcha_hash): bool
+	{
+		/** @var UserData $User_Data */
+		$User_Data  = $this->Controller->get_modul('user-data');
 		$ip_address = $User_Data->get_ip_address();
 
+		$this->get_logger()->debug(
+			"is_valid(): Starte Validierung",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__,
+				'ip'     => $ip_address,
+				'hash'   => $captcha_hash
+			]
+		);
 
-		$Captcha = new Captcha( $ip_address );
-		$Captcha = $Captcha->get_by_hash( $captcha_hash );
+		$Captcha = new Captcha($this->Controller->get_logger(), $ip_address);
+		$Captcha = $Captcha->get_by_hash($captcha_hash);
 
-		if ( ! $Captcha || $Captcha->get_validated() == 1 ) {
+		if (!$Captcha) {
+			$this->get_logger()->warning(
+				"is_valid(): Kein Captcha für Hash gefunden",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__,
+					'ip'     => $ip_address
+				]
+			);
 			return false;
 		}
 
-		$Captcha->set_validated( 1 );
+		if ($Captcha->get_validated() == 1) {
+			$this->get_logger()->info(
+				"is_valid(): Captcha bereits validiert → ungültig",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__,
+					'id'     => $Captcha->get_id()
+				]
+			);
+			return false;
+		}
+
+		$Captcha->set_validated(1);
 		$Captcha->save();
 
-		if ( $captcha_code != $Captcha->get_code() ) {
+		if ($captcha_code !== $Captcha->get_code()) {
+			$this->get_logger()->warning(
+				"is_valid(): Code stimmt nicht überein → ungültig",
+				[
+					'plugin'    => 'f12-cf7-captcha',
+					'class'     => __CLASS__,
+					'id'        => $Captcha->get_id(),
+					'submitted' => $captcha_code,
+					'expected'  => $Captcha->get_code()
+				]
+			);
 			return false;
 		}
 
+		$this->get_logger()->info(
+			"is_valid(): Captcha erfolgreich validiert",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__,
+				'id'     => $Captcha->get_id()
+			]
+		);
+
 		return true;
-	}
-
-	/**
-	 * @param $fieldname
-	 * @param $args [] [
-	 *              'classes'         => '',
-	 *              'wrapper_classes' => '',
-	 *              'attributes'      => []
-	 *              ]
-	 *
-	 * @return mixed|null
-	 * @deprecated
-	 */
-	public static function get_form_field( $fieldname, $args = [] ) {
-		$Captcha = new CaptchaMathGenerator();
-
-		return $Captcha->get_field( $fieldname, $args );
 	}
 
 	/**
@@ -269,8 +370,22 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		 */
 		if ( $this->Captcha_Session != null ) {
 			$Captcha_Session = $this->Captcha_Session;
+			$this->get_logger()->debug(
+				"get_field(math): Vorhandene Captcha-Session wiederverwendet",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'ip'     => $ip_address,
+				]
+			);
 		} else {
-			$Captcha_Session = new Captcha( $ip_address );
+			$Captcha_Session = new Captcha( $this->Controller->get_logger(), $ip_address );
+			$this->get_logger()->debug(
+				"get_field(math): Neue Captcha-Session erstellt",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'ip'     => $ip_address,
+				]
+			);
 		}
 
 		/*
@@ -338,9 +453,21 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		 */
 		$template = (int) $this->Controller->get_settings( 'protection_captcha_template', 'global' );
 
-		if ( $template != 0 && $template != 1 && $template != 2 ) {
+		if (!in_array($template, [0, 1, 2], true)) {
 			$template = 0;
 		}
+
+		$this->get_logger()->info(
+			"get_field(math): Captcha-Feld wird generiert",
+			[
+				'plugin'     => 'f12-cf7-captcha',
+				'field_name' => $field_name,
+				'template'   => $template,
+				'hash_id'    => substr($hash_id, 0, 6) . '...',
+				'captcha_id' => substr($captcha_id, 0, 6) . '...',
+				'formula'    => sprintf("%d %s %d = ?", $this->_number_1, $this->_method, $this->_number_2)
+			]
+		);
 
 		$captcha = $TemplateController->get_plugin_template( 'captcha/template-' . $template, [
 			'hash_id'            => $hash_id,
@@ -378,7 +505,20 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		 *
 		 * @since 1.0.0
 		 */
-		return apply_filters( 'f12-cf7-captcha-get-form-field-math', $captcha, $field_name, $label, $Captcha_Session, $atts['classes'] );
+		$filtered = apply_filters( 'f12-cf7-captcha-get-form-field-math', $captcha, $field_name, $label, $Captcha_Session, $atts['classes'] );
+
+
+		if ($filtered !== $captcha) {
+			$this->get_logger()->debug(
+				"get_field(math): Captcha-Feld durch Filter modifiziert",
+				[
+					'plugin'     => 'f12-cf7-captcha',
+					'field_name' => $field_name
+				]
+			);
+		}
+
+		return $filtered;
 	}
 
 	/**
@@ -388,7 +528,20 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 *
 	 * @return string The AJAX response.
 	 */
-	function get_ajax_response(): string {
-		return $this->get_calculation();
+	public function get_ajax_response(): string
+	{
+		$calculation = $this->get_calculation();
+
+		$this->get_logger()->debug(
+			"get_ajax_response(math): Captcha-Formel an Ajax zurückgegeben",
+			[
+				'plugin'  => 'f12-cf7-captcha',
+				'class'   => __CLASS__,
+				'formula' => sprintf("%d %s %d = ?", $this->_number_1, $this->_method, $this->_number_2)
+			]
+		);
+
+		return $calculation;
 	}
+
 }

@@ -3,6 +3,7 @@
 namespace f12_cf7_captcha\core\protection\captcha;
 
 use f12_cf7_captcha\CF7Captcha;
+use f12_cf7_captcha\core\protection\javascript\Javascript_Validator;
 use f12_cf7_captcha\core\protection\javascript\JavascriptValidator;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,39 +20,82 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	/**
 	 * constructor.
 	 */
-	public function __construct( CF7Captcha $Controller ) {
-		parent::__construct( $Controller, 0 );
+	public function __construct(CF7Captcha $Controller)
+	{
+		parent::__construct($Controller, 0);
+
+		$this->get_logger()->debug(
+			"__construct(): Initialisierung gestartet",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
 
 		$this->init();
+
+		$this->get_logger()->info(
+			"__construct(): Initialisierung abgeschlossen",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
 	}
+
 
 	/**
 	 * Init the captcha
 	 */
-	private function init() {
+	private function init(): void
+	{
 		$this->_captcha = '';
+
+		$this->get_logger()->debug(
+			"init(): Captcha zurückgesetzt",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
 	}
+
 
 	/**
 	 * Get the Value of the captcha
 	 *
 	 * @return string|void
 	 */
-	public function get() {
+	public function get(): string
+	{
+		if (empty($this->_captcha)) {
+			$this->get_logger()->warning(
+				"get(): Kein Captcha gesetzt",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__
+				]
+			);
+			return '';
+		}
+
+		// Maskieren: nur erste und letzte Stelle sichtbar
+		$length = strlen($this->_captcha);
+		$masked = substr($this->_captcha, 0, 1)
+		          . str_repeat('*', max(0, $length - 2))
+		          . substr($this->_captcha, -1);
+
+		$this->get_logger()->debug(
+			"get(): Captcha zurückgegeben",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__,
+				'masked' => $masked,
+				'length' => $length
+			]
+		);
+
 		return $this->_captcha;
-	}
-
-	/**
-	 * @param $captcha_code
-	 *
-	 * @return bool
-	 * @deprecated
-	 */
-	public static function validate( $captcha_code ) {
-		$Timer    = JavascriptValidator::get_instance();
-		$Honeypot = new CaptchaHoneypotGenerator( $Timer );
-
-		return $Honeypot->is_valid( $captcha_code );
 	}
 
 	/**
@@ -61,28 +105,25 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	 *
 	 * @return bool Returns true if the captcha code is valid, false otherwise.
 	 */
-	public function is_valid( string $captcha_code, string $captcha_hash = '' ): bool {
-		if ( ! empty( $captcha_code ) ) {
-			return false;
-		}
+	public function is_valid(string $captcha_code, string $captcha_hash = ''): bool
+	{
+		$result = empty($captcha_code);
 
-		return true;
-	}
+		// Maskieren: nur 1. und letzte Stelle sichtbar
+		$length = strlen($captcha_code);
 
+		$this->get_logger()->debug(
+			"is_valid(): Captcha validiert",
+			[
+				'plugin'       => 'f12-cf7-captcha',
+				'code'  => $captcha_code,
+				'length'       => $length,
+				'hash_present' => !empty($captcha_hash) ? 'yes' : 'no',
+				'result'       => $result ? 'valid' : 'invalid'
+			]
+		);
 
-	/**
-	 * Retrieves a form field for a given field name.
-	 *
-	 * @param string $fieldname The name of the form field to generate.
-	 *
-	 * @return string The generated form field HTML.
-	 * @deprecated
-	 */
-	public static function get_form_field( $fieldname ) {
-		$Timer    = JavascriptValidator::get_instance();
-		$Honeypot = new CaptchaHoneypotGenerator( $Timer );
-
-		return $Honeypot->get_field( $fieldname );
+		return $result;
 	}
 
 	/**
@@ -95,6 +136,14 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	public function get_field( string $field_name ): string {
 		$captcha = sprintf( '<input id="%s" type="text" style="visibility:hidden!important; opacity:1!important; height:0!important; width:0!important; margin:0!important; padding:0!important;" name="%s" value=""/>', esc_attr( $field_name ), esc_attr( $field_name ) );
 
+		$this->get_logger()->debug(
+			"get_field(): Honeypot-Feld generiert",
+			[
+				'plugin'     => 'f12-cf7-captcha',
+				'field_name' => $field_name
+			]
+		);
+
 		/**
 		 * Update Honeypot Field before output
 		 *
@@ -105,7 +154,19 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		 *
 		 * @since 1.0.0
 		 */
-		return apply_filters( 'f12-cf7-captcha-get-form-field-honeypot', $captcha, $field_name );
+		$filtered = apply_filters( 'f12-cf7-captcha-get-form-field-honeypot', $captcha, $field_name );
+
+		if ($filtered !== $captcha) {
+			$this->get_logger()->info(
+				"get_field(): Honeypot-Feld durch Filter angepasst",
+				[
+					'plugin'     => 'f12-cf7-captcha',
+					'field_name' => $field_name
+				]
+			);
+		}
+
+		return $filtered;
 	}
 
 	/**
@@ -113,7 +174,20 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	 *
 	 * @return string The AJAX response.
 	 */
-	function get_ajax_response(): string {
-		return '';
+	public function get_ajax_response(): string
+	{
+		$response = '';
+
+		$this->get_logger()->debug(
+			"get_ajax_response(): Ajax-Response erzeugt",
+			[
+				'plugin'   => 'f12-cf7-captcha',
+				'class'    => __CLASS__,
+				'response' => empty($response) ? '(leer)' : '(gesetzt)'
+			]
+		);
+
+		return $response;
 	}
+
 }

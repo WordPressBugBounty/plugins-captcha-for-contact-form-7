@@ -31,7 +31,7 @@
         </div>
 
         <!-- CAPTCHA Reload mit Tastenzugänglichkeit -->
-        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'CAPTCHA neu laden', 'captcha-for-contact-form-7' ); ?>">
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Refresh CAPTCHA', 'captcha-for-contact-form-7' ); ?>">
 			<?php echo $captcha_reload; ?>
         </div>
     </div>
@@ -56,6 +56,6 @@
 
     <!-- Screenreader-Hinweise -->
     <p id="captcha-instructions" class="screen-reader-text">
-		<?php esc_html_e( 'Bitte geben Sie die im CAPTCHA angezeigten Zeichen ein, um sicherzustellen, dass Sie ein Mensch sind.', 'captcha-for-contact-form-7' ); ?>
+		<?php esc_html_e( 'Please enter the characters shown in the CAPTCHA to verify that you are human.', 'captcha-for-contact-form-7' ); ?>
     </p>
 </div>

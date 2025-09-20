@@ -25,11 +25,11 @@
         <div class="c-data" aria-live="polite" aria-describedby="captcha-instructions">
 			<?php echo $captcha_data; ?>
         </div>
-        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'CAPTCHA neu laden' ); ?>">
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Reload CAPTCHA' ); ?>">
 			<?php echo $captcha_reload; ?>
         </div>
         <p id="captcha-instructions" class="screen-reader-text">
-			<?php esc_html_e( 'Bitte geben Sie die im CAPTCHA angezeigten Zeichen ein, um sicherzustellen, dass Sie ein Mensch sind.' ); ?>
+			<?php esc_html_e( 'Please enter the characters shown in the CAPTCHA to ensure that you are human.' ); ?>
         </p>
     </div>
 

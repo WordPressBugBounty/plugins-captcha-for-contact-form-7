@@ -3,6 +3,7 @@
 namespace f12_cf7_captcha\core;
 
 use f12_cf7_captcha\CF7Captcha;
+use Forge12\Shared\LoggerInterface;
 
 abstract class BaseController {
 	/**
@@ -40,11 +41,31 @@ abstract class BaseController {
 	 *
 	 * @return void
 	 */
-	public function __construct( CF7Captcha $Controller, Log_WordPress $Logger ) {
-		$this->Controller = $Controller;
-		$this->Logger     = $Logger;
+	public function __construct(CF7Captcha $Controller, Log_WordPress $Logger)
+	{
+		// Die Basisklasse des Controllers hat wahrscheinlich bereits eine Methode zum Abrufen des Loggers.
+		// Daher ist es besser, diese zu verwenden, anstatt einen neuen Logger als Parameter zu übergeben.
+		// Aber basierend auf dem bereitgestellten Code, passen wir die Implementierung an.
 
-		add_action( 'f12_cf7_captcha_compatibilities_loaded', array( $this, 'wp_init' ) );
+		$this->Controller = $Controller;
+		$this->Logger = $Logger;
+
+		$this->get_logger()->info('Konstruktor gestartet.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		add_action('f12_cf7_captcha_compatibilities_loaded', array($this, 'wp_init'));
+		$this->get_logger()->debug('Hook "f12_cf7_captcha_compatibilities_loaded" für die Methode "wp_init" hinzugefügt.');
+
+		$this->get_logger()->info('Konstruktor abgeschlossen.');
+	}
+
+	/**
+	 * @return LoggerInterface
+	 */
+	public function get_logger(): LoggerInterface {
+		return $this->Controller->get_logger();
 	}
 
 	/**
@@ -52,7 +73,14 @@ abstract class BaseController {
 	 *
 	 * @return string The name of the object.
 	 */
-	public function get_name(): string {
+	public function get_name(): string
+	{
+		$this->get_logger()->debug('Rufe den Namen der Modul-Instanz ab.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'name' => $this->name,
+		]);
+
 		return $this->name;
 	}
 
@@ -61,7 +89,14 @@ abstract class BaseController {
 	 *
 	 * @return string The description of the object.
 	 */
-	public function get_description():string{
+	public function get_description(): string
+	{
+		$this->get_logger()->debug('Rufe die Beschreibung des Moduls ab.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'description' => $this->description,
+		]);
+
 		return $this->description;
 	}
 
@@ -70,7 +105,14 @@ abstract class BaseController {
 	 *
 	 * @return string The ID of the instance.
 	 */
-	public function get_id(): string {
+	public function get_id(): string
+	{
+		$this->get_logger()->debug('Rufe die ID des Objekts ab.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'id' => $this->id,
+		]);
+
 		return $this->id;
 	}
 
@@ -81,10 +123,23 @@ abstract class BaseController {
 	 *
 	 * @return void
 	 */
-	public function wp_init(): void {
-		if ( $this->is_enabled() ) {
+	public function wp_init(): void
+	{
+		$this->get_logger()->info('Führe die WordPress-Initialisierungsmethode aus.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		// Überprüfe, ob die Funktionalität über die Einstellungen aktiviert ist.
+		if ($this->is_enabled()) {
+			$this->get_logger()->debug('Funktionalität ist aktiviert. Starte die Initialisierung.');
+			// Rufe die on_init-Methode auf, die die Hauptinitialisierungslogik enthält.
 			$this->on_init();
+		} else {
+			$this->get_logger()->info('Funktionalität ist deaktiviert. Initialisierung wird übersprungen.');
 		}
+
+		$this->get_logger()->info('WordPress-Initialisierungsmethode abgeschlossen.');
 	}
 
 	protected abstract function on_init(): void;

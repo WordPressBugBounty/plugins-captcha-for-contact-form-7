@@ -4,6 +4,9 @@ namespace f12_cf7_captcha\core;
 
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\log\Array_Formatter;
+use forge12\contactform7\CF7Captcha\core\log\Log_Item;
+use Forge12\Shared\Logger;
+use Forge12\Shared\LoggerInterface;
 use RuntimeException;
 use WP_Post;
 
@@ -11,9 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+require_once( plugin_dir_path( dirname(dirname(__FILE__) )) . '/logger/logger.php' );
+
 require_once( 'Array_Formatter.class.php' );
 
 class Log_WordPress {
+	/**
+	 * @var LoggerInterface
+	 */
+	private LoggerInterface $logger;
 	/**
 	 * The current instance
 	 *
@@ -40,24 +50,60 @@ class Log_WordPress {
 	}
 
 	/**
+	 * Get the Logger for System Logs
+	 *
+	 * @return LoggerInterface
+	 */
+	public function get_logger(): LoggerInterface {
+		return $this->logger;
+	}
+
+	/**
 	 * The constructor, ensure that only one instance could be created
 	 */
 	private function __construct() {
-		/*
-		 * Load Taxonomy
-		 */
-		add_action( 'init', [ $this, 'wp_register_taxonomy' ] );
+		try {
+			$this->logger = Logger::getInstance();
 
-		/*
-		 * Load Post Type
-		 */
-		add_action( 'init', [ $this, 'wp_register_post_type' ] );
+			/*
+			 * Load Taxonomy
+			 */
+			add_action( 'init', [ $this, 'wp_register_taxonomy' ] );
+			$this->logger->debug( "Hook registriert: init -> wp_register_taxonomy", [
+				'plugin' => 'f12-cf7-captcha'
+			] );
 
-		/*
-		 * Add Menu Entries for Logger
-		 */
-		add_action( 'admin_menu', [ $this, 'wp_set_admin_submenu_page' ] );
-		add_filter( 'parent_file', [ $this, 'wp_set_admin_menu_active' ] );
+			/*
+			 * Load Post Type
+			 */
+			add_action( 'init', [ $this, 'wp_register_post_type' ] );
+			$this->logger->debug( "Hook registriert: init -> wp_register_post_type", [
+				'plugin' => 'f12-cf7-captcha'
+			] );
+
+			/*
+			 * Add Menu Entries for Logger
+			 */
+			add_action( 'admin_menu', [ $this, 'wp_set_admin_submenu_page' ] );
+			$this->logger->debug( "Hook registriert: admin_menu -> wp_set_admin_submenu_page", [
+				'plugin' => 'f12-cf7-captcha'
+			] );
+
+			add_filter( 'parent_file', [ $this, 'wp_set_admin_menu_active' ] );
+			$this->logger->debug( "Hook registriert: parent_file -> wp_set_admin_menu_active", [
+				'plugin' => 'f12-cf7-captcha'
+			] );
+		} catch ( \Throwable $e ) {
+			// Fehler sofort im Log dokumentieren
+			if ( isset( $this->logger ) ) {
+				$this->logger->error( "Fehler beim Initialisieren des Logger-Moduls", [
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => static::class,
+					'error'  => $e->getMessage()
+				] );
+			}
+			throw $e; // wichtig: Fehler nicht verschlucken
+		}
 	}
 
 	/**
@@ -67,8 +113,23 @@ class Log_WordPress {
 	 *
 	 */
 	public function wp_set_admin_submenu_page(): void {
-		add_submenu_page( 'f12-cf7-captcha', __('Log Entries', 'captcha-for-contact-form-7'), __('Log Entries', 'captcha-for-contact-form-7'), 'edit_pages', 'edit.php?post_type=f12_captcha_log' );
+		add_submenu_page(
+			'f12-cf7-captcha',
+			__( 'Log Entries', 'captcha-for-contact-form-7' ),
+			__( 'Log Entries', 'captcha-for-contact-form-7' ),
+			'edit_pages',
+			'edit.php?post_type=f12_captcha_log'
+		);
+
+		$this->get_logger()->debug("Admin-Submenu für Logs registriert", [
+			'plugin'     => 'f12-cf7-captcha',
+			'menu_slug'  => 'f12-cf7-captcha',
+			'page_title' => 'Log Entries',
+			'capability' => 'edit_pages',
+			'target'     => 'f12_captcha_log'
+		]);
 	}
+
 
 	/**
 	 * Sets the active menu item in the WordPress Admin menu based on the parent file.
@@ -85,17 +146,34 @@ class Log_WordPress {
 		global $submenu_file, $current_screen;
 
 		if ( ! $current_screen ) {
-			throw new RuntimeException( 'Current Screen is not defined' );
+			$this->get_logger()->error("Admin-Menü konnte nicht gesetzt werden: current_screen fehlt", [
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => static::class
+			]);
+			throw new \RuntimeException('Current Screen is not defined');
 		}
 
-		// Set correct active/current menu and submenu in the WordPress Admin menu for the "example_cpt" Add-New/Edit/List
 		if ( $current_screen->post_type === 'f12_captcha_log' ) {
 			$submenu_file = 'edit.php?post_type=f12_captcha_log';
 			$parent_file  = 'f12-cf7-captcha';
+
+			$this->get_logger()->debug("Admin-Menü aktiv gesetzt", [
+				'plugin'    => 'f12-cf7-captcha',
+				'post_type' => $current_screen->post_type,
+				'submenu'   => $submenu_file,
+				'parent'    => $parent_file
+			]);
+		} else {
+			$this->get_logger()->debug("Admin-Menü nicht geändert", [
+				'plugin'    => 'f12-cf7-captcha',
+				'post_type' => $current_screen->post_type,
+				'parent'    => $parent_file
+			]);
 		}
 
 		return $parent_file;
 	}
+
 
 	/**
 	 * Register the custom post type for Captcha Log.
@@ -147,41 +225,76 @@ class Log_WordPress {
 			'menu_name'     => _x( 'Status', 'Admin Menu text', 'captcha-for-contact-form-7' ),
 		);
 
-		register_taxonomy( 'log_status', array( 'deals' ), array(
-			'hierarchical'      => false,
-			'labels'            => $labels,
-			'show_ui'           => true,
-			'show_admin_column' => true,
-			'query_var'         => true,
-			'public'            => false,
-		) );
+		try {
+			register_taxonomy( 'log_status', array( 'deals' ), array(
+				'hierarchical'      => false,
+				'labels'            => $labels,
+				'show_ui'           => true,
+				'show_admin_column' => true,
+				'query_var'         => true,
+				'public'            => false,
+			) );
+
+			$this->get_logger()->info("Taxonomie registriert", [
+				'plugin'     => 'f12-cf7-captcha',
+				'taxonomy'   => 'log_status',
+				'post_types' => ['deals']
+			]);
+		} catch (\Throwable $e) {
+			$this->get_logger()->error("Fehler beim Registrieren der Taxonomie", [
+				'plugin'   => 'f12-cf7-captcha',
+				'taxonomy' => 'log_status',
+				'error'    => $e->getMessage()
+			]);
+			throw $e;
+		}
 
 		/*
 		 * Create the default taxonomies if not exists
 		 */
-		$terms = get_terms( 'log_status' );
-
+		$terms = get_terms('log_status');
 		$defaultTerms = [ 'spam' => 'Spam', 'verified' => 'Verified' ];
 
-		foreach ( $terms as $term ) {
-			foreach ( $defaultTerms as $slug => $l10n ) {
-				if ( $term->slug == $slug ) {
-					unset( $defaultTerms[ $slug ] );
+		foreach ($terms as $term) {
+			foreach ($defaultTerms as $slug => $l10n) {
+				if ($term->slug == $slug) {
+					unset($defaultTerms[$slug]);
 				}
 			}
 		}
 
-		if ( empty( $defaultTerms ) ) {
+		if (empty($defaultTerms)) {
+			$this->get_logger()->debug("Alle Default-Terme bereits vorhanden", [
+				'plugin'   => 'f12-cf7-captcha',
+				'taxonomy' => 'log_status'
+			]);
 			return;
 		}
 
 		/*
 		 * Add default data to the term
 		 */
-		foreach ( $defaultTerms as $slug => $l10n ) {
-			wp_insert_term( $l10n, 'log_status', [ 'slug' => $slug ] );
+		foreach ($defaultTerms as $slug => $l10n) {
+			$result = wp_insert_term($l10n, 'log_status', ['slug' => $slug]);
+
+			if (is_wp_error($result)) {
+				$this->get_logger()->error("Fehler beim Anlegen des Default-Terms", [
+					'plugin'   => 'f12-cf7-captcha',
+					'taxonomy' => 'log_status',
+					'term'     => $slug,
+					'error'    => $result->get_error_message()
+				]);
+			} else {
+				$this->get_logger()->info("Default-Term angelegt", [
+					'plugin'   => 'f12-cf7-captcha',
+					'taxonomy' => 'log_status',
+					'term'     => $slug,
+					'name'     => $l10n
+				]);
+			}
 		}
 	}
+
 
 	/**
 	 * Check if the logging is enabled.
@@ -190,8 +303,16 @@ class Log_WordPress {
 	 *
 	 * @since 1.12.3
 	 */
-	public function is_logging_enabled() {
-		return (int) CF7Captcha::get_instance()->get_settings( 'protection_log_enable', 'global' );
+	public function is_logging_enabled(): bool {
+		$enabled = (int) CF7Captcha::get_instance()->get_settings('protection_log_enable', 'global') === 1;
+
+		// Optional Debug-Log
+		$this->get_logger()->debug("Logging Status geprüft", [
+			'plugin'  => 'f12-cf7-captcha',
+			'enabled' => $enabled
+		]);
+
+		return $enabled;
 	}
 
 	/**
@@ -201,15 +322,25 @@ class Log_WordPress {
 	 *
 	 * @since 1.12.3
 	 */
-	public function get_timezone_id() {
-		$timezone_id = get_option( 'timezone_string' );
+	public function get_timezone_id(): string {
+		$timezone_id = get_option('timezone_string');
 
-		if ( empty( $timezone_id ) ) {
+		if (empty($timezone_id)) {
 			$timezone_id = 'Europe/Berlin';
+			$this->get_logger()->debug("Keine Zeitzone in WP konfiguriert, Fallback gesetzt", [
+				'plugin'   => 'f12-cf7-captcha',
+				'timezone' => $timezone_id
+			]);
+		} else {
+			$this->get_logger()->debug("Zeitzone geladen", [
+				'plugin'   => 'f12-cf7-captcha',
+				'timezone' => $timezone_id
+			]);
 		}
 
 		return $timezone_id;
 	}
+
 
 	/**
 	 * maybe_log
@@ -229,6 +360,10 @@ class Log_WordPress {
 		 * Skip if logging is disabled
 		 */
 		if ( ! $this->is_logging_enabled() ) {
+			$this->get_logger()->debug("Logging übersprungen – deaktiviert", [
+				'plugin' => 'f12-cf7-captcha',
+				'type'   => $type
+			]);
 			return false;
 		}
 
@@ -342,6 +477,11 @@ class Log_WordPress {
 		if ( ! is_numeric( $post_id ) || 0 === $post_id ) {
 			$this->last_insert_id = 0;
 
+			$this->get_logger()->error("Log konnte nicht gespeichert werden", [
+				'plugin'   => 'f12-cf7-captcha',
+				'type'     => $type,
+				'title'    => $log_title
+			]);
 			return false;
 		}
 
@@ -358,7 +498,17 @@ class Log_WordPress {
 		 * Add Taxonomy Status
 		 */
 		wp_set_object_terms( $post_id, $log_status, 'log_status' );
-
+		/*
+		 * Write to technical log
+		 */
+		$this->get_logger()->info("Logeintrag erstellt", [
+			'plugin'   => 'f12-cf7-captcha',
+			'type'     => $type,
+			'post_id'  => $post_id,
+			'status'   => $log_status,
+			'title'    => $log_title,
+			'preview'  => mb_substr(strip_tags($post_content), 0, 100) . (strlen($post_content) > 100 ? '...' : '')
+		]);
 		return true;
 	}
 
@@ -369,11 +519,30 @@ class Log_WordPress {
 	 */
 	public function get_last_entry(): ?WP_Post {
 		if ( $this->last_insert_id == 0 ) {
+			$this->get_logger()->debug("Kein letzter Log-Eintrag vorhanden", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
 			return null;
 		}
 
-		return get_post( $this->last_insert_id );
+		$post = get_post( $this->last_insert_id );
+
+		if ( $post instanceof \WP_Post ) {
+			$this->get_logger()->debug("Letzter Log-Eintrag geladen", [
+				'plugin' => 'f12-cf7-captcha',
+				'post_id'=> $this->last_insert_id,
+				'title'  => $post->post_title ?? 'unknown'
+			]);
+			return $post;
+		}
+
+		$this->get_logger()->error("Fehler: Letzter Log-Eintrag konnte nicht geladen werden", [
+			'plugin' => 'f12-cf7-captcha',
+			'post_id'=> $this->last_insert_id
+		]);
+		return null;
 	}
+
 
 	/**
 	 * @param Log_Item $Log_Item
@@ -384,16 +553,32 @@ class Log_WordPress {
 	 *
 	 */
 	public static function store( $Log_Item ) {
-		if ( ! Log_WordPress::get_instance()->is_logging_enabled() ) {
+		$logger = \Forge12\Shared\Logger::getInstance();
+		$log_wp = Log_WordPress::get_instance();
+
+		if ( ! $log_wp->is_logging_enabled() ) {
+			$logger->debug("Logging übersprungen – deaktiviert", [
+				'plugin'   => 'f12-cf7-captcha',
+				'log_item' => method_exists($Log_Item, 'get_name') ? $Log_Item->get_name() : 'unknown'
+			]);
 			return;
 		}
 
-		Log_WordPress::get_instance()->maybe_log(
+		$is_spam = $Log_Item->get_log_status_slug() === 'spam';
+
+		$logger->info("Log Item wird gespeichert", [
+			'plugin'   => 'f12-cf7-captcha',
+			'name'     => $Log_Item->get_name(),
+			'status'   => $is_spam ? 'spam' : 'verified'
+		]);
+
+		$log_wp->maybe_log(
 			$Log_Item->get_name(),
 			$Log_Item->get_properties(),
-			$Log_Item->get_log_status_slug() == 'spam' ? true : false
+			$is_spam
 		);
 	}
+
 
 	/**
 	 * Retrieves the table name for posts from the global $wpdb object.
@@ -406,11 +591,22 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB is not defined' );
+			$this->get_logger()->error("WPDB nicht definiert", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
+			throw new \RuntimeException('WPDB is not defined');
 		}
 
-		return $wpdb->prefix . 'posts';
+		$table = $wpdb->prefix . 'posts';
+
+		$this->get_logger()->debug("Tabellenname ermittelt", [
+			'plugin' => 'f12-cf7-captcha',
+			'table'  => $table
+		]);
+
+		return $table;
 	}
+
 
 	/**
 	 * Get the count of records in the database table.
@@ -421,29 +617,49 @@ class Log_WordPress {
 	 * @global wpdb $wpdb The WordPress database object.
 	 *
 	 */
-	public function get_count() {
+	public function get_count(): int {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB is not defined' );
+			$this->get_logger()->error("WPDB nicht definiert", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
+			throw new \RuntimeException('WPDB is not defined');
 		}
 
 		$table_name = $this->get_table_name();
 
-		$result = $wpdb->get_results(
-			sprintf(
-				'SELECT count(*) AS counting FROM %s WHERE post_type = "%s"',
-				$table_name,
-				'f12_captcha_log'
-			)
+		$sql = sprintf(
+			'SELECT count(*) AS counting FROM %s WHERE post_type = "%s"',
+			$table_name,
+			'f12_captcha_log'
 		);
 
+		$this->get_logger()->debug("Zähle Log-Einträge", [
+			'plugin' => 'f12-cf7-captcha',
+			'query'  => $sql
+		]);
+
+		$result = $wpdb->get_results($sql);
+
 		if ( isset( $result[0] ) ) {
-			return $result[0]->counting;
+			$count = (int) $result[0]->counting;
+
+			$this->get_logger()->info("Log-Einträge gezählt", [
+				'plugin' => 'f12-cf7-captcha',
+				'count'  => $count
+			]);
+
+			return $count;
 		}
+
+		$this->get_logger()->warning("Keine Log-Einträge gefunden", [
+			'plugin' => 'f12-cf7-captcha'
+		]);
 
 		return 0;
 	}
+
 
 	/**
 	 * Resets the table by deleting all rows where the post_type is "f12_captcha_log".
@@ -455,15 +671,35 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB is not defined' );
+			$this->get_logger()->error("WPDB nicht definiert", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
+			throw new \RuntimeException('WPDB is not defined');
 		}
 
 		$table_name = $this->get_table_name();
 
-		return (int) $wpdb->query(
-			sprintf( 'DELETE FROM %s WHERE post_type = "%s"', $table_name, 'f12_captcha_log' )
+		$sql = sprintf(
+			'DELETE FROM %s WHERE post_type = "%s"',
+			$table_name,
+			'f12_captcha_log'
 		);
+
+		$this->get_logger()->warning("Alle Logs werden gelöscht", [
+			'plugin' => 'f12-cf7-captcha',
+			'query'  => $sql
+		]);
+
+		$deleted = (int) $wpdb->query($sql);
+
+		$this->get_logger()->info("Logs gelöscht", [
+			'plugin'  => 'f12-cf7-captcha',
+			'deleted' => $deleted
+		]);
+
+		return $deleted;
 	}
+
 
 	/**
 	 * Deletes records older than a specified create time from the database table.
@@ -477,13 +713,36 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB is not defined' );
+			$this->get_logger()->error("WPDB nicht definiert", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
+			throw new \RuntimeException('WPDB is not defined');
 		}
 
 		$table_name = $this->get_table_name();
 
-		return (int) $wpdb->query(
-			sprintf( 'DELETE FROM %s WHERE post_type = "%s" AND post_date < "%s"', $table_name, 'f12_captcha_log', $create_time )
+		$sql = sprintf(
+			'DELETE FROM %s WHERE post_type = "%s" AND post_date < "%s"',
+			$table_name,
+			'f12_captcha_log',
+			esc_sql($create_time)
 		);
+
+		$this->get_logger()->warning("Lösche alte Logs", [
+			'plugin' => 'f12-cf7-captcha',
+			'before' => $create_time,
+			'query'  => $sql
+		]);
+
+		$deleted = (int) $wpdb->query($sql);
+
+		$this->get_logger()->info("Alte Logs gelöscht", [
+			'plugin'  => 'f12-cf7-captcha',
+			'deleted' => $deleted,
+			'before'  => $create_time
+		]);
+
+		return $deleted;
 	}
+
 }

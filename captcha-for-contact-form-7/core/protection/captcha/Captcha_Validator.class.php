@@ -30,18 +30,50 @@ class Captcha_Validator extends BaseProtection {
 	 *
 	 * @return void
 	 */
-	public function __construct( CF7Captcha $Controller ) {
-		parent::__construct( $Controller );
+	public function __construct(CF7Captcha $Controller)
+	{
+		parent::__construct($Controller);
 
-		/**
-		 * Load submoduls
-		 */
-		new CaptchaAjax( $Controller );
+		$this->get_logger()->info(
+			"__construct(): CF7Captcha Controller initialisiert",
+			[
+				'plugin'    => 'f12-cf7-captcha',
+				'class'     => __CLASS__
+			]
+		);
 
-		$this->_Captcha_Cleaner = new CaptchaCleaner( $Controller );
+		// Submodules laden
+		try {
+			new CaptchaAjax($Controller);
+			$this->get_logger()->debug(
+				"__construct(): Submodul CaptchaAjax geladen",
+				['plugin' => 'f12-cf7-captcha']
+			);
 
-		$this->set_message( __( 'captcha-protection', 'captcha-for-contact-form-7' ));
+			$this->_Captcha_Cleaner = new CaptchaCleaner($Controller);
+			$this->get_logger()->debug(
+				"__construct(): Submodul CaptchaCleaner geladen",
+				['plugin' => 'f12-cf7-captcha']
+			);
+		} catch (\Throwable $e) {
+			$this->get_logger()->error(
+				"__construct(): Fehler beim Laden der Submodule",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'error'  => $e->getMessage()
+				]
+			);
+			throw $e;
+		}
+
+		$this->set_message(__('captcha-protection', 'captcha-for-contact-form-7'));
+
+		$this->get_logger()->info(
+			"__construct(): Initialisierung abgeschlossen",
+			['plugin' => 'f12-cf7-captcha']
+		);
 	}
+
 
 	/**
 	 * Create and get a Captcha object.
@@ -51,14 +83,38 @@ class Captcha_Validator extends BaseProtection {
 	 * @return Captcha The newly created Captcha object.
 	 * @throws \Exception
 	 */
-	public function factory(): Captcha {
+	public function factory(): Captcha
+	{
 		/**
 		 * @var UserData $User_Data
 		 */
-		$User_Data = $this->Controller->get_modul( 'user-data' );
+		$User_Data = $this->Controller->get_modul('user-data');
+		$ipAddress = $User_Data->get_ip_address();
 
-		return new Captcha( $User_Data->get_ip_address() );
+		$this->get_logger()->debug(
+			"factory(): Erzeuge neues Captcha-Objekt",
+			[
+				'plugin'     => 'f12-cf7-captcha',
+				'ip_address' => $ipAddress
+			]
+		);
+
+		$captcha = new Captcha(
+			$this->Controller->get_logger(),
+			$ipAddress
+		);
+
+		$this->get_logger()->info(
+			"factory(): Neues Captcha-Objekt erstellt",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => Captcha::class
+			]
+		);
+
+		return $captcha;
 	}
+
 
 	/**
 	 * Retrieves the instance of the CaptchaCleaner.
@@ -68,9 +124,26 @@ class Captcha_Validator extends BaseProtection {
 	 *
 	 * @return CaptchaCleaner The instance of the CaptchaCleaner.
 	 */
-	public function get_captcha_cleaner(): CaptchaCleaner {
+	public function get_captcha_cleaner(): CaptchaCleaner
+	{
+		if ($this->_Captcha_Cleaner instanceof CaptchaCleaner) {
+			$this->get_logger()->debug(
+				"get_captcha_cleaner(): Instanz von CaptchaCleaner zurückgegeben",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => get_class($this->_Captcha_Cleaner)
+				]
+			);
+		} else {
+			$this->get_logger()->warning(
+				"get_captcha_cleaner(): Keine gültige Instanz von CaptchaCleaner vorhanden",
+				['plugin' => 'f12-cf7-captcha']
+			);
+		}
+
 		return $this->_Captcha_Cleaner;
 	}
+
 
 
 	/**
@@ -82,11 +155,34 @@ class Captcha_Validator extends BaseProtection {
 	 *
 	 * @return bool True if the functionality is enabled, false otherwise.
 	 */
-	protected function is_enabled(): bool {
-		$is_enabled = (int) $this->Controller->get_settings( 'protection_captcha_enable', 'global' ) === 1;
+	protected function is_enabled(): bool
+	{
+		$is_enabled = (int) $this->Controller->get_settings('protection_captcha_enable', 'global') === 1;
 
-		return apply_filters( 'f12-cf7-captcha-skip-validation-captcha', $is_enabled );
+		$this->get_logger()->debug(
+			"is_enabled(): Einstellung aus get_settings() ermittelt",
+			[
+				'plugin'   => 'f12-cf7-captcha',
+				'enabled'  => $is_enabled ? 'ja' : 'nein'
+			]
+		);
+
+		$filtered = apply_filters('f12-cf7-captcha-skip-validation-captcha', $is_enabled);
+
+		if ($filtered !== $is_enabled) {
+			$this->get_logger()->info(
+				"is_enabled(): Ergebnis durch Filter überschrieben",
+				[
+					'plugin'        => 'f12-cf7-captcha',
+					'original'      => $is_enabled ? 'ja' : 'nein',
+					'nach_filter'   => $filtered ? 'ja' : 'nein'
+				]
+			);
+		}
+
+		return $filtered;
 	}
+
 
 	/**
 	 * Check if the provided data is considered as spam.
@@ -97,49 +193,84 @@ class Captcha_Validator extends BaseProtection {
 	 * @return bool Returns true if the data is considered as spam, otherwise returns false.
 	 * @throws \Exception
 	 */
-	public function is_spam( ...$args ): bool {
-		if ( ! isset( $args[0] ) ) {
+	public function is_spam(...$args): bool
+	{
+		if (!isset($args[0])) {
+			$this->get_logger()->warning(
+				"is_spam(): Keine Post-Daten übergeben",
+				['plugin' => 'f12-cf7-captcha']
+			);
 			return false;
 		}
 
-		if ( ! $this->is_enabled() ) {
+		if (!$this->is_enabled()) {
+			$this->get_logger()->debug(
+				"is_spam(): Captcha ist deaktiviert → kein Spam-Check",
+				['plugin' => 'f12-cf7-captcha']
+			);
 			return false;
 		}
 
 		$array_post_data = $args[0];
+		$field_name      = $this->get_field_name();
 
-		$field_name = $this->get_field_name();
-
-		if ( ! isset( $array_post_data[ $field_name ] ) ) {
+		if (!isset($array_post_data[$field_name])) {
+			$this->get_logger()->info(
+				"is_spam(): Feld nicht vorhanden → Spam erkannt",
+				[
+					'plugin'     => 'f12-cf7-captcha',
+					'field_name' => $field_name
+				]
+			);
 			return true;
 		}
 
 		$validation_method = $this->get_validation_method();
 
-		/*
-		 * Exception for honey - honeys dont have hash values
-		 */
-		if ( $validation_method != 'honey' && ! isset( $array_post_data[ $field_name . '_hash' ] ) ) {
+		// Honeypot → kein Hash erwartet
+		if ($validation_method !== 'honey' && !isset($array_post_data[$field_name . '_hash'])) {
+			$this->get_logger()->info(
+				"is_spam(): Hash fehlt bei Methode '{$validation_method}' → Spam erkannt",
+				[
+					'plugin'     => 'f12-cf7-captcha',
+					'field_name' => $field_name
+				]
+			);
 			return true;
 		}
 
 		$hash = '';
-
-		if ( $validation_method != 'honey' ) {
-			$hash = $array_post_data[ $field_name . '_hash' ];
+		if ($validation_method !== 'honey') {
+			$hash = $array_post_data[$field_name . '_hash'];
 		}
 
-		/*
-		* Check if captcha is valid
-		*/
-		$Generator = $this->get_generator( $validation_method );
+		// Generator validieren
+		$Generator = $this->get_generator($validation_method);
 
-		if ( $Generator->is_valid( $array_post_data[ $field_name ], $hash ) ) {
+		if ($Generator->is_valid($array_post_data[$field_name], $hash)) {
+			$this->get_logger()->debug(
+				"is_spam(): Captcha gültig → kein Spam",
+				[
+					'plugin'     => 'f12-cf7-captcha',
+					'field_name' => $field_name,
+					'method'     => $validation_method
+				]
+			);
 			return false;
 		}
 
+		$this->get_logger()->warning(
+			"is_spam(): Captcha-Validierung fehlgeschlagen → Spam erkannt",
+			[
+				'plugin'     => 'f12-cf7-captcha',
+				'field_name' => $field_name,
+				'method'     => $validation_method
+			]
+		);
+
 		return true;
 	}
+
 
 	/**
 	 * Retrieves the captcha value.
@@ -151,19 +282,33 @@ class Captcha_Validator extends BaseProtection {
 	 *                       These arguments are ignored in the implementation.
 	 *
 	 * @return string The captcha value as a string.
+	 * @throws \Exception
 	 */
-	public function get_captcha( ...$args ): string {
-		if ( ! $this->is_enabled() ) {
+	public function get_captcha(...$args): string
+	{
+		if (!$this->is_enabled()) {
+			$this->get_logger()->debug(
+				"get_captcha(): Captcha ist deaktiviert – kein Feld generiert",
+				['plugin' => 'f12-cf7-captcha']
+			);
 			return '';
 		}
 
-		/*
-		 * Load the field name
-		 */
 		$field_name = $this->get_field_name();
+		$generator  = $this->get_generator();
 
-		return $this->get_generator()->get_field( $field_name );
+		$this->get_logger()->info(
+			"get_captcha(): Captcha-Feld wird generiert",
+			[
+				'plugin'     => 'f12-cf7-captcha',
+				'field_name' => $field_name,
+				'generator'  => get_class($generator)
+			]
+		);
+
+		return $generator->get_field($field_name);
 	}
+
 
 	/**
 	 * Retrieves the generator module based on the specified validation method.
@@ -175,37 +320,49 @@ class Captcha_Validator extends BaseProtection {
 	 * @return CaptchaGenerator The generator module instance.
 	 * @throws \Exception
 	 */
-	public function get_generator( string $validation_method = '' ): CaptchaGenerator {
-		/*
-		 * Load the validation method
-		 */
-		if ( empty( $validation_method ) ) {
+	public function get_generator(string $validation_method = ''): CaptchaGenerator
+	{
+		// Fallback auf Default-Methode
+		if (empty($validation_method)) {
 			$validation_method = $this->get_validation_method();
+			$this->get_logger()->debug(
+				"get_generator(): Kein Parameter übergeben, nehme Standard-Validation-Methode",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'method' => $validation_method
+				]
+			);
 		}
 
-		switch ( $validation_method ) {
+		switch ($validation_method) {
 			case 'math':
-				/**
-				 * @var CaptchaMathGenerator $Captcha_Generator
-				 */
-				$Captcha_Generator = new CaptchaMathGenerator( $this->Controller );
+				$Captcha_Generator = new CaptchaMathGenerator($this->Controller);
+				$this->get_logger()->info(
+					"get_generator(): Math-Generator instanziiert",
+					['plugin' => 'f12-cf7-captcha']
+				);
 				break;
+
 			case 'image':
-				/**
-				 * @var CaptchaImageGenerator $Captcha_Generator
-				 */
-				$Captcha_Generator = new CaptchaImageGenerator( $this->Controller );
+				$Captcha_Generator = new CaptchaImageGenerator($this->Controller);
+				$this->get_logger()->info(
+					"get_generator(): Image-Generator instanziiert",
+					['plugin' => 'f12-cf7-captcha']
+				);
 				break;
+
 			default:
-				/**
-				 * @var CaptchaHoneypotGenerator $Captcha_Generator
-				 */
-				$Captcha_Generator = new CaptchaHoneypotGenerator( $this->Controller );
+				$Captcha_Generator = new CaptchaHoneypotGenerator($this->Controller);
+				$this->get_logger()->info(
+					"get_generator(): Honeypot-Generator instanziiert (Fallback)",
+					['plugin' => 'f12-cf7-captcha']
+				);
 				break;
 		}
 
 		return $Captcha_Generator;
 	}
+
 
 	/**
 	 * Retrieves the validation method.
@@ -214,9 +371,29 @@ class Captcha_Validator extends BaseProtection {
 	 *
 	 * @return string The validation method. Possible Values:  honeypot, math, image
 	 */
-	protected function get_validation_method(): string {
-		return $this->Controller->get_settings( 'protection_captcha_method', 'global' );
+	protected function get_validation_method(): string
+	{
+		$method = $this->Controller->get_settings('protection_captcha_method', 'global');
+
+		if (empty($method)) {
+			$this->get_logger()->warning(
+				"get_validation_method(): Keine Methode in den Settings gefunden, Fallback auf 'honey'",
+				['plugin' => 'f12-cf7-captcha']
+			);
+			$method = 'honey'; // sinnvoller Fallback
+		} else {
+			$this->get_logger()->debug(
+				"get_validation_method(): Methode ermittelt",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'method' => $method
+				]
+			);
+		}
+
+		return $method;
 	}
+
 
 	/**
 	 * Retrieves the field name.
@@ -225,9 +402,31 @@ class Captcha_Validator extends BaseProtection {
 	 *
 	 * @return string The field name.
 	 */
-	protected function get_field_name() {
-		return $this->Controller->get_settings( 'protection_captcha_field_name', 'global' );
+	protected function get_field_name(): string
+	{
+		$field_name = $this->Controller->get_settings('protection_captcha_field_name', 'global');
+
+		if (empty($field_name)) {
+			$this->get_logger()->warning(
+				"get_field_name(): Kein Feldname in den Settings gefunden – Fallback gesetzt",
+				['plugin' => 'f12-cf7-captcha']
+			);
+
+			// sinnvoller Fallback
+			$field_name = 'captcha_field';
+		} else {
+			$this->get_logger()->debug(
+				"get_field_name(): Feldname ermittelt",
+				[
+					'plugin'     => 'f12-cf7-captcha',
+					'field_name' => $field_name
+				]
+			);
+		}
+
+		return $field_name;
 	}
+
 
 	/**
 	 * Initializes the method.
@@ -236,11 +435,41 @@ class Captcha_Validator extends BaseProtection {
 	 *
 	 * @return void
 	 */
-	protected function on_init(): void {
+	protected function on_init(): void
+	{
+		$this->get_logger()->info(
+			"on_init(): Initialisierung des Captcha-Moduls gestartet",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
 
+		// Hier könntest du später Hooks/Filter registrieren, z. B.:
+		// add_action('wp_enqueue_scripts', [$this, 'enqueue_scripts']);
+
+		$this->get_logger()->debug(
+			"on_init(): Initialisierung abgeschlossen",
+			[
+				'plugin' => 'f12-cf7-captcha'
+			]
+		);
 	}
 
-	public function success(): void {
-		// TODO: Implement success() method.
+	public function success(): void
+	{
+		$this->get_logger()->info(
+			"success(): Erfolgreiche Captcha-Validierung ausgeführt",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
+
+		// Späterer Erweiterungspunkt:
+		// - Erfolgsmeldung setzen
+		// - Analytics/Event-Tracking
+		// - Weiterleitung/Custom Action
 	}
+
 }

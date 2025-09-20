@@ -10,19 +10,35 @@ use f12_cf7_captcha\CF7Captcha;
 require_once('BaseController.class.php');
 abstract class Validator extends \f12_cf7_captcha\core\BaseController
 {
-    public function __construct(CF7Captcha $Controller = null, Log_WordPress $Logger = null)
-    {
-        if (null === $Controller) {
-            $Controller = CF7Captcha::get_instance();
-        }
+	public function __construct(CF7Captcha $Controller = null, Log_WordPress $Logger = null)
+	{
+		// Die Logger-Eigenschaft wird von der Elternklasse initialisiert.
+		// Daher muss hier nur der Controller initialisiert werden.
+		$this->Controller = $Controller;
 
-        if (null === $Logger) {
-            $Logger = Log_WordPress::get_instance();
-        }
+		// Protokollierung des Konstruktorstarts.
+		$this->get_logger()->info('Konstruktor mit optionalen Abhängigkeiten gestartet.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-        parent::__construct($Controller, $Logger);
+		// Wenn kein Controller übergeben wurde, hole die Singleton-Instanz.
+		if (null === $Controller) {
+			$Controller = CF7Captcha::get_instance();
+			$this->get_logger()->debug('Keine Controller-Instanz übergeben. Singleton-Instanz abgerufen.');
+		}
 
-    }
+		// Wenn kein Logger übergeben wurde, hole die Singleton-Instanz.
+		if (null === $Logger) {
+			$Logger = Log_WordPress::get_instance();
+			$this->get_logger()->debug('Keine Logger-Instanz übergeben. Singleton-Instanz abgerufen.');
+		}
+
+		// Übergabe der abhängigen Objekte an den Konstruktor der Elternklasse.
+		parent::__construct($Controller, $Logger);
+
+		$this->get_logger()->info('Konstruktor abgeschlossen.');
+	}
 
     public abstract function is_spam(): bool;
 

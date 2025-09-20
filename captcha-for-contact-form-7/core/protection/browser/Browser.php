@@ -62,17 +62,33 @@ class Browser extends BaseProtection {
 	public function __construct( CF7Captcha $Controller ) {
 		parent::__construct( $Controller );
 
-		require( 'Browser_User_Agent.php' );
+		try {
+			require( 'Browser_User_Agent.php' );
 
-		$this->browser_names       = $browser_names;
-		$this->browser_regexes     = $browser_regexes;
-		$this->platform_names      = $platform_names;
-		$this->platform_regexes    = $platform_regexes;
-		$this->device_type_names   = $device_type_names;
-		$this->device_type_regexes = $device_type_regexes;
+			$this->browser_names       = $browser_names ?? [];
+			$this->browser_regexes     = $browser_regexes ?? [];
+			$this->platform_names      = $platform_names ?? [];
+			$this->platform_regexes    = $platform_regexes ?? [];
+			$this->device_type_names   = $device_type_names ?? [];
+			$this->device_type_regexes = $device_type_regexes ?? [];
+
+			$this->get_logger()->info("Browser User Agent Daten geladen", [
+				'plugin'    => 'f12-cf7-captcha',
+				'browsers'  => count($this->browser_names),
+				'platforms' => count($this->platform_names),
+				'devices'   => count($this->device_type_names)
+			]);
+		} catch (\Throwable $e) {
+			$this->get_logger()->error("Fehler beim Laden von Browser_User_Agent.php", [
+				'plugin' => 'f12-cf7-captcha',
+				'error'  => $e->getMessage()
+			]);
+			throw $e;
+		}
 
 		add_filter( 'f12-cf7-captcha-log-data', [ $this, 'get_log_data' ] );
 	}
+
 
 	/**
 	 * Checks if browser protection is enabled.
@@ -81,10 +97,24 @@ class Browser extends BaseProtection {
 	 * @return bool Returns true if browser protection is enabled; otherwise, false.
 	 */
 	protected function is_enabled(): bool {
-		$is_enabled = (int) $this->Controller->get_settings( 'protection_browser_enable', 'global' ) === 1;
+		$raw_setting = $this->Controller->get_settings( 'protection_browser_enable', 'global' );
 
-		return apply_filters( 'f12-cf7-captcha-skip-validation-browser', $is_enabled );
+		if ($raw_setting === '' || $raw_setting === null) {
+			// Default: aktiv, wenn nicht explizit gesetzt
+			$raw_setting = 1;
+		}
+
+		$is_enabled = apply_filters( 'f12-cf7-captcha-skip-validation-browser', $raw_setting );
+
+		$this->get_logger()->debug("Browser Protection Status geprüft", [
+			'plugin'      => 'f12-cf7-captcha',
+			'raw_setting' => $raw_setting,
+			'final_value' => $is_enabled
+		]);
+
+		return $is_enabled;
 	}
+
 
 	/**
 	 * Retrieves the spam protection code.
@@ -92,8 +122,16 @@ class Browser extends BaseProtection {
 	 * @return string Returns the spam protection code.
 	 */
 	public function get_captcha( ...$args ): string {
+		$this->get_logger()->debug("get_captcha() aufgerufen", [
+			'plugin' => 'f12-cf7-captcha',
+			'args'   => $args,
+			'protection' => 'Browser'
+		]);
+
+		// Aktuell noch kein Captcha implementiert
 		return '';
 	}
+
 
 	/**
 	 * Get the log data.
@@ -115,13 +153,21 @@ class Browser extends BaseProtection {
 		 * Get the Browser Data
 		 */
 		$data['Browser Data'] = $this->get_browser_as_string();
+
 		/*
-		 * Get the Header DAta
+		 * Get the Header Data
 		 */
 		$data['Header Data'] = $this->get_headers_as_string();
 
+		$this->get_logger()->debug("Zusätzliche Log-Daten gesammelt", [
+			'plugin'       => 'f12-cf7-captcha',
+			'browser_data' => mb_substr($data['Browser Data'] ?? '', 0, 80) . (strlen($data['Browser Data'] ?? '') > 80 ? '...' : ''),
+			'header_data'  => mb_substr($data['Header Data'] ?? '', 0, 80) . (strlen($data['Header Data'] ?? '') > 80 ? '...' : '')
+		]);
+
 		return $data;
 	}
+
 
 	/**
 	 * Retrieves the user agent string from the $_SERVER superglobal.
@@ -132,11 +178,22 @@ class Browser extends BaseProtection {
 	 */
 	private function get_user_agent(): string {
 		if ( ! isset( $_SERVER['HTTP_USER_AGENT'] ) ) {
+			$this->get_logger()->debug("Kein User-Agent gefunden", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
 			return '';
 		}
 
-		return $_SERVER['HTTP_USER_AGENT'];
+		$ua = sanitize_text_field( $_SERVER['HTTP_USER_AGENT'] );
+
+		$this->get_logger()->debug("User-Agent gelesen", [
+			'plugin'  => 'f12-cf7-captcha',
+			'preview' => mb_substr($ua, 0, 120) . (strlen($ua) > 120 ? '...' : '')
+		]);
+
+		return $ua;
 	}
+
 
 	/**
 	 * Checks if the given browser data matches the default settings.
@@ -166,8 +223,20 @@ class Browser extends BaseProtection {
 			'is_mobile'        => false,
 		];
 
-		return empty( array_diff_assoc( $browser_data, $default_browser_data ) );
+		$is_default = empty( array_diff_assoc( $browser_data, $default_browser_data ) );
+
+		$this->get_logger()->debug("Browser-Daten geprüft", [
+			'plugin'      => 'f12-cf7-captcha',
+			'is_default'  => $is_default,
+			'browser'     => $browser_data['browser_name'] ?? '',
+			'platform'    => $browser_data['platform_name'] ?? '',
+			'device_type' => $browser_data['device_type_name'] ?? '',
+			'is_mobile'   => $browser_data['is_mobile'] ?? false,
+		]);
+
+		return $is_default;
 	}
+
 
 	/**
 	 * Retrieves the headers as a formatted string.
@@ -177,10 +246,28 @@ class Browser extends BaseProtection {
 	private function get_headers_as_string(): string {
 		$header_data = $this->get_headers();
 
-		$response = '';
+		$sanitized = [];
 		foreach ( $header_data as $key => $value ) {
+			$lower = strtolower($key);
+
+			// sensible Header maskieren
+			if (in_array($lower, ['cookie', 'authorization', 'php_auth_pw'])) {
+				$value = '[masked]';
+			}
+
+			$sanitized[$key] = $value;
+		}
+
+		$response = '';
+		foreach ( $sanitized as $key => $value ) {
 			$response .= $key . ':' . $value . ',';
 		}
+
+		// Logging mit gekürzter Vorschau
+		$this->get_logger()->debug("Header gesammelt", [
+			'plugin'  => 'f12-cf7-captcha',
+			'preview' => mb_substr($response, 0, 150) . (strlen($response) > 150 ? '...' : '')
+		]);
 
 		return $response;
 	}
@@ -216,8 +303,19 @@ class Browser extends BaseProtection {
 			}
 		}
 
+		// Logging hinzufügen
+		$this->get_logger()->debug("Header gesammelt", [
+			'plugin'       => 'f12-cf7-captcha',
+			'header_count' => count($header_data),
+			'headers'      => array_map(function($v) {
+				return mb_substr($v, 0, 60) . (strlen($v) > 60 ? '...' : '');
+			}, $header_data)
+		]);
+
 		return $header_data;
 	}
+
+
 
 	/**
 	 * Returns the browser data as a string.
@@ -229,12 +327,22 @@ class Browser extends BaseProtection {
 		$browser_data = $this->get_browser();
 
 		$response = '';
-		foreach ( $browser_data as $key => $value ) {
+		foreach ($browser_data as $key => $value) {
 			$response .= $key . ':' . $value . ',';
 		}
 
+		// Prüfen ob nur Default-Daten drinstehen
+		$is_default = $this->is_default($browser_data);
+
+		$this->get_logger()->debug("Browser-Daten gesammelt", [
+			'plugin'      => 'f12-cf7-captcha',
+			'is_default'  => $is_default,
+			'preview'     => mb_substr($response, 0, 120) . (strlen($response) > 120 ? '...' : '')
+		]);
+
 		return $response;
 	}
+
 
 	/**
 	 * Retrieves browser data based on the given user agent.
@@ -276,7 +384,7 @@ class Browser extends BaseProtection {
 		foreach ( $this->browser_regexes as $index => $regex ) {
 			if ( preg_match( $regex, $user_agent, $matches ) ) {
 				$browser_data['browser_name']    = $this->browser_names[ $index ];
-				$browser_data['browser_version'] = ( isset( $matches[3] ) ? $matches[3] : isset( $matches[2] ) ) ? $matches[2] : '';
+				$browser_data['browser_version'] = isset($matches[2]) ? $matches[2] : ( $matches[3] ?? '' );
 				break;
 			}
 		}
@@ -308,8 +416,16 @@ class Browser extends BaseProtection {
 			$browser_data['is_mobile'] = true;
 		}
 
+		// Logging
+		$this->get_logger()->debug("Browser erkannt", [
+			'plugin'    => 'f12-cf7-captcha',
+			'userAgent' => mb_substr($user_agent, 0, 120) . (strlen($user_agent) > 120 ? '...' : ''),
+			'detected'  => $browser_data
+		]);
+
 		return $browser_data;
 	}
+
 
 	/**
 	 * Checks if the given user agent string indicates a bot.
@@ -323,12 +439,17 @@ class Browser extends BaseProtection {
 			$user_agent = $this->get_user_agent();
 		}
 
-		if ( preg_match( '/bot|crawl|slurp|spider/i', $user_agent ) ) {
-			return true;
-		}
+		$is_bot = (bool) preg_match( '/bot|crawl|slurp|spider/i', $user_agent );
 
-		return false;
+		$this->get_logger()->debug("Bot-Erkennung durchgeführt", [
+			'plugin'    => 'f12-cf7-captcha',
+			'userAgent' => mb_substr($user_agent, 0, 120) . (strlen($user_agent) > 120 ? '...' : ''),
+			'is_bot'    => $is_bot
+		]);
+
+		return $is_bot;
 	}
+
 
 	/**
 	 * Determine if the current call is done by a crawler
@@ -341,14 +462,32 @@ class Browser extends BaseProtection {
 		if ( $this->is_bot() ) {
 			$this->set_message( __( 'bot-detected', 'captcha-for-contact-form-7' ) );
 
+			$this->get_logger()->info("Bot erkannt", [
+				'plugin'       => 'f12-cf7-captcha',
+				'userAgent'    => mb_substr($this->get_user_agent(), 0, 120) . (strlen($this->get_user_agent()) > 120 ? '...' : ''),
+				'browser_data' => $browser_data
+			]);
+
 			return true;
 		}
 
 		if ( $this->is_default( $browser_data ) ) {
 			$this->set_message( __( 'crawler-detected', 'captcha-for-contact-form-7' ) );
 
+			$this->get_logger()->info("Crawler erkannt (nur Default-Daten)", [
+				'plugin'       => 'f12-cf7-captcha',
+				'userAgent'    => mb_substr($this->get_user_agent(), 0, 120) . (strlen($this->get_user_agent()) > 120 ? '...' : ''),
+				'browser_data' => $browser_data
+			]);
+
 			return true;
 		}
+
+		$this->get_logger()->debug("Kein Bot/Crawler erkannt", [
+			'plugin'       => 'f12-cf7-captcha',
+			'userAgent'    => mb_substr($this->get_user_agent(), 0, 120) . (strlen($this->get_user_agent()) > 120 ? '...' : ''),
+			'browser_data' => $browser_data
+		]);
 
 		return false;
 	}
@@ -360,13 +499,28 @@ class Browser extends BaseProtection {
 	 */
 	public function is_spam(): bool {
 		if ( ! $this->is_enabled() ) {
+			$this->get_logger()->debug("Spam-Check übersprungen (Feature deaktiviert)", [
+				'plugin' => 'f12-cf7-captcha'
+			]);
 			return false;
 		}
 
-		return $this->is_crawler();
+		$is_spam = $this->is_crawler();
+
+		$this->get_logger()->info("Spam-Check durchgeführt", [
+			'plugin' => 'f12-cf7-captcha',
+			'result' => $is_spam ? 'SPAM erkannt' : 'kein Spam'
+		]);
+
+		return $is_spam;
 	}
 
+
 	public function success(): void {
-		// TODO: Implement success() method.
+		$this->get_logger()->info("Validierung erfolgreich", [
+			'plugin' => 'f12-cf7-captcha',
+			'status' => 'success'
+		]);
 	}
+
 }

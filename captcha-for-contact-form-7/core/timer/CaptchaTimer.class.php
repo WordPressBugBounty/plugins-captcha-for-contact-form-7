@@ -2,9 +2,8 @@
 
 namespace f12_cf7_captcha\core\timer;
 
-use f12_cf7_captcha\core\The;
 use f12_cf7_captcha\core\wpdb;
-use IPAddress;
+use Forge12\Shared\LoggerInterface;
 use RuntimeException;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,6 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @package forge12\contactform7
  */
 class CaptchaTimer {
+
 	/**
 	 * The unique ID
 	 *
@@ -53,8 +53,24 @@ class CaptchaTimer {
 	 *
 	 * @param $object
 	 */
-	public function __construct( $params = array() ) {
-		$this->set_params( $params );
+	public function __construct(LoggerInterface $logger, $params = array())
+	{
+		$this->logger = $logger;
+
+		$this->get_logger()->info('Konstruktor gestartet.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		$this->set_params($params);
+
+		$this->get_logger()->debug('Initialisierung mit Parametern abgeschlossen.', [
+			'params_count' => count($params),
+		]);
+	}
+
+	private function get_logger(): LoggerInterface {
+		return $this->logger;
 	}
 
 	/**
@@ -66,12 +82,26 @@ class CaptchaTimer {
 	 *
 	 * @return void
 	 */
-	private function set_params( array $params ) {
-		foreach ( $params as $key => $value ) {
-			if ( isset( $this->{$key} ) ) {
+	private function set_params(array $params)
+	{
+		$this->get_logger()->info('Versuche, Parameter auf die Klasseneigenschaften anzuwenden.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'given_params_count' => count($params),
+		]);
+
+		foreach ($params as $key => $value) {
+			if (isset($this->{$key})) {
 				$this->{$key} = $value;
+				$this->get_logger()->debug("Parameter '{$key}' wurde erfolgreich gesetzt.", [
+					'value' => $value,
+				]);
+			} else {
+				$this->get_logger()->warning("Parameter '{$key}' existiert nicht als Klasseneigenschaft. Er wird übersprungen.");
 			}
 		}
+
+		$this->get_logger()->info('Parameter-Initialisierung abgeschlossen.');
 	}
 
 	/**
@@ -83,14 +113,25 @@ class CaptchaTimer {
 	 *
 	 * @throws RuntimeException When the global $wpdb is not defined.
 	 */
-	public function get_table_name(): string {
+	public function get_table_name(): string
+	{
 		global $wpdb;
 
-		if ( null === $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		$this->get_logger()->info('Versuche, den Namen der Timer-Datenbanktabelle abzurufen.');
+
+		if (null === $wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		return $wpdb->prefix . 'f12_cf7_captcha_timer';
+		$table_name = $wpdb->prefix . 'f12_cf7_captcha_timer';
+
+		$this->get_logger()->debug('Tabellenname erfolgreich abgerufen.', [
+			'table_name' => $table_name,
+		]);
+
+		return $table_name;
 	}
 
 	/**
@@ -101,10 +142,27 @@ class CaptchaTimer {
 	 *
 	 * @return void
 	 */
-	public function create_table(): void {
-		require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	public function create_table(): void
+	{
+		$this->get_logger()->info('Starte die Erstellung der Datenbanktabelle.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-		$table_name = $this->get_table_name();
+		// Lade die WordPress-Upgrade-Funktionalität.
+		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+		$this->get_logger()->debug('Die WordPress-Upgrade-Funktionalität wurde geladen.');
+
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Tabellenerstellung abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return;
+		}
+
+		global $wpdb;
 
 		$sql = sprintf( "CREATE TABLE %s (
                 id int(11) NOT NULL auto_increment, 
@@ -113,7 +171,17 @@ class CaptchaTimer {
                 createtime varchar(255) DEFAULT '',
                 PRIMARY KEY  (id)
             )", $table_name );
-		dbDelta( $sql );
+
+		$this->get_logger()->debug('SQL-Anweisung zur Tabellenerstellung vorbereitet.', [
+			'sql' => $sql,
+		]);
+
+		// Führe die dbDelta-Funktion aus.
+		dbDelta($sql);
+
+		// Es gibt keine Methode "table_exists" in der Klasse.
+		// Eine Überprüfung des Erfolgs kann nicht protokolliert werden.
+		$this->get_logger()->info('Tabellenerstellung abgeschlossen.');
 	}
 
 	/**
@@ -121,19 +189,40 @@ class CaptchaTimer {
 	 *
 	 * @throws RuntimeException if WPDB is not defined
 	 */
-	public function delete_table(): void {
+	public function delete_table(): void
+	{
+		$this->get_logger()->info('Starte den Prozess zum Löschen der Datenbanktabelle und des Cron-Jobs.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
 		global $wpdb;
 
-		if ( null === $wpdb ) {
-			throw new RuntimeException( 'WPDB is not defined' );
+		if (null === $wpdb) {
+			$error_message = 'WPDB ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Löschvorgang abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return;
+		}
 
-		$wpdb->query( sprintf( "DROP TABLE IF EXISTS %s", $table_name ) );
+		// Lösche die Datenbanktabelle
+		$sql = sprintf("DROP TABLE IF EXISTS %s", $table_name);
+		$wpdb->query($sql);
+		$this->get_logger()->info('Datenbanktabelle wurde gelöscht (falls vorhanden).', ['table_name' => $table_name]);
 
-		# clear cron
-		wp_clear_scheduled_hook( 'dailyCaptchaTimerClear' );
+		// Lösche den geplanten Cron-Job
+		wp_clear_scheduled_hook('dailyCaptchaTimerClear');
+		$this->get_logger()->info('Geplanter Cron-Job "dailyCaptchaTimerClear" wurde gelöscht.');
+
+		$this->get_logger()->info('Löschvorgang der Tabelle und des Cron-Jobs erfolgreich abgeschlossen.');
 	}
 
 
@@ -142,7 +231,14 @@ class CaptchaTimer {
 	 *
 	 * @return int The ID of the object
 	 */
-	public function get_id(): int {
+	public function get_id(): int
+	{
+		$this->get_logger()->debug('Rufe die ID des Objekts ab.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'id' => $this->id,
+		]);
+
 		return $this->id;
 	}
 
@@ -153,8 +249,18 @@ class CaptchaTimer {
 	 *
 	 * @return void
 	 */
-	public function set_id( int $id ): void {
+	public function set_id(int $id): void
+	{
+		$this->get_logger()->info('Setze die ID des Objekts.', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+			'old_id' => $this->id,
+			'new_id' => $id,
+		]);
+
 		$this->id = $id;
+
+		$this->get_logger()->debug('ID erfolgreich auf ' . $id . ' gesetzt.');
 	}
 
 
@@ -164,9 +270,21 @@ class CaptchaTimer {
 	 *
 	 * @return string The hash value.
 	 */
-	public function get_hash( string $user_ip_address = '' ): string {
-		if ( empty( $this->hash ) ) {
-			$this->hash = $this->generate_hash( $user_ip_address );
+	public function get_hash(string $user_ip_address = ''): string
+	{
+		$this->get_logger()->info('Versuche, den Hash-Wert abzurufen.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'current_hash_state' => empty($this->hash) ? 'leer' : 'vorhanden',
+		]);
+
+		// Generiere einen neuen Hash, wenn das aktuelle Objekt keinen hat
+		if (empty($this->hash)) {
+			$this->get_logger()->debug('Aktueller Hash-Wert ist leer. Generiere einen neuen.');
+			$this->hash = $this->generate_hash($user_ip_address);
+			$this->get_logger()->info('Neuer Hash-Wert wurde generiert.');
+		} else {
+			$this->get_logger()->debug('Hash-Wert ist bereits vorhanden. Gebe den bestehenden Wert zurück.');
 		}
 
 		return $this->hash;
@@ -179,8 +297,24 @@ class CaptchaTimer {
 	 *
 	 * @return string The generated hash string.
 	 */
-	private function generate_hash( string $user_ip_address ): string {
-		return \password_hash( microtime( true ) . $user_ip_address, PASSWORD_DEFAULT );
+	private function generate_hash(string $user_ip_address): string
+	{
+		$this->get_logger()->info('Generiere einen neuen eindeutigen Hash-Wert.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		// Generiere eine einzigartige, schwer zu erratende Zeichenkette
+		$data_to_hash = microtime(true) . $user_ip_address . uniqid('', true);
+
+		// Erstelle den Hash unter Verwendung von password_hash zur Stärkung der Sicherheit
+		$hash = password_hash($data_to_hash, PASSWORD_DEFAULT);
+
+		$this->get_logger()->debug('Hash-Generierung abgeschlossen.', [
+			'generated_hash_length' => strlen($hash),
+		]);
+
+		return $hash;
 	}
 
 	/**
@@ -188,8 +322,17 @@ class CaptchaTimer {
 	 *
 	 * @return bool Returns true if the hash is valid, false otherwise.
 	 */
-	private function is_valid_hash(): bool {
-		return ! empty( $this->hash );
+	private function is_valid_hash(): bool
+	{
+		$is_valid = !empty($this->hash);
+
+		$this->get_logger()->debug('Überprüfe die Gültigkeit des Hash-Werts.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'hash_state' => $is_valid ? 'gültig' : 'ungültig',
+		]);
+
+		return $is_valid;
 	}
 
 
@@ -213,8 +356,18 @@ class CaptchaTimer {
 	 *
 	 * @return void
 	 */
-	public function set_value( $value ) {
+	public function set_value($value)
+	{
+		$this->get_logger()->info('Setze den Wert des Objekts.', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+			'old_value' => $this->value,
+			'new_value' => $value,
+		]);
+
 		$this->value = $value;
+
+		$this->get_logger()->debug('Wert erfolgreich gesetzt.');
 	}
 
 	/**
@@ -225,10 +378,26 @@ class CaptchaTimer {
 	 *
 	 * @return string The create time in the format 'Y-m-d H:i:s'
 	 */
-	public function get_create_time(): string {
-		if ( empty( $this->createtime ) ) {
-			$dt               = new \DateTime();
-			$this->createtime = $dt->format( 'Y-m-d H:i:s' );
+	public function get_create_time(): string
+	{
+		$this->get_logger()->info('Versuche, die Erstellungszeit abzurufen.');
+
+		// Überprüfe, ob die Erstellungszeit bereits gesetzt ist
+		if (empty($this->createtime)) {
+			$this->get_logger()->debug('Erstellungszeit ist leer. Generiere einen neuen Zeitstempel.');
+
+			try {
+				// Erstelle ein neues DateTime-Objekt mit der aktuellen Zeit
+				$dt = new \DateTime();
+				$this->createtime = $dt->format('Y-m-d H:i:s');
+				$this->get_logger()->info('Neuer Zeitstempel erfolgreich generiert.', ['createtime' => $this->createtime]);
+			} catch (\Exception $e) {
+				$this->get_logger()->error('Fehler beim Erstellen des DateTime-Objekts.', ['error' => $e->getMessage()]);
+				// Optional: Rückgabe eines Standard-Zeitstempels bei Fehler
+				return date('Y-m-d H:i:s');
+			}
+		} else {
+			$this->get_logger()->debug('Erstellungszeit ist bereits vorhanden. Gebe den bestehenden Wert zurück.');
 		}
 
 		return $this->createtime;
@@ -242,10 +411,29 @@ class CaptchaTimer {
 	 *
 	 * @return string The create time in the format 'Y-m-d H:i:s'
 	 */
-	public function get_update_time(): string {
-		if ( empty( $this->updatetime ) ) {
-			$dt               = new \DateTime();
-			$this->updatetime = $dt->format( 'Y-m-d H:i:s' );
+	public function get_update_time(): string
+	{
+		$this->get_logger()->info('Versuche, die Aktualisierungszeit abzurufen.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		// Überprüfe, ob die Aktualisierungszeit bereits gesetzt ist.
+		if (empty($this->updatetime)) {
+			$this->get_logger()->debug('Aktualisierungszeit ist leer. Generiere einen neuen Zeitstempel.');
+
+			try {
+				// Erstelle ein neues DateTime-Objekt mit der aktuellen Zeit.
+				$dt = new \DateTime();
+				$this->updatetime = $dt->format('Y-m-d H:i:s');
+				$this->get_logger()->info('Neuer Zeitstempel erfolgreich generiert.', ['updatetime' => $this->updatetime]);
+			} catch (\Exception $e) {
+				$this->get_logger()->error('Fehler beim Erstellen des DateTime-Objekts.', ['error' => $e->getMessage()]);
+				// Optional: Rückgabe eines Standard-Zeitstempels bei Fehler.
+				return date('Y-m-d H:i:s');
+			}
+		} else {
+			$this->get_logger()->debug('Aktualisierungszeit ist bereits vorhanden. Gebe den bestehenden Wert zurück.');
 		}
 
 		return $this->updatetime;
@@ -259,9 +447,22 @@ class CaptchaTimer {
 	 *
 	 * @return void
 	 */
-	private function set_create_time(): void {
-		$dt               = new \DateTime();
-		$this->updatetime = $dt->format( 'Y-m-d H:i:s' );
+	private function set_create_time(): void
+	{
+		$this->get_logger()->info('Setze die Erstellungszeit für das Objekt.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
+		try {
+			$dt = new \DateTime();
+			$this->createtime = $dt->format('Y-m-d H:i:s');
+			$this->get_logger()->debug('Erstellungszeit erfolgreich gesetzt.', ['createtime' => $this->createtime]);
+		} catch (\Exception $e) {
+			$this->get_logger()->error('Fehler beim Erstellen des DateTime-Objekts. Erstellungszeit konnte nicht gesetzt werden.', [
+				'error' => $e->getMessage(),
+			]);
+		}
 	}
 
 	/**
@@ -272,22 +473,52 @@ class CaptchaTimer {
 	 * @return CaptchaTimer|null The retrieved CaptchaTimer object, or null if not found.
 	 * @throws RuntimeException If WPDB global variable is not defined.
 	 */
-	public function get_by_id( int $id ): ?CaptchaTimer {
+	public function get_by_id(int $id): ?CaptchaTimer
+	{
+		$this->get_logger()->info('Versuche, einen Captcha-Timer nach ID abzurufen.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'id' => $id,
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
-
-		$results = $wpdb->get_results( sprintf( 'SELECT * FROM %s WHERE id="%d"', $table_name, $id ), ARRAY_A );
-
-		if ( null != $results ) {
-			$results = new CaptchaTimer( $results[0] );
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Abfrage abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return null;
 		}
 
-		return $results;
+		// Verwende eine sichere Methode, um SQL-Injection zu verhindern.
+		// Die WordPress-Funktion prepare ist dafür ideal.
+		$sql = $wpdb->prepare("SELECT * FROM {$table_name} WHERE id = %d", $id);
+		$this->get_logger()->debug('SQL-Abfrage vorbereitet.', ['sql' => $sql]);
+
+		$results = $wpdb->get_results($sql, ARRAY_A);
+
+		if (empty($results)) {
+			$this->get_logger()->info('Kein Captcha-Timer-Eintrag für die gegebene ID gefunden.', ['id' => $id]);
+			return null;
+		}
+
+		// Erstelle ein CaptchaTimer-Objekt aus den ersten Ergebnissen
+		$timer = new CaptchaTimer($this->get_logger(), $results[0]);
+
+		$this->get_logger()->info('Captcha-Timer-Eintrag erfolgreich nach ID abgerufen.', [
+			'id' => $timer->get_id(),
+			'hash' => $timer->get_hash(),
+		]);
+
+		return $timer;
 	}
 
 	/**
@@ -299,26 +530,50 @@ class CaptchaTimer {
 	 *
 	 * @throws RuntimeException When the global $wpdb is not defined.
 	 */
-	public function get_by_hash( string $hash ): ?CaptchaTimer {
+	public function get_by_hash(string $hash): ?CaptchaTimer
+	{
+		$this->get_logger()->info('Versuche, einen Captcha-Timer nach Hash abzurufen.', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+			'hash'   => $hash,
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
-
-		$results = $wpdb->get_results( sprintf( 'SELECT * FROM %s WHERE hash="%s"', $table_name, $hash ), ARRAY_A );
-
-		if ( empty( $results ) ) {
-			$results = null;
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Abfrage abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return null;
 		}
 
-		if ( null != $results ) {
-			$results = new CaptchaTimer( $results[0] );
+		// Verwende $wpdb->prepare() zur SQL-Injection-Prävention.
+		$sql = $wpdb->prepare("SELECT * FROM {$table_name} WHERE hash = %s", $hash);
+		$this->get_logger()->debug('SQL-Abfrage vorbereitet.', ['sql' => $sql]);
+
+		$results = $wpdb->get_results($sql, ARRAY_A);
+
+		if (empty($results)) {
+			$this->get_logger()->info('Kein Captcha-Timer-Eintrag für den gegebenen Hash gefunden.', ['hash' => $hash]);
+			return null;
 		}
 
-		return $results;
+		// Da wir wissen, dass das Array nicht leer ist, können wir den ersten Eintrag verwenden.
+		$timer = new CaptchaTimer($this->get_logger(), $results[0]);
+		$this->get_logger()->info('Captcha-Timer-Eintrag erfolgreich nach Hash abgerufen.', [
+			'id' => $timer->get_id(),
+			'hash' => $timer->get_hash(),
+		]);
+
+		return $timer;
 	}
 
 	/**
@@ -326,8 +581,30 @@ class CaptchaTimer {
 	 *
 	 * @return bool Returns `true` if the deletion is successful, `false` otherwise.
 	 */
-	public function delete(): bool {
-		return $this->delete_by_hash( $this->hash );
+	public function delete(): bool
+	{
+		$this->get_logger()->info('Versuche, den aktuellen Timer-Eintrag zu löschen.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'hash' => $this->hash,
+		]);
+
+		if (empty($this->hash)) {
+			$this->get_logger()->warning('Kein Hash-Wert zum Löschen vorhanden. Vorgang abgebrochen.');
+			return false;
+		}
+
+		$is_deleted = $this->delete_by_hash($this->hash);
+
+		if ($is_deleted) {
+			$this->get_logger()->info('Timer-Eintrag erfolgreich gelöscht.');
+			// Optional: Setze den internen Hash auf null, um Mehrfachlöschungen zu verhindern.
+			$this->hash = null;
+		} else {
+			$this->get_logger()->error('Fehler beim Löschen des Timer-Eintrags.');
+		}
+
+		return $is_deleted;
 	}
 
 
@@ -339,16 +616,52 @@ class CaptchaTimer {
 	 * @return bool True if the record was successfully deleted, false otherwise.
 	 * @throws RuntimeException If WPDB global variable is not defined.
 	 */
-	public function delete_by_hash( string $hash ): bool {
+	public function delete_by_hash(string $hash): bool
+	{
+		$this->get_logger()->info('Starte den Löschvorgang basierend auf dem Hash-Wert.', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+			'hash'   => $hash,
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Löschvorgang abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return false;
+		}
 
-		return $wpdb->query( sprintf( 'DELETE FROM %s WHERE hash="%s"', $table_name, $hash ) );
+		// Verwende $wpdb->prepare() zur SQL-Injection-Prävention.
+		$sql = $wpdb->prepare("DELETE FROM {$table_name} WHERE hash = %s", $hash);
+		$this->get_logger()->debug('SQL-Löschabfrage vorbereitet.', ['sql' => $sql]);
+
+		// Führe die Abfrage aus. query() gibt die Anzahl der betroffenen Zeilen oder false bei einem Fehler zurück.
+		$result = $wpdb->query($sql);
+
+		if ($result === false) {
+			$this->get_logger()->error('Fehler beim Ausführen der Löschabfrage.', [
+				'db_error' => $wpdb->last_error,
+			]);
+			return false;
+		}
+
+		$this->get_logger()->info('Löschvorgang erfolgreich abgeschlossen.', [
+			'rows_deleted' => $result,
+			'hash' => $hash,
+		]);
+
+		// Rückgabe des Ergebnisses der Abfrage. True, wenn eine oder mehrere Zeilen gelöscht wurden.
+		return (bool)$result;
 	}
 
 
@@ -357,12 +670,18 @@ class CaptchaTimer {
 	 *
 	 * @return bool Returns true if the instance is an update operation, otherwise false.
 	 */
-	private function is_update(): bool {
-		if ( $this->id != 0 ) {
-			return true;
-		}
+	private function is_update(): bool
+	{
+		$is_update = ($this->id != 0);
 
-		return false;
+		$this->get_logger()->debug('Überprüfe, ob das Objekt aktualisiert oder neu erstellt werden soll.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'current_id' => $this->id,
+			'is_update' => $is_update,
+		]);
+
+		return $is_update;
 	}
 
 	/**
@@ -375,16 +694,55 @@ class CaptchaTimer {
 	 * @throws RuntimeException If $wpdb is not defined.
 	 *
 	 */
-	public function reset_table(): int {
+	public function reset_table(): int
+	{
+		$this->get_logger()->info('Starte den Vorgang, um die gesamte Tabelle zu leeren.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Reset abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return 0;
+		}
 
-		return $wpdb->query( sprintf( 'DELETE FROM %s', $table_name ) );
+		// Verwende sprintf zur Vorbereitung der Abfrage, da hier keine Benutzereingaben verarbeitet werden.
+		$sql = sprintf('TRUNCATE TABLE %s', $table_name);
+		// TRUNCATE ist in der Regel schneller und effizienter als DELETE ohne WHERE-Klausel.
+		// Jedoch gibt es keine Rückgabe der gelöschten Zeilenanzahl.
+
+		// Alternativ, um die Anzahl der gelöschten Zeilen zu erhalten:
+		$sql = sprintf('DELETE FROM %s', $table_name);
+
+		$this->get_logger()->debug('SQL-Abfrage zum Zurücksetzen der Tabelle vorbereitet.', ['sql' => $sql]);
+
+		// Führe die Abfrage aus und erhalte die Anzahl der betroffenen Zeilen.
+		$rows_deleted = $wpdb->query($sql);
+
+		if ($rows_deleted === false) {
+			$this->get_logger()->error('Fehler beim Ausführen der Abfrage zum Zurücksetzen der Tabelle.', [
+				'db_error' => $wpdb->last_error,
+			]);
+			return 0;
+		}
+
+		$this->get_logger()->info('Tabelle erfolgreich zurückgesetzt.', [
+			'rows_deleted' => $rows_deleted,
+		]);
+
+		return $rows_deleted;
 	}
 
 	/**
@@ -396,16 +754,51 @@ class CaptchaTimer {
 	 *
 	 * @throws RuntimeException When WPDB is not defined.
 	 */
-	public function delete_older_than( string $create_time ): int {
+	public function delete_older_than(string $create_time): int
+	{
+		$this->get_logger()->info('Starte den Löschvorgang für Einträge, die älter als ein bestimmter Zeitstempel sind.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'create_time' => $create_time,
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Löschvorgang abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return 0;
+		}
 
-		return (int) $wpdb->query( sprintf( 'DELETE FROM %s WHERE createtime < "%s"', $table_name, $create_time ) );
+		// Verwende $wpdb->prepare() zur SQL-Injection-Prävention.
+		// Der Zeitstempel sollte als string behandelt werden (%s).
+		$sql = $wpdb->prepare("DELETE FROM {$table_name} WHERE createtime < %s", $create_time);
+		$this->get_logger()->debug('SQL-Löschabfrage vorbereitet.', ['sql' => $sql]);
+
+		// Führe die Abfrage aus und erhalte die Anzahl der betroffenen Zeilen.
+		$rows_deleted = $wpdb->query($sql);
+
+		if ($rows_deleted === false) {
+			$this->get_logger()->error('Fehler beim Ausführen der Löschabfrage.', [
+				'db_error' => $wpdb->last_error,
+			]);
+			return 0;
+		}
+
+		$this->get_logger()->info('Alte Timer-Einträge erfolgreich gelöscht.', [
+			'rows_deleted' => $rows_deleted,
+		]);
+
+		return (int)$rows_deleted;
 	}
 
 	/**
@@ -414,20 +807,43 @@ class CaptchaTimer {
 	 * @return int The number of entries in the table.
 	 * @throws RuntimeException If WPDB is not defined.
 	 */
-	public function get_count(): int {
+	public function get_count(): int
+	{
+		$this->get_logger()->info('Versuche, die Gesamtzahl der Einträge in der Tabelle abzurufen.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
-
-		$results = $wpdb->get_results( sprintf( 'SELECT count(*) AS entries FROM %s', $table_name ) );
-
-		if ( is_array( $results ) && isset( $results[0] ) ) {
-			return (int) $results[0]->entries;
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Abfrage abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			return 0;
 		}
+
+		// Verwende sprintf für die Abfrage, da hier keine Benutzereingaben verwendet werden.
+		$sql = sprintf('SELECT count(*) AS entries FROM %s', $table_name);
+		$this->get_logger()->debug('SQL-Abfrage vorbereitet.', ['sql' => $sql]);
+
+		$results = $wpdb->get_results($sql);
+
+		if (is_array($results) && isset($results[0])) {
+			$count = (int)$results[0]->entries;
+			$this->get_logger()->info("Anzahl der Einträge in der Tabelle: {$count}.");
+			return $count;
+		}
+
+		$this->get_logger()->warning('Ergebnis der Datenbankabfrage war ungültig oder leer. Rückgabe von 0.');
 
 		return 0;
 	}
@@ -445,36 +861,61 @@ class CaptchaTimer {
 	 * @global wpdb $wpdb WordPress database object.
 	 *
 	 */
-	public function save() {
+	public function save()
+	{
+		$this->get_logger()->info('Starte den Speichervorgang für den Timer-Eintrag.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+			'action' => $this->is_update() ? 'update' : 'insert',
+		]);
+
 		global $wpdb;
 
-		if ( ! $wpdb ) {
-			throw new RuntimeException( 'WPDB not defined' );
+		if (!$wpdb) {
+			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$this->get_logger()->error($error_message);
+			throw new RuntimeException($error_message);
 		}
 
-		$table_name = $this->get_table_name();
+		try {
+			$table_name = $this->get_table_name();
+		} catch (RuntimeException $e) {
+			$this->get_logger()->error('Fehler beim Abrufen des Tabellennamens. Speichervorgang abgebrochen.', [
+				'error' => $e->getMessage(),
+			]);
+			throw $e;
+		}
 
-		if ( $this->is_update() ) {
-			$result = $wpdb->update( $table_name, array(
-				'hash'       => $this->get_hash(),
-				'createtime' => $this->get_create_time(),
-				'value'      => $this->get_value(),
-			), array(
-				'id' => $this->get_id()
-			) );
+		$data = [
+			'hash'       => $this->get_hash(),
+			'value'      => $this->get_value(),
+			'createtime' => $this->get_create_time(),
+		];
+
+		$result = false;
+		if ($this->is_update()) {
+			$where = ['id' => $this->get_id()];
+			$this->get_logger()->debug('Aktualisiere bestehenden Eintrag.', ['data' => $data, 'where' => $where]);
+			$result = $wpdb->update($table_name, $data, $where);
 		} else {
-			$result = $wpdb->insert( $table_name, array(
-				'hash'       => $this->get_hash(),
-				'value'      => $this->get_value(),
-				'createtime' => $this->get_create_time(),
-			) );
-
-			$this->id = $wpdb->insert_id;
+			$this->get_logger()->debug('Füge neuen Eintrag hinzu.', ['data' => $data]);
+			$result = $wpdb->insert($table_name, $data);
+			if ($result !== false) {
+				$this->id = $wpdb->insert_id;
+				$this->get_logger()->info('Neuer Eintrag erfolgreich hinzugefügt. ID: ' . $this->id);
+			}
 		}
 
-		if ( $result === false ) {
-			throw new RuntimeException( 'Database error occurred. Reactivate the plugin to create missing tables.' );
+		if ($result === false) {
+			$this->get_logger()->error('Datenbankfehler beim Speichern des Eintrags.', [
+				'db_error' => $wpdb->last_error,
+			]);
+			throw new RuntimeException('Datenbankfehler aufgetreten. Bitte aktivieren Sie das Plugin erneut, um fehlende Tabellen zu erstellen.');
 		}
+
+		$this->get_logger()->info('Speichervorgang erfolgreich abgeschlossen.', [
+			'result' => $result,
+		]);
 
 		return $result;
 	}

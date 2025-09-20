@@ -35,7 +35,7 @@
 				<?php if ( $method === 'image' ): ?>
                     <!-- CAPTCHA-Beschreibung für Screenreader -->
                     <div class="c-hint" id="captcha-image-hint">
-						<?php esc_html_e( 'Geben Sie die im Bild gezeigten Zeichen ein:', 'captcha-for-contact-form-7' ); ?>
+						<?php esc_html_e( 'Enter the characters shown in the image:', 'captcha-for-contact-form-7' ); ?>
                     </div>
 				<?php endif; ?>
 
@@ -52,7 +52,7 @@
         </div>
 
         <!-- Schaltfläche für CAPTCHA-Neuladen -->
-        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'CAPTCHA neu laden', 'captcha-for-contact-form-7' ); ?>">
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Reload CAPTCHA', 'captcha-for-contact-form-7' ); ?>">
 			<?php echo $captcha_reload; ?>
         </div>
     </div>
@@ -64,6 +64,6 @@
 
     <!-- Screenreader-Beschreibung -->
     <p id="captcha-instructions" class="screen-reader-text">
-		<?php esc_html_e( 'Dieser CAPTCHA hilft sicherzustellen, dass Sie ein Mensch sind. Bitte geben Sie die geforderten Zeichen ein.', 'captcha-for-contact-form-7' ); ?>
+		<?php esc_html_e( 'This CAPTCHA helps ensure that you are human. Please enter the requested characters.', 'captcha-for-contact-form-7' ); ?>
     </p>
 </div>
