@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.2.4
+ * Version: 2.2.42
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.2.4' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.2.42' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -36,7 +36,7 @@ use Forge12\Shared\LoggerInterface;
  */
 require_once( 'logger/logger.php' );
 require_once( 'core/helpers/uuid.php' );
-require_once( 'core/bootstrap.php');
+require_once( 'core/bootstrap.php' );
 
 require_once( 'core/BaseController.class.php' );
 require_once( 'core/BaseModul.class.php' );
@@ -128,6 +128,10 @@ class CF7Captcha {
 		$default = array();
 
 		$default = apply_filters( 'f12-cf7-captcha_settings', $default );
+		$this->logger->debug( "Default Settings geladen", [
+			'plugin'  => 'f12-cf7-captcha',
+			'default' => $default
+		] );
 
 		$settings = get_option( 'f12-cf7-captcha-settings' );
 
@@ -136,6 +140,8 @@ class CF7Captcha {
 				'plugin' => 'f12-cf7-captcha'
 			] );
 			$settings = array();
+		} else {
+			$this->logger->debug( "Settings geladen", [ 'plugin' => 'f12-cf7-captcha', 'settings' => $settings ] );
 		}
 
 		// Load Settings for Blacklist
@@ -353,10 +359,10 @@ class CF7Captcha {
 			$this->logger->debug( "Spam-Filter entfernt", [ 'plugin' => 'f12-cf7-captcha', 'filter' => 'wpcf7_spam' ] );
 		} );
 
-		add_action('init', function(){
+		add_action( 'init', function () {
 			load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
 			$this->logger->debug( "Textdomain geladen", [ 'plugin' => 'f12-cf7-captcha' ] );
-		});
+		} );
 
 		// Filter for Blacklist
 		add_filter( 'f12-cf7-captcha_settings_loaded', [ $this, 'wp_load_blacklist' ] );

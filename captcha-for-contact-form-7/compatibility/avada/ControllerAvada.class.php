@@ -39,39 +39,33 @@ class ControllerAvada extends BaseController {
 			'method' => __METHOD__,
 		] );
 
+		// Überprüfe, ob das Avada-Plugin installiert ist.
+		$is_installed = $this->is_installed();
+		$this->get_logger()->debug( 'Installationsstatus des Moduls: ' . ( $is_installed ? 'Installiert' : 'Nicht installiert' ) );
+
 		// Rufe den Aktivierungsstatus aus den globalen Einstellungen ab.
-		$is_setting_enabled = $this->Controller->get_settings( 'protection_avada_enable', 'global' ) === 1;
-		if ($is_setting_enabled === '' || $is_setting_enabled === null) {
+		$setting_value = $this->Controller->get_settings( 'protection_avada_enable', 'global' );
+		$this->get_logger()->debug( 'Wert der Einstellung "protection_avada_enable": ' . $setting_value );
+
+		if ($setting_value === '' || $setting_value === null) {
 			// Default: aktiv, wenn nicht explizit gesetzt
-			$is_setting_enabled = 1;
+			$setting_value = 1;
+			$this->get_logger()->debug( 'Wert der Einstellung "protection_avada_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
-		// Überprüfe, ob das Avada-Plugin installiert ist.
-		$is_plugin_installed = $this->is_installed();
-
 		// Die Kompatibilität ist nur aktiviert, wenn beide Bedingungen erfüllt sind.
-		$is_enabled = $is_plugin_installed && $is_setting_enabled;
+		$is_active = $is_installed && ( (int) $setting_value === 1 );
 
-		$this->get_logger()->debug( 'Status der Avada-Kompatibilität.', [
-
-			'plugin'              => 'f12-cf7-captcha',
-			'is_plugin_installed' => $is_plugin_installed,
-			'is_setting_enabled'  => $is_setting_enabled,
-			'final_status'        => $is_enabled,
-		] );
+		$this->get_logger()->debug( 'Modulstatus vor dem Filter: ' . ( $is_active ? 'Aktiv' : 'Inaktiv' ) );
 
 		// Wende einen Filter an, um anderen Entwicklern die Möglichkeit zu geben, das Verhalten zu überschreiben.
 		// Der Filter 'f12_cf7_captcha_is_installed_avada' erlaubt es, den Aktivierungsstatus
 		// von außen zu modifizieren, bevor er zurückgegeben wird.
-		$final_status = apply_filters( 'f12_cf7_captcha_is_installed_avada', $is_enabled );
+		$result = apply_filters( 'f12_cf7_captcha_is_installed_avada', $is_active );
 
-		$this->get_logger()->info( 'Rückgabe des finalen Status für die Avada-Kompatibilität.', [
+		$this->get_logger()->info( 'Endgültiger Status nach dem Filter: ' . ( $result ? 'Aktiv' : 'Inaktiv' ) );
 
-			'plugin'       => 'f12-cf7-captcha',
-			'final_status' => $final_status,
-		] );
-
-		return $final_status;
+		return $result;
 	}
 
 	/**

@@ -42,10 +42,10 @@ class ControllerComments extends BaseController
 		$setting_value = $this->Controller->get_settings('protection_wordpress_comments_enable', 'global');
 		$this->get_logger()->debug('Wert der Einstellung "protection_wordpress_comments_enable": ' . $setting_value);
 
-		// Die Hauptlogik
+		$this->get_logger()->debug('Status von den Einstellungen: ' .$setting_value);
 		if ($setting_value === '' || $setting_value === null) {
-			// Default: aktiv, wenn nicht explizit gesetzt
 			$setting_value = 1;
+			$this->get_logger()->debug( 'Wert der Einstellung "protection_wordpress_comments_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
 		$is_active = $setting_value === 1;

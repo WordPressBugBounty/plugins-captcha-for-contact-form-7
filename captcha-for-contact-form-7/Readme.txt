@@ -5,11 +5,14 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.8.2
 Requires PHP: 8.1
-Stable tag: 2.2.4
+Stable tag: 2.2.42
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
 **SilentShield** – the invisible shield against spam.
+Spam is the weed of the internet. It clogs your forms, steals your time, and corrupts your data.
+
+**SilentShield ends this.**
 Protects WordPress forms with captcha, honeypot and blacklist technology – fully compatible with CF7, WPForms, Elementor, WooCommerce and more.
 
 ---
@@ -19,75 +22,32 @@ SilentShield is a **unified captcha and anti-spam plugin for WordPress**.
 It works with the most popular form builders and protects login, registration, and comment forms – without slowing your site.
 
 **Why choose SilentShield?**
-- Stop spam instantly with smart defaults
-- Seamless integration with all major form plugins
-- GDPR/DSGVO ready – no cookies, no tracking
-- Easy to use – install, enable, and enjoy clean forms in seconds
+- **Invisible defense** – Captcha, honeypot, and blacklists working silently.
+- **Instant results** – Install, activate, and stop spam.
+- **Universal support** – Works with Contact Form 7, WPForms, Elementor, WooCommerce, and more.
+- **Privacy-first** – No cookies, no tracking, fully GDPR / DSGVO compliant.
 
-Supported plugins and forms:
-- Contact Form 7
-- WPForms
-- Elementor Forms
-- WooCommerce (Login & Registration)
-- FluentForms
-- Gravity Forms
-- Avada Forms
-- JetForm Builder
-- WordPress Login, Registration & Comments
-- Ultimate Member Registration
-
-> Did SilentShield protect your site? Please consider [leaving a 5-star review](https://wordpress.org/support/plugin/captcha-for-contact-form-7/reviews/).
+SilentShield doesn’t just protect forms.
+It protects your time, your customers, your business.
 
 ---
 
-= ⭐ Key Features ⭐ =
-- Arithmetic, Honeypot & Image Captcha
-- IP Blacklist & Blocking
-- Whitelisting for admins & logged-in users (smooth WooCommerce checkout)
-- Browser & Javascript Validation
-- URL & BB Code filter
-- Time-based submission limit
-- Multiple submission protection
-- Import blacklist with thousands of spam words
-- Custom error messages
-- Default settings block spam instantly – no coding required
+## Core Features
+- Invisible Captcha (Arithmetic, Honeypot, Image)
+- Smart IP Blocking & Blacklists
+- Spam filters for links, code & keywords
+- Whitelisting for admins & customers
+- GDPR-ready, no cookies, no tracking
 
 ---
 
-== Protection Mechanics ==
-SilentShield layers multiple protection methods:
-1. Captcha (Arithmetic, Honeypot, Image)
-2. Blacklists (built-in & custom)
-3. Filter Rules (URLs, BB code, keywords)
-4. IP blocking & multi-submission protection
-5. Browser & Javascript validation
-6. Whitelisting – automatically bypasses captcha for administrators & logged-in users (e.g. WooCommerce checkout)
+## The Promise
 
----
+SilentShield is not “just another plugin.”
+It’s an invisible wall against the background noise of the internet.
 
-== What’s new in 2.2.4 ==
-- New: IP Blacklist Validator
-- New: Anonymous telemetry (opt-out, GDPR compliant)
-- Improved: Simplified configuration defaults
-- Improved: Reload & error handling for Avada, Gravity, FluentForms, WPForms
-- Improved: Skeleton loader for captcha reload
-- Fixed: Whitelist for admins & logged-in users in Ajax/REST
+Activate once – and your forms are human again.
 
----
-
-== Important ==
-Starting with version 2.2.4, SilentShield collects anonymized telemetry to understand usage and improve features.
-- Fully GDPR compliant
-- Can be disabled anytime in settings
-
----
-
-== Privacy ==
-- No cookies, no user tracking
-- Encrypted IP storage (max. 2 months)
-- Telemetry is optional and anonymized
-
----
 
 == Screenshots ==
 1. IP Protection settings
@@ -118,6 +78,34 @@ Yes – no cookies, no tracking, only anonymized data.
 = Do I need coding skills? =
 No. Everything is managed via WordPress Dashboard.
 
+= What data does telemetry collect and why? =
+SilentShield includes **optional anonymous telemetry** (opt-out).
+This helps us understand which features are used, so we can improve usability and remove unused complexity.
+
+**We are a small independent team** – we don’t earn money with this plugin, and we don’t sell or share data.
+Telemetry is used **only for optimization and maintenance purposes**.
+
+---
+
+== Privacy & Telemetry ==
+- No cookies, no user tracking.
+- Encrypted IP storage (max. 2 months, only for spam defense).
+- Telemetry is optional and anonymized.
+- You can disable telemetry anytime in plugin settings.
+
+Collected fields:
+- `plugin_slug`, `plugin_version`
+- `snapshot_date`
+- `settings_json` (anonymized config)
+- `features_json` (enabled features)
+- `created_at`, `first_seen`, `last_seen`
+- `counters_json` (spam events)
+- `wp_version`, `php_version`, `locale`
+
+**GDPR / DSGVO Compliance**
+- Basis: *Art. 6 Abs. 1 lit. f DSGVO* (legitimate interest – plugin optimization).
+- No personal data, no cookies, no user tracking.
+
 ---
 
 == Changelog ==
@@ -129,4 +117,4 @@ No. Everything is managed via WordPress Dashboard.
 - Improved: Reload & error handling for form plugins
 - Fixed: Admin whitelist for Ajax forms
 
-(Older versions trimmed – full changelog available on plugin site.)
+(Older versions trimmed – full changelog on plugin site.)

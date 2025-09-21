@@ -24,16 +24,22 @@ class ControllerJetForm extends BaseController
 		$this->get_logger()->info('Starte Überprüfung, ob das JetForm-Modul aktiviert ist.');
 
 		$is_installed = $this->is_installed();
+		$this->get_logger()->debug('Installationsstatus des Moduls: ' . ($is_installed ? 'Installiert' : 'Nicht installiert'));
+
 		$setting_value = $this->Controller->get_settings('protection_jetform_enable', 'global');
+		$this->get_logger()->debug( 'Wert der Einstellung "protection_jetform_enable": ' . $setting_value );
 
 		if ($setting_value === '' || $setting_value === null) {
 			$setting_value = 1;
+			$this->get_logger()->debug( 'Wert der Einstellung "protection_jetform_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
 		$is_active = $is_installed && ($setting_value === 1);
 
 		$this->get_logger()->debug('Status vor Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));
+
 		$result = apply_filters('f12_cf7_captcha_is_installed_jetform', $is_active);
+
 		$this->get_logger()->info('Endgültiger Status: ' . ($result ? 'Aktiv' : 'Inaktiv'));
 
 		return $result;

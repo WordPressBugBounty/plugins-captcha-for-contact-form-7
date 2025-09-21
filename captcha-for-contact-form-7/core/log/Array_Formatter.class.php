@@ -11,6 +11,29 @@ if (!defined('ABSPATH')) {
  */
 class Array_Formatter
 {
+	/**
+	 * Prüfen, ob ein Array-Key wahrscheinlich ein Passwort-Feld ist
+	 */
+	private static function is_password_field(string $key): bool {
+		$key = strtolower($key);
+		return in_array($key, ['password', 'pass', 'pwd', 'passwort', 'pw'], true);
+	}
+
+	/**
+	 * Passwort maskieren (komplett durch Sternchen ersetzen)
+	 */
+	private static function mask_password(string $password): string {
+		$len = strlen($password);
+		if ($len === 0) {
+			return '';
+		}
+		// Optional: ersten und letzten Buchstaben sichtbar lassen
+		if ($len > 2) {
+			return substr($password, 0, 1) . str_repeat('*', $len - 2) . substr($password, -1);
+		}
+		return str_repeat('*', $len);
+	}
+
 	public static function to_string($data, $delimiter = '', $use_key_as_label = false)
 	{
 		$response = '';
@@ -26,10 +49,13 @@ class Array_Formatter
 
 			// Maskierung einbauen
 			if (is_string($value)) {
-				if (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+				if (self::is_password_field($key)) {
+					$value = self::mask_password($value);
+				}
+				elseif (filter_var($value, FILTER_VALIDATE_EMAIL)) {
 					$value = self::mask_email($value);
 				}
-				if (filter_var($value, FILTER_VALIDATE_IP)) {
+				elseif (filter_var($value, FILTER_VALIDATE_IP)) {
 					$value = self::mask_ip($value);
 				}
 			}

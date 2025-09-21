@@ -46,6 +46,12 @@ class ControllerCF7 extends BaseController
 
 		// Hole die Einstellung zur Aktivierung
 		$setting_value = $this->Controller->get_settings('protection_cf7_enable', 'global');
+		$this->get_logger()->debug('Status von den Einstellungen: ' .$setting_value);
+		if ($setting_value === '' || $setting_value === null) {
+			$setting_value = 1;
+			$this->get_logger()->debug( 'Wert der Einstellung "protection_cf7_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
+		}
+
 		$this->get_logger()->debug('Einstellung "protection_cf7_enable": ' . $setting_value);
 
 		// Die Hauptlogik

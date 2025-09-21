@@ -46,10 +46,9 @@ class ControllerElementor extends BaseController
 		$setting_value = $this->Controller->get_settings('protection_elementor_enable', 'global');
 		$this->get_logger()->debug('Setting "protection_elementor_enable" value: ' . $setting_value);
 
-		// Determine if the module should be active based on installation and settings.
 		if ($setting_value === '' || $setting_value === null) {
-			// Default: aktiv, wenn nicht explizit gesetzt
 			$setting_value = 1;
+			$this->get_logger()->debug( 'Wert der Einstellung "protection_elementor_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
 		$is_active = $is_installed && $setting_value === 1;

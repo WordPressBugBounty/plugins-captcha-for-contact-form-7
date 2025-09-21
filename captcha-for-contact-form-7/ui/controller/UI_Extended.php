@@ -289,13 +289,14 @@ namespace f12_cf7_captcha {
 				'protection_captcha_template',
 				// Dieser Wert sollte als Integer behandelt werden
 				'support',
+                'telemetry',
 				'protection_whitelist_role_admin',
 				'protection_whitelist_role_logged_in',
 			];
 
 			$this->get_logger()->debug( 'Verarbeite alle POST-Werte und saniere sie.' );
 			foreach ( $_POST as $key => $value ) {
-				if ( strpos( $key, 'protection_' ) === 0 || in_array( $key, [ 'support' ], true ) ) {
+				if ( strpos( $key, 'protection_' ) === 0 || in_array( $key, [ 'support', 'telemetry' ], true ) ) {
 					if ( is_array( $value ) ) {
 						$settings['global'][ $key ] = array_map( 'sanitize_text_field', $value );
 					} else {
@@ -318,6 +319,9 @@ namespace f12_cf7_captcha {
 			// Setze den Support-Wert separat, da es eine spezifische Logik gibt.
 			$settings['global']['support'] = ( isset( $_POST['support'] ) && (int) $_POST['support'] === 1 ) ? 1 : 0;
 			$this->get_logger()->debug( 'Support-Einstellung aktualisiert.', [ 'support' => $settings['global']['support'] ] );
+
+			$settings['global']['telemetry'] = ( isset( $_POST['telemetry'] ) && (int) $_POST['telemetry'] === 1 ) ? 1 : 0;
+			$this->get_logger()->debug( 'Telemetry-Einstellung aktualisiert.', [ 'telemetry' => $settings['global']['telemetry'] ] );
 
 			// Bearbeite die Blacklist-Werte
 			$blacklist = $settings['global']['protection_rules_blacklist_value'] ?? '';
