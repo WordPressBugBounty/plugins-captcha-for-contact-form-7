@@ -51,7 +51,7 @@ class ControllerElementor extends BaseController
 			$this->get_logger()->debug( 'Wert der Einstellung "protection_elementor_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
-		$is_active = $is_installed && $setting_value === 1;
+		$is_active = $is_installed && (int)$setting_value === 1;
 
 		// Log the status before applying any filters.
 		$this->get_logger()->debug('Module status before filter: ' . ($is_active ? 'Active' : 'Inactive'));

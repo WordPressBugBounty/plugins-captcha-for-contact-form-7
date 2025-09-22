@@ -48,7 +48,7 @@ class ControllerWoocommerceLogin extends BaseController
 			$setting_value = 1;
 			$this->get_logger()->debug( 'Wert der Einstellung "protection_woocommerce_login_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
-		$is_active = $is_installed && $setting_value === 1;
+		$is_active = $is_installed && (int)$setting_value === 1;
 
 		// Log the status before applying any filters.
 		$this->get_logger()->debug('Modulstatus vor dem Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));

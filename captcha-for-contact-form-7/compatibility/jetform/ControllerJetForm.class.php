@@ -34,7 +34,7 @@ class ControllerJetForm extends BaseController
 			$this->get_logger()->debug( 'Wert der Einstellung "protection_jetform_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
-		$is_active = $is_installed && ($setting_value === 1);
+		$is_active = $is_installed && (int)$setting_value === 1;
 
 		$this->get_logger()->debug('Status vor Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));
 
