@@ -48,7 +48,7 @@ class ControllerComments extends BaseController
 			$this->get_logger()->debug( 'Wert der Einstellung "protection_wordpress_comments_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
 		}
 
-		$is_active = $setting_value === 1;
+		$is_active = (int)$setting_value === 1;
 
 		// Logge den Status vor dem Anwenden des Filters
 		$this->get_logger()->debug('Status vor dem Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));

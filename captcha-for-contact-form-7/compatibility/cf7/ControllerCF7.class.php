@@ -55,7 +55,7 @@ class ControllerCF7 extends BaseController
 		$this->get_logger()->debug('Einstellung "protection_cf7_enable": ' . $setting_value);
 
 		// Die Hauptlogik
-		$is_active = $is_installed && $setting_value === 1;
+		$is_active = $is_installed && (int)$setting_value === 1;
 
 		// Logge das Ergebnis vor dem Filter
 		$this->get_logger()->debug('Modulstatus vor dem Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));
