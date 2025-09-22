@@ -12,6 +12,8 @@ namespace f12_cf7_captcha {
 	use f12_cf7_captcha\core\timer\Timer_Controller;
 	use f12_cf7_captcha\ui\UI_Manager;
 	use f12_cf7_captcha\ui\UI_Page_Form;
+	use forge12\contactform7\CF7Captcha\CaptchaCleaner;
+	use forge12\contactform7\CF7Captcha\Messages;
 
 	if ( ! defined( 'ABSPATH' ) ) {
 		exit;
@@ -38,13 +40,13 @@ namespace f12_cf7_captcha {
 			// Füge einen Filter-Hook hinzu, der vor dem Speichern der UI-Einstellungen ausgelöst wird.
 			// Der Hook-Tag wird dynamisch aus dem UI-Manager-Domain-Namen und dem eigenen Domain-Namen erstellt.
 			add_filter(
-				$UI_Manager->get_domain() . '_ui_f12-cf7-captcha_before_on_save',
+				$UI_Manager->get_domain() . '_ui_f12-cf7-captcha-extended_before_on_save',
 				array( $this, 'maybe_clean' ), // Rufe die Methode maybe_clean() dieser Klasse auf.
 				10, // Priorität des Filters (10 ist Standard).
 				1  // Anzahl der übergebenen Argumente (hier 1).
 			);
-			$this->get_logger()->debug( 'Filter "ui_f12-cf7-captcha_before_on_save" hinzugefügt.', [
-				'hook' => $UI_Manager->get_domain() . '_ui_f12-cf7-captcha_before_on_save'
+			$this->get_logger()->debug( 'Filter "ui_f12-cf7-captcha-extended_before_on_save" hinzugefügt.', [
+				'hook' => $UI_Manager->get_domain() . '_ui_f12-cf7-captcha_before-extended_on_save'
 			] );
 
 			$this->get_logger()->info( 'Konstruktor abgeschlossen.' );

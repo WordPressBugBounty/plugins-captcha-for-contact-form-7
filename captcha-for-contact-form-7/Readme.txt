@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.8.2
 Requires PHP: 8.1
-Stable tag: 2.2.42
+Stable tag: 2.2.43
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -109,6 +109,12 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.2.43 =
+- Fixed: Adjusted hooks to clear database entries by user.
+- Fixed: Fatal error caused by IPLogs using array_keys
+-
+
+
 = 2.2.4 =
 - New: JetForm support
 - New: IP Blacklist Validator

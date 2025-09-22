@@ -71,7 +71,7 @@ class IPLog
 		}
 
 		$this->get_logger()->info('Instanz erstellt', [
-			'params' => array_keys($params),
+			'params' => is_object($params) ? get_object_vars($params) : (array) $params,
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
