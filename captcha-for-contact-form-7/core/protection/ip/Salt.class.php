@@ -644,20 +644,29 @@ class Salt {
 	public function get_salted(string $value): string
 	{
 		$this->logger->info('Erzeuge einen gesalzenen Hash-Wert.', [
+			"plugin" => "f12-cf7-captcha",
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (empty($this->salt)) {
 			$this->logger->error('Fehler: Der Salt-Wert fehlt.', [
+				"plugin" => "f12-cf7-captcha",
 				'class' => __CLASS__,
 			]);
-			throw new \RuntimeException('Salt-Wert ist nicht gesetzt.');
+
+			$salt = $this->create_salt();
+			if(!empty($salt)) {
+				$this->logger->debug( 'Salt-Wert erfolgreich generiert.', ["plugin" => "f12-cf7-captcha","salt" => $salt ] );
+			}else{
+				$this->logger->critical( 'Salt-Wert konnte nicht generiert werden.', ["plugin" => "f12-cf7-captcha"] );
+			}
 		}
 
 		$hash = hash_pbkdf2('sha512', $value, $this->salt, 10);
 
 		$this->logger->debug('Hash erfolgreich generiert.', [
+			"plugin" => "f12-cf7-captcha",
 			'hash_length' => strlen($hash),
 		]);
 
@@ -679,16 +688,17 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.', ["plugin" => "f12-cf7-captcha"]);
 			return null;
 		}
 
-		$this->logger->info("Versuche, einen Salt-Datensatz mit dem Offset '{$offset}' abzurufen.");
+		$this->logger->info("Versuche, einen Salt-Datensatz mit dem Offset '{$offset}' abzurufen.", ["plugin" => "f12-cf7-captcha"]);
 
 		$table = $this->get_table_name();
 
 		if (!is_numeric($offset) || $offset < 0) {
 			$this->logger->error('Ungültiger Offset-Wert. Erwartet wurde eine nicht-negative Ganzzahl.', [
+				"plugin" => "f12-cf7-captcha",
 				'offset' => $offset,
 			]);
 			return null;
@@ -700,6 +710,7 @@ class Salt {
 		);
 
 		$this->logger->debug('Führe Datenbankabfrage aus.', [
+			"plugin" => "f12-cf7-captcha",
 			'query' => $query,
 		]);
 
@@ -712,6 +723,7 @@ class Salt {
 			$Salt = new Salt($this->get_logger(), $results[0]);
 		} else {
 			$this->logger->warning('Kein Salt-Datensatz für den gegebenen Offset gefunden.', [
+				"plugin" => "f12-cf7-captcha",
 				'offset' => $offset,
 			]);
 		}
@@ -732,10 +744,10 @@ class Salt {
 	{
 		global $wpdb;
 
-		$this->logger->info('Versuche, alte Datenbankeinträge zu bereinigen.');
+		$this->logger->info('Versuche, alte Datenbankeinträge zu bereinigen.', ["plugin" => "f12-cf7-captcha"]);
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.', ["plugin" => "f12-cf7-captcha"]);
 			throw new \RuntimeException('WPDB not found');
 		}
 
@@ -746,6 +758,7 @@ class Salt {
 			$date_time = new DateTime('-3 Weeks');
 			$date_time_formatted = $date_time->format('Y-m-d H:i:s');
 			$this->logger->debug("Datums-Grenze für die Löschung berechnet.", [
+				"plugin" => "f12-cf7-captcha",
 				'cutoff_date' => $date_time_formatted,
 			]);
 		} catch (\Exception $e) {

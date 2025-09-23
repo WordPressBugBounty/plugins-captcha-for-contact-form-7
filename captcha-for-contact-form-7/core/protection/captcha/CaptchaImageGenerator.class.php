@@ -126,22 +126,6 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	 * @return string The captcha image HTML markup.
 	 */
 	public function get_image(): string {
-		/*
-		 * Load the stored image if it has been generated and storing is enabled
-		 */
-		if ( $this->store_image && ! empty( $this->image ) ) {
-			$this->get_logger()->debug(
-				"get_image(): Gespeichertes Captcha-Bild zurückgegeben",
-				[
-					'plugin' => 'f12-cf7-captcha',
-					'class'  => __CLASS__,
-					'length' => strlen( $this->image )
-				]
-			);
-
-			return $this->image;
-		}
-
 		// the captcha
 		$captcha = $this->get();
 
@@ -200,8 +184,8 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		imagepng( $image );
 		$image = ob_get_contents();
 		ob_end_clean();
-
-		$this->image = '<span class="captcha-image"><img alt="captcha" src="data:image/png;base64,' . base64_encode( $image ) . '"/></span>';
+		$rand = uniqid('cpi_', true);
+		$this->image = '<span class="captcha-image"><img id="'.$rand.'" alt="captcha" src="data:image/png;base64,' . base64_encode( $image ) . '"/></span>';
 
 		$this->get_logger()->info(
 			"get_image(): Neues Captcha-Bild generiert",
