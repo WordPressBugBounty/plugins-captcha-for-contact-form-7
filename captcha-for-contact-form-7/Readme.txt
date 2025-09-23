@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.8.2
 Requires PHP: 8.1
-Stable tag: 2.2.45
+Stable tag: 2.2.46
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -109,8 +109,15 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.2.46 =
+- Fix [Core]: Removed dynamic property creation in CaptchaTimer; explicit initialization.
+- Fix [JS]: Validation now works when the submit button has an inline onclick; our callback is no longer blocked.
+- Fix [Gravity Forms]: CAPTCHA now renders at the configured position; misplacement previously caused constant protection triggering.
+- Fix [Logs]: Removed properties are no longer tracked; prevents excessive log size growth.
+
+
 = 2.2.44 =
- - Fixed: Updated the comparison of `$setting_value` by adding an explicit `(int)` cast to ensure numeric strings like `'1'` are correctly converted to integers. This fixes issues where the strict comparison `=== 1` would previously return `false`.
+- Fixed: Updated the comparison of `$setting_value` by adding an explicit `(int)` cast to ensure numeric strings like `'1'` are correctly converted to integers. This fixes issues where the strict comparison `=== 1` would previously return `false`.
 
 = 2.2.43 =
 - Fixed: Adjusted hooks to clear database entries by user.

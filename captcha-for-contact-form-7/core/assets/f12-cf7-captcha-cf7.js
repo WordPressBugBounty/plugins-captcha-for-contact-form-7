@@ -3,6 +3,71 @@
  * This will regenerate the Hash and the Captcha Value
  */
 window.f12cf7captcha_cf7 = {
+    storedOnclicks: {}, // To store onclick handlers for submit buttons
+
+    /**
+     * Save and remove onclick handlers for all forms containing js_end_time
+     */
+    processFormOnclicks: function () {
+        jQuery('form').each(function () {
+            var $form = jQuery(this);
+            // Check if the form has the input with class 'js_end_time'
+            if ($form.find('.js_end_time').length > 0) {
+                // Find all submit buttons in the form
+                $form.find('button[type=submit], input[type=submit]').each(function () {
+                    var $button = jQuery(this);
+                    var buttonId = $button.attr('id') || (Math.random().toString(36).substr(2, 9)); // Unique ID for the button
+
+                    var inlineOnclick = $button.attr('onclick');
+                    if (inlineOnclick) {
+                        // Store the inline onclick handler and remove it temporarily
+                        window.f12cf7captcha_cf7.storedOnclicks[buttonId] = inlineOnclick;
+                        $button.removeAttr('onclick'); // Disable onclick temporarily
+                        $button.attr('data-f12-stored-id', buttonId); // Mark the button with a unique identifier
+                    }
+                });
+            }
+        });
+    },
+
+    /**
+     * Handle the click event for submit buttons and execute stored onclick logic
+     */
+    handleFormSubmission: function () {
+        jQuery(document).on('click', 'button[type=submit], input[type=submit]', function (event) {
+            var $button = jQuery(this);
+            var $form = $button.closest('form');
+
+            // Check if the form contains 'js_end_time'
+            if ($form.find('.js_end_time').length > 0) {
+                event.preventDefault(); // Stop default submission for now
+
+                // Execute custom logic for setting js_end_time
+                var timestamp = Date.now();
+                var js_microtime = timestamp / 1000; // Convert milliseconds to seconds
+                $form.find('.js_end_time').val(js_microtime);
+
+                // Execute dynamically bound click handlers (if any)
+                var events = jQuery._data(this, 'events');
+                if (events && events.click) {
+                    events.click.forEach(function (handler) {
+                        handler.handler.call(this);
+                    }.bind(this));
+                }
+
+                // Fetch and execute stored onclick handler if it exists
+                var buttonId = $button.attr('data-f12-stored-id');
+                if (buttonId && window.f12cf7captcha_cf7.storedOnclicks[buttonId]) {
+                    var storedOnclick = window.f12cf7captcha_cf7.storedOnclicks[buttonId];
+                    eval(storedOnclick); // Execute the stored onclick logic
+                }
+
+                // Finally, trigger the form to submit
+                $form.submit(); // Submit the form programmatically
+            }
+        });
+    },
+
     showOverlay: function($container) {
         if ($container.css('position') === 'static') {
             $container.css('position', 'relative');
@@ -98,6 +163,12 @@ window.f12cf7captcha_cf7 = {
      * Init
      */
     init: function () {
+        // Identify and process onclicks in all relevant forms
+        this.processFormOnclicks();
+
+        // Handle form submission and reintegrate onclicks
+        this.handleFormSubmission();
+
         /**
          * Reload the Captcha by User
          * @param document
@@ -108,20 +179,6 @@ window.f12cf7captcha_cf7 = {
 
             window.f12cf7captcha_cf7.reloadCaptcha(jQuery(this));
             //window.f12cf7captcha_cf7.reloadTimer();
-        });
-
-        /**
-         * Add timer information when the user clicks on the submit button so we can check the time the user needs
-         * from displaying the form to submit
-         */
-        jQuery(document).on('click', 'button[type=submit], input[type="submit"]', function () {
-            // Get the current timestamp in milliseconds using Date.now()
-            var timestamp = Date.now();
-
-            // Combine the timestamp and date milliseconds to create a JavaScript microtime value
-            var js_microtime = timestamp / 1000;
-
-            jQuery(this).closest('form').find('.js_end_time').val(js_microtime)
         });
 
         /**

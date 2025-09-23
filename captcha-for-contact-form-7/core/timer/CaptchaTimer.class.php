@@ -47,6 +47,7 @@ class CaptchaTimer {
 	 * @var string
 	 */
 	private $updatetime = '';
+	private LoggerInterface $logger;
 
 	/**
 	 * Create a new Captcha Object

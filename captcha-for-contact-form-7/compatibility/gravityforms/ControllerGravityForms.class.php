@@ -90,18 +90,28 @@ class ControllerGravityForms extends BaseController {
 	 */
 	public function on_init(): void {
 		// Log the start of the initialization process for the Gravity Forms module.
-		$this->get_logger()->info( 'Starte die Initialisierung des Gravity Forms-Moduls.' );
+		$this->get_logger()->info( 'Starte die Initialisierung des Gravity Forms-Moduls.', [ 'plugin' => 'f12-cf7-captcha' ] );
 
 		// Set the module name.
 		$this->name = __( 'GravityForms', 'captcha-for-contact-form-7' );
-		$this->get_logger()->debug( 'Modulname wurde gesetzt.', [ 'name' => $this->name ] );
+		$this->get_logger()->debug( 'Modulname wurde gesetzt.', [
+			'name'   => $this->name,
+			'plugin' => 'f12-cf7-captcha'
+		] );
 
 		// Add a filter to modify the form HTML and insert the captcha.
-		$this->get_logger()->debug( 'Füge den Filter "gform_get_form_filter" hinzu, um den Spamschutz in Formulare einzufügen.' );
-		add_filter( 'gform_get_form_filter', array( $this, 'wp_add_spam_protection' ), 10, 2 );
+		//if ( class_exists( '\GFCommon' ) && version_compare( \GFCommon::$version, '2.9', '<' ) ) {
+		// älter als 2.9
+		add_filter( 'gform_get_form_filter', [ $this, 'wp_add_spam_protection' ], 10, 2 );
+		$this->get_logger()->debug( 'Füge den Filter "gform_get_form_filter" hinzu, um Formulareinträge auf Spam zu prüfen.', [ 'plugin' => 'f12-cf7-captcha' ] );
+		/*} else {
+			// 2.9 oder neuer
+			add_filter( 'gform_form_markup', [ $this, 'wp_add_spam_protection' ], 10, 2 );
+			$this->get_logger()->debug( 'Füge den Filter "gform_form_markup" hinzu, um Formulareinträge auf Spam zu prüfen.', [ 'plugin' => 'f12-cf7-captcha' ] );
+		}*/
 
 		// Add a filter for spam validation.
-		$this->get_logger()->debug( 'Füge den Filter "gform_entry_is_spam" hinzu, um Formulareinträge auf Spam zu prüfen.' );
+		$this->get_logger()->debug( 'Füge den Filter "gform_entry_is_spam" hinzu, um Formulareinträge auf Spam zu prüfen.', [ 'plugin' => 'f12-cf7-captcha' ] );
 		// Mark entry as spam
 		add_filter( 'gform_entry_is_spam', array( $this, 'wp_is_spam' ), 10, 3 );
 		// Show error in form without sending the form
@@ -111,10 +121,10 @@ class ControllerGravityForms extends BaseController {
 		// Adds an action to enqueue the necessary scripts and styles for the spam protection.
 		// This hook is used to add assets to the front-end of the website.
 		add_action( 'wp_enqueue_scripts', array( $this, 'wp_add_assets' ) );
-		$this->get_logger()->debug( 'Action "wp_enqueue_scripts" zum Laden der Assets registriert.' );
+		$this->get_logger()->debug( 'Action "wp_enqueue_scripts" zum Laden der Assets registriert.', [ 'plugin' => 'f12-cf7-captcha' ] );
 
 		// Log the successful completion of the initialization.
-		$this->get_logger()->info( 'Initialisierung abgeschlossen.' );
+		$this->get_logger()->info( 'Initialisierung abgeschlossen.', [ 'plugin' => 'f12-cf7-captcha' ] );
 	}
 
 	/**
@@ -215,6 +225,10 @@ class ControllerGravityForms extends BaseController {
 		if ( str_contains( $form_string, "<div class='gform_footer" ) ) {
 			// Place the captcha before the form's footer.
 			$form_string = str_replace( "<div class='gform_footer", $captcha . "<div class='gform_footer", $form_string );
+			$this->get_logger()->info( 'Captcha wurde erfolgreich vor dem Footer eingefügt.' );
+		} elseif ( str_contains( $form_string, "<div class='gform-footer" ) ) {
+			// Place the captcha before the form's footer.
+			$form_string = str_replace( "<div class='gform-footer", $captcha . "<div class='gform-footer", $form_string );
 			$this->get_logger()->info( 'Captcha wurde erfolgreich vor dem Footer eingefügt.' );
 		} else {
 			// If the marker is not found, append the captcha to the end of the form.
