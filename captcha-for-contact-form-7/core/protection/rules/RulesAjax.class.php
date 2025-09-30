@@ -100,14 +100,15 @@ class RulesAjax extends BaseModul
 	{
 		$this->get_logger()->info('Versuche, den Blacklist-Inhalt von der externen API abzurufen.');
 
-		$url = 'https://api.forge12.com/v1/tools/blacklist.txt';
+		//$url = 'https://api.forge12.com/v1/tools/blacklist.txt';
+		$url = 'https://api.silentshield.io/api/captcha/blacklist';
 
 		// Führe die API-Anfrage sicher über die WordPress-HTTP-API aus.
 		$response = wp_remote_get($url, [
-			'timeout' => 15, // Setze ein großzügiges Timeout
+			'timeout' => 3, // Setze ein großzügiges Timeout
 			'headers' => [
 				'Accept' => 'text/plain',
-				'User-Agent' => 'CF7-Captcha-Plugin/' . F12_CF7_CAPTCHA_VERSION,
+				'User-Agent' => 'CF7-Captcha-Plugin/' . FORGE12_CAPTCHA_VERSION,
 			],
 		]);
 

@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.8.2
 Requires PHP: 8.1
-Stable tag: 2.2.48
+Stable tag: 2.2.49
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -109,6 +109,12 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.2.49 =
+- New [API v2]: Started implementing the new Captcha SaaS solution.
+- Fix [JavaScript]: Fixed a bug that prevented WooCommerce from triggering its own events on form submit.
+- Fix [Logger]: No longer tied to WP_DEBUG. Enable with F12_DEBUG.
+- Fix [Core]: Updated paths for blacklist and set timeout value to 3s.
+
 = 2.2.46 =
 - Fix [Core]: Removed dynamic property creation in CaptchaTimer; explicit initialization.
 - Fix [JS]: Validation now works when the submit button has an inline onclick; our callback is no longer blocked.

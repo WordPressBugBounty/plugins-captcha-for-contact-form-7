@@ -105,8 +105,6 @@ namespace f12_cf7_captcha {
 
 				// Telemetry
 				'telemetry'                                => 1,
-				// Support-Link
-				'support'                                  => 1,
 			];
 
 			// Füge die Standardeinstellungen unter dem Schlüssel 'global' zum übergebenen Array hinzu.
@@ -290,7 +288,6 @@ namespace f12_cf7_captcha {
 				'protection_javascript_enable',
 				'protection_captcha_template',
 				// Dieser Wert sollte als Integer behandelt werden
-				'support',
                 'telemetry',
 				'protection_whitelist_role_admin',
 				'protection_whitelist_role_logged_in',
@@ -298,7 +295,7 @@ namespace f12_cf7_captcha {
 
 			$this->get_logger()->debug( 'Verarbeite alle POST-Werte und saniere sie.' );
 			foreach ( $_POST as $key => $value ) {
-				if ( strpos( $key, 'protection_' ) === 0 || in_array( $key, [ 'support', 'telemetry' ], true ) ) {
+				if ( strpos( $key, 'protection_' ) === 0 || in_array( $key, [ 'telemetry' ], true ) ) {
 					if ( is_array( $value ) ) {
 						$settings['global'][ $key ] = array_map( 'sanitize_text_field', $value );
 					} else {
@@ -317,10 +314,6 @@ namespace f12_cf7_captcha {
 					$this->get_logger()->debug( 'Neues Feld übernommen oder bestehendes aktualisiert.', [ 'key' => $key ] );
 				}
 			}
-
-			// Setze den Support-Wert separat, da es eine spezifische Logik gibt.
-			$settings['global']['support'] = ( isset( $_POST['support'] ) && (int) $_POST['support'] === 1 ) ? 1 : 0;
-			$this->get_logger()->debug( 'Support-Einstellung aktualisiert.', [ 'support' => $settings['global']['support'] ] );
 
 			$settings['global']['telemetry'] = ( isset( $_POST['telemetry'] ) && (int) $_POST['telemetry'] === 1 ) ? 1 : 0;
 			$this->get_logger()->debug( 'Telemetry-Einstellung aktualisiert.', [ 'telemetry' => $settings['global']['telemetry'] ] );
@@ -1374,42 +1367,6 @@ namespace f12_cf7_captcha {
 											$field_name = 'protection_whitelist_role_logged_in';
 											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
 											$name       = __( 'Activate Whitelist for Logged-In Users', 'captcha-for-contact-form-7' );
-											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );
-											?>
-                                            <label for="<?php esc_attr_e( $field_name ); ?>"
-                                                   class="toggle-label"></label>
-                                        </div>
-                                        <label for="<?php esc_attr_e( $field_name ); ?>">
-											<?php esc_attr_e( $name ); ?>
-                                        </label>
-                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-container">
-                <!-- Whitelist Section -->
-                <h3><?php _e( 'Support', 'captcha-for-contact-form-7' ); ?></h3>
-                <div class="section-wrapper">
-                    <div class="section">
-                        <div class="option">
-                            <div class="label">
-                                <label for="support"><strong><?php _e( 'Support us', 'captcha-for-contact-form-7' ); ?></strong></label>
-                                <p style="padding-right:20px;"><?php _e( 'Enable this option to support us developing and updating the plugin.', 'captcha-for-contact-form-7' ); ?></p>
-                            </div>
-                            <div class="input">
-                                <div class="toggle-item-wrapper">
-                                    <!-- SEPARATOR -->
-                                    <div class="f12-checkbox-toggle">
-                                        <div class="toggle-container">
-											<?php
-											$field_name = 'support';
-											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
-											$name       = __( 'Activate Support', 'captcha-for-contact-form-7' );
 											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );
 											?>
                                             <label for="<?php esc_attr_e( $field_name ); ?>"

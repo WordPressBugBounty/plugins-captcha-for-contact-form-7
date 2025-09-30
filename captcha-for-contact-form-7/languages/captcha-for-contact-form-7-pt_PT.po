@@ -1,8 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: Captcha for Contact Form 7\n"
-"POT-Creation-Date: 2025-09-20 15:13+0200\n"
-"PO-Revision-Date: 2025-09-20 15:13+0200\n"
+"POT-Creation-Date: 2025-09-30 16:27+0200\n"
+"PO-Revision-Date: 2025-09-30 16:31+0200\n"
 "Last-Translator: B. <nomail@free.fr>\n"
 "Language-Team: \n"
 "Language: pt_PT\n"
@@ -23,13 +23,13 @@ msgstr ""
 "X-Poedit-SearchPath-1: .\n"
 "X-Poedit-SearchPathExcluded-0: *.min.js\n"
 
-#: compatibility/avada/ControllerAvada.class.php:109
+#: compatibility/avada/ControllerAvada.class.php:103
 msgid "Avada"
 msgstr "Avada"
 
-#: compatibility/avada/ControllerAvada.class.php:262
-#: compatibility/gravityforms/ControllerGravityForms.class.php:176
-#: compatibility/jetform/ControllerJetForm.class.php:122
+#: compatibility/avada/ControllerAvada.class.php:256
+#: compatibility/gravityforms/ControllerGravityForms.class.php:183
+#: compatibility/jetform/ControllerJetForm.class.php:128
 msgid "Invalid input detected."
 msgstr "Entrada inválida detetada."
 
@@ -39,8 +39,8 @@ msgstr "Captcha inválido"
 
 #: compatibility/cf7/Backend.class.php:155
 #: compatibility/cf7/Backend.class.php:269 ui/controller/UI_Dashboard.php:69
-#: ui/controller/UI_Dashboard.php:70 ui/controller/UI_Dashboard.php:353
-#: ui/controller/UI_Dashboard.php:367
+#: ui/controller/UI_Dashboard.php:70 ui/controller/UI_Dashboard.php:356
+#: ui/controller/UI_Dashboard.php:370
 msgid "Captcha"
 msgstr "Captcha"
 
@@ -80,7 +80,7 @@ msgstr "Atributo de Classe"
 msgid "Insert Tag"
 msgstr "Inserir Etiqueta"
 
-#: compatibility/cf7/ControllerCF7.class.php:100
+#: compatibility/cf7/ControllerCF7.class.php:106
 msgid "Contact Forms 7"
 msgstr "Contact Forms 7"
 
@@ -92,79 +92,69 @@ msgstr "Comentários do WordPress"
 msgid "Error: Spam"
 msgstr "Erro: Spam"
 
-#: compatibility/elementor/ControllerElementor.class.php:102
+#: compatibility/elementor/ControllerElementor.class.php:101
 msgid "Elementor"
 msgstr "Elementor"
 
-#: compatibility/elementor/ControllerElementor.class.php:291
+#: compatibility/elementor/ControllerElementor.class.php:290
 #, php-format
 msgid "Spam detected: %s"
 msgstr "Spam detetado: %s"
 
-#: compatibility/fluentform/ControllerFluentform.class.php:135
+#: compatibility/fluentform/ControllerFluentform.class.php:136
 msgid "Fluent Forms"
 msgstr "Fluent Forms"
 
-#: compatibility/fluentform/ControllerFluentform.class.php:232
+#: compatibility/fluentform/ControllerFluentform.class.php:233
 #, php-format
 msgid "Captcha verification failed: %s"
 msgstr "Falha na verificação do captcha: %s"
 
-#: compatibility/gravityforms/ControllerGravityForms.class.php:99
+#: compatibility/gravityforms/ControllerGravityForms.class.php:96
 msgid "GravityForms"
 msgstr "GravityForms"
 
-#: compatibility/jetform/ControllerJetForm.class.php:65
+#: compatibility/jetform/ControllerJetForm.class.php:71
 msgid "JetFormBuilder"
 msgstr "JetFormBuilder"
 
-#: compatibility/ultimatemember/ControllerUltimateMember.class.php:100
+#: compatibility/ultimatemember/ControllerUltimateMember.class.php:101
 msgid "Ultimate Member"
 msgstr "Ultimate Member"
 
-#: compatibility/ultimatemember/ControllerUltimateMember.class.php:151
-#: compatibility/ultimatemember/ControllerUltimateMember.class.php:188
+#: compatibility/ultimatemember/ControllerUltimateMember.class.php:152
+#: compatibility/ultimatemember/ControllerUltimateMember.class.php:189
 #, php-format
 msgid "Captcha not valid: %s"
 msgstr "Captcha inválido: %s"
 
-#: compatibility/woocommerce-login/ControllerWoocommerceLogin.class.php:97
+#: compatibility/woocommerce-login/ControllerWoocommerceLogin.class.php:98
 msgid "WooCommerce Login"
 msgstr "Início de Sessão WooCommerce"
 
-#: compatibility/woocommerce-login/ControllerWoocommerceLogin.class.php:187
-#: compatibility/woocommerce-registration/ControllerWoocommerceRegistration.class.php:187
-#: compatibility/woocommerce/ControllerWoocommerce.class.php:193
-#: compatibility/wordpress-login/ControllerWordpressLogin.class.php:170
-#: compatibility/wordpress-registration/ControllerWordpressRegistration.class.php:184
-#: compatibility/wordpress/ControllerWordpress.class.php:189
-#: compatibility/wpforms/ControllerWPForms.class.php:235
-#: compatibility/wpjobmanager-applications/ControllerWPJobManagerApplications.class.php:181
+#: compatibility/woocommerce-login/ControllerWoocommerceLogin.class.php:188
+#: compatibility/woocommerce-registration/ControllerWoocommerceRegistration.class.php:188
+#: compatibility/wordpress-login/ControllerWordpressLogin.class.php:171
+#: compatibility/wordpress-registration/ControllerWordpressRegistration.class.php:185
+#: compatibility/wpforms/ControllerWPForms.class.php:236
+#: compatibility/wpjobmanager-applications/ControllerWPJobManagerApplications.class.php:182
 #, php-format
 msgid "Captcha not correct: %s"
 msgstr "Captcha incorreto: %s"
 
-#: compatibility/woocommerce-registration/ControllerWoocommerceRegistration.class.php:97
+#: compatibility/woocommerce-registration/ControllerWoocommerceRegistration.class.php:98
 msgid "WooCommerce Registration"
 msgstr "Registo WooCommerce"
 
-#: compatibility/woocommerce/ControllerWoocommerce.class.php:97
-msgid "WooCommerce Login & Registration"
-msgstr "Início de Sessão e Registo WooCommerce"
-
-#: compatibility/wordpress-login/ControllerWordpressLogin.class.php:77
+#: compatibility/wordpress-login/ControllerWordpressLogin.class.php:78
 msgid "WordPress Login"
 msgstr "Início de Sessão WordPress"
 
-#: compatibility/wordpress-registration/ControllerWordpressRegistration.class.php:88
+#: compatibility/wordpress-registration/ControllerWordpressRegistration.class.php:89
 msgid "WordPress Registration"
 msgstr "Registo WordPress"
 
-#: compatibility/wordpress/ControllerWordpress.class.php:88
-msgid "WordPress Login & Registration"
-msgstr "Início de Sessão e Registo WordPress"
-
-#: compatibility/wpjobmanager-applications/ControllerWPJobManagerApplications.class.php:88
+#: compatibility/wpjobmanager-applications/ControllerWPJobManagerApplications.class.php:89
 msgid "WP Job Manager Application Forms"
 msgstr "Formulários de Candidatura WP Job Manager"
 
@@ -253,8 +243,8 @@ msgstr ""
 "A verificação do tempo falhou. Isto é causado se o formulário for submetido "
 "muito rapidamente após o carregamento da página."
 
-#: core/log/Log_WordPress.class.php:402 ui/controller/UI_Dashboard.php:309
-#: ui/controller/UI_Dashboard.php:326 ui/controller/UI_Dashboard.php:420
+#: core/log/Log_WordPress.class.php:402 ui/controller/UI_Dashboard.php:312
+#: ui/controller/UI_Dashboard.php:329 ui/controller/UI_Dashboard.php:423
 msgid "Captcha Protection"
 msgstr "Proteção por Captcha"
 
@@ -271,8 +261,8 @@ msgid "The form has been blocked by given rules (BBCode, Blacklist or URL)."
 msgstr ""
 "O formulário foi bloqueado pelas regras dadas (BBCode, Lista Negra ou URL)."
 
-#: core/log/Log_WordPress.class.php:410 ui/controller/UI_Extended.php:1052
-#: ui/controller/UI_Extended.php:1058 ui/controller/UI_Extended.php:1069
+#: core/log/Log_WordPress.class.php:410 ui/controller/UI_Extended.php:1059
+#: ui/controller/UI_Extended.php:1065 ui/controller/UI_Extended.php:1076
 msgid "IP Protection"
 msgstr "Proteção de IP"
 
@@ -297,8 +287,8 @@ msgstr ""
 "A validação do JavaScript falhou. Isto indica que o formulário foi submetido "
 "por um bot ou um script que não conseguiu executar a nossa validação."
 
-#: core/log/Log_WordPress.class.php:418 ui/controller/UI_Extended.php:705
-#: ui/controller/UI_Extended.php:759
+#: core/log/Log_WordPress.class.php:418 ui/controller/UI_Extended.php:712
+#: ui/controller/UI_Extended.php:766
 msgid "Browser Protection"
 msgstr "Proteção do Navegador"
 
@@ -334,11 +324,11 @@ msgstr ""
 "O campo para validação está em falta. Isso pode ser causado por bots que não "
 "permitem que o JavaScript funcione."
 
-#: core/protection/browser/Browser.php:458
+#: core/protection/browser/Browser.php:463
 msgid "bot-detected"
 msgstr "bot detetado"
 
-#: core/protection/browser/Browser.php:470
+#: core/protection/browser/Browser.php:475
 msgid "crawler-detected"
 msgstr "crawler detetado"
 
@@ -362,7 +352,7 @@ msgstr "proteção-ip"
 msgid "Your IP is blocked from submitting this form."
 msgstr "O seu IP está bloqueado para submeter este formulário."
 
-#: core/protection/javascript/Javascript_Validator.php:573
+#: core/protection/javascript/Javascript_Validator.php:578
 msgid "javascript-protection"
 msgstr "proteção-javascript"
 
@@ -376,7 +366,7 @@ msgid "The word %s is blacklisted. Please remove it to continue."
 msgstr "A palavra %s está na lista negra. Por favor, remova-a para continuar."
 
 #: core/protection/rules/RulesHandler.class.php:252 core/upgrade.php:125
-#: ui/controller/UI_Extended.php:90
+#: ui/controller/UI_Extended.php:92
 msgid "BBCode is not allowed."
 msgstr "BBCode não é permitido."
 
@@ -417,23 +407,23 @@ msgstr "Lembrar-me mais tarde"
 msgid "Don’t ask again"
 msgstr "Não perguntar novamente"
 
-#: core/upgrade.php:124 ui/controller/UI_Extended.php:89
-#: ui/controller/UI_Extended.php:832 ui/controller/UI_Extended.php:893
-#: ui/controller/UI_Extended.php:1000
+#: core/upgrade.php:124 ui/controller/UI_Extended.php:91
+#: ui/controller/UI_Extended.php:839 ui/controller/UI_Extended.php:900
+#: ui/controller/UI_Extended.php:1007
 #, php-format
 msgid "The Limit %d has been reached. Remove the %s to continue."
 msgstr "O limite %d foi atingido. Remova o %s para continuar."
 
-#: core/upgrade.php:126 ui/controller/UI_Extended.php:91
+#: core/upgrade.php:126 ui/controller/UI_Extended.php:93
 #, php-format
 msgid "The word %s is blacklisted."
 msgstr "A palavra %s está na lista negra."
 
-#: f12-cf7-captcha.php:436
+#: f12-cf7-captcha.php:443
 msgid "View Settings"
 msgstr "Ver Definições"
 
-#: f12-cf7-captcha.php:436
+#: f12-cf7-captcha.php:443
 msgid "Settings"
 msgstr "Definições"
 
@@ -473,62 +463,161 @@ msgstr ""
 "Por favor, insira os caracteres mostrados no CAPTCHA para verificar que é "
 "humano."
 
-#: ui/controller/UI_Dashboard.php:106 ui/controller/UI_Extended.php:139
+#: ui/controller/UI_Beta.php:111
+msgid "Captcha Protection (v2)"
+msgstr "Proteção Captcha (v2)"
+
+#: ui/controller/UI_Beta.php:117 ui/controller/UI_Dashboard.php:318
+#: ui/controller/UI_Extended.php:364 ui/controller/UI_Extended.php:680
+msgid "Enable/Disable"
+msgstr "Ativar/Desativar"
+
+#: ui/controller/UI_Beta.php:120
+msgid ""
+"Activate the new SilentShield Captcha protection. Unlike the old method, "
+"this version uses our API, behavior-based metrics and server-side "
+"verification for stronger and more reliable bot protection."
+msgstr ""
+"Ativa a nova proteção SilentShield Captcha. Ao contrário do método antigo, "
+"esta versão utiliza a nossa API, métricas baseadas no comportamento e "
+"verificação no lado do servidor para uma proteção contra bots mais robusta e "
+"fiável."
+
+#: ui/controller/UI_Beta.php:132
+msgid "SilentShield Captcha (Beta)"
+msgstr "SilentShield Captcha (Beta)"
+
+#: ui/controller/UI_Beta.php:146
+msgid ""
+"Enable this option to switch from the old Captcha v1 to the new SilentShield "
+"Captcha with API verification and enhanced security."
+msgstr ""
+"Ativa esta opção para mudar do antigo Captcha v1 para o novo SilentShield "
+"Captcha com verificação por API e segurança reforçada."
+
+#: ui/controller/UI_Beta.php:157
+msgid "API Key:"
+msgstr "Chave API:"
+
+#: ui/controller/UI_Beta.php:160
+msgid ""
+"Enter your SilentShield API Key. This key is required so the plugin can "
+"verify solved captchas with the SilentShield backend."
+msgstr ""
+"Introduz a tua chave API SilentShield. Esta chave é necessária para que o "
+"plugin possa verificar os captchas resolvidos com o backend SilentShield."
+
+#: ui/controller/UI_Beta.php:175
+msgid "Request API Key"
+msgstr "Pedir chave API"
+
+#: ui/controller/UI_Beta.php:196 ui/controller/UI_Dashboard.php:478
+#: ui/controller/UI_Extended.php:1440
+msgid "Need help?"
+msgstr "Precisa de ajuda?"
+
+#: ui/controller/UI_Beta.php:199 ui/controller/UI_Dashboard.php:481
+#: ui/controller/UI_Extended.php:1443
+#, php-format
+msgid "Take a look at our <a href='%s' target='_blank'>Documentation</a>."
+msgstr ""
+"Dê uma vista de olhos na nossa <a href='%s' target='_blank'>Documentação</a>."
+
+#: ui/controller/UI_Beta.php:207 ui/controller/UI_Dashboard.php:489
+#: ui/controller/UI_Extended.php:1451
+msgid "Hooks:"
+msgstr "Ganchos:"
+
+#: ui/controller/UI_Beta.php:210 ui/controller/UI_Dashboard.php:492
+#: ui/controller/UI_Extended.php:1454
+msgid "This hook can be used to skip specific protection methods for forms:"
+msgstr ""
+"Este gancho pode ser usado para ignorar métodos de proteção específicos para "
+"formulários:"
+
+#: ui/controller/UI_Beta.php:221 ui/controller/UI_Dashboard.php:503
+#: ui/controller/UI_Extended.php:1465
+msgid "This hook can be used to disable the protection for a plugin:"
+msgstr "Este gancho pode ser usado para desativar a proteção de um plugin:"
+
+#: ui/controller/UI_Beta.php:224 ui/controller/UI_Dashboard.php:506
+#: ui/controller/UI_Extended.php:1468
+msgid ""
+"Supported ids: avada, fluentform, elementor, cf7, wpforms, ultimatemember, "
+"gravityforms, wordpress_comments, wordpress, woocommerce."
+msgstr ""
+"IDs suportados: avada, fluentform, elementor, cf7, wpforms, ultimatemember, "
+"gravityforms, wordpress_comments, wordpress, woocommerce."
+
+#: ui/controller/UI_Beta.php:236 ui/controller/UI_Dashboard.php:518
+#: ui/controller/UI_Extended.php:1480
+msgid "This hook can be used to manipulate the layout of the captcha field:"
+msgstr ""
+"Este gancho pode ser usado para manipular o layout do campo do captcha:"
+
+#: ui/controller/UI_Beta.php:248 ui/controller/UI_Dashboard.php:530
+#: ui/controller/UI_Extended.php:1492
+msgid "This hook can be used to load a custom the reload icon:"
+msgstr ""
+"Este gancho pode ser usado para carregar um ícone de recarregar "
+"personalizado:"
+
+#: ui/controller/UI_Dashboard.php:109 ui/controller/UI_Extended.php:142
 msgid "IP Logs removed from database"
 msgstr "Registos de IP removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:113 ui/controller/UI_Extended.php:146
+#: ui/controller/UI_Dashboard.php:116 ui/controller/UI_Extended.php:149
 msgid "IP Bans removed from database"
 msgstr "Proibições de IP removidas da base de dados"
 
-#: ui/controller/UI_Dashboard.php:120 ui/controller/UI_Extended.php:153
+#: ui/controller/UI_Dashboard.php:123 ui/controller/UI_Extended.php:156
 msgid "Captchas removed from database"
 msgstr "Captchas removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:127 ui/controller/UI_Extended.php:160
+#: ui/controller/UI_Dashboard.php:130 ui/controller/UI_Extended.php:163
 msgid "Validated Captchas removed from database"
 msgstr "Captchas validados removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:134 ui/controller/UI_Extended.php:167
+#: ui/controller/UI_Dashboard.php:137 ui/controller/UI_Extended.php:170
 msgid "Non Validated Captchas removed from database"
 msgstr "Captchas não validados removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:140 ui/controller/UI_Extended.php:173
+#: ui/controller/UI_Dashboard.php:143 ui/controller/UI_Extended.php:176
 msgid "Logs removed from database"
 msgstr "Registos removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:146 ui/controller/UI_Extended.php:179
+#: ui/controller/UI_Dashboard.php:149 ui/controller/UI_Extended.php:182
 msgid "Logs older than 3 Weeks have been removed from database"
 msgstr "Os registos com mais de 3 semanas foram removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:153 ui/controller/UI_Extended.php:186
+#: ui/controller/UI_Dashboard.php:156 ui/controller/UI_Extended.php:189
 msgid "Timers removed from database"
 msgstr "Temporizadores removidos da base de dados"
 
-#: ui/controller/UI_Dashboard.php:160 ui/controller/UI_Extended.php:193
+#: ui/controller/UI_Dashboard.php:163 ui/controller/UI_Extended.php:196
 msgid ""
 "Something went wrong, please try again later or contact the plugin author."
 msgstr ""
 "Algo correu mal, por favor, tente novamente mais tarde ou contacte o autor "
 "do plugin."
 
-#: ui/controller/UI_Dashboard.php:258
+#: ui/controller/UI_Dashboard.php:261
 msgid "Total Checks"
 msgstr "Verificações totais"
 
-#: ui/controller/UI_Dashboard.php:268
+#: ui/controller/UI_Dashboard.php:271
 msgid "Spam Blocked"
 msgstr "Spam Bloqueado"
 
-#: ui/controller/UI_Dashboard.php:278
+#: ui/controller/UI_Dashboard.php:281
 msgid "Clean Submissions"
 msgstr "Submissões Limpas"
 
-#: ui/controller/UI_Dashboard.php:286
+#: ui/controller/UI_Dashboard.php:289
 msgid "Notice"
 msgstr "Aviso"
 
-#: ui/controller/UI_Dashboard.php:289
+#: ui/controller/UI_Dashboard.php:292
 msgid ""
 "These counters show the overall protection activity since the plugin has "
 "been activated."
@@ -536,12 +625,7 @@ msgstr ""
 "Estes contadores mostram a atividade de proteção geral desde que o plugin "
 "foi ativado."
 
-#: ui/controller/UI_Dashboard.php:315 ui/controller/UI_Extended.php:357
-#: ui/controller/UI_Extended.php:673
-msgid "Enable/Disable"
-msgstr "Ativar/Desativar"
-
-#: ui/controller/UI_Dashboard.php:316
+#: ui/controller/UI_Dashboard.php:319
 msgid ""
 "If activated, a captcha will automatically added to all enabled protection "
 "serivces. You can select the type of the captcha below."
@@ -549,18 +633,18 @@ msgstr ""
 "Se ativado, um captcha será automaticamente adicionado a todos os serviços "
 "de proteção ativados. Pode selecionar o tipo de captcha abaixo."
 
-#: ui/controller/UI_Dashboard.php:334
+#: ui/controller/UI_Dashboard.php:337
 msgid ""
 "Check if you want to add a captcha for the activated protection serivces."
 msgstr ""
 "Verifique se pretende adicionar um captcha para os serviços de proteção "
 "ativados."
 
-#: ui/controller/UI_Dashboard.php:342
+#: ui/controller/UI_Dashboard.php:345
 msgid "Label for Captcha:"
 msgstr "Etiqueta para o Captcha:"
 
-#: ui/controller/UI_Dashboard.php:343
+#: ui/controller/UI_Dashboard.php:346
 msgid ""
 "Defines the label for the captcha. You can also change the label using WPML "
 "or LocoTranslate Plugins."
@@ -568,11 +652,11 @@ msgstr ""
 "Define a etiqueta para o captcha. Também pode alterar a etiqueta usando os "
 "plugins WPML ou LocoTranslate."
 
-#: ui/controller/UI_Dashboard.php:359
+#: ui/controller/UI_Dashboard.php:362
 msgid "Placeholder for Captcha:"
 msgstr "Espaço reservado para o Captcha:"
 
-#: ui/controller/UI_Dashboard.php:360
+#: ui/controller/UI_Dashboard.php:363
 msgid ""
 "Defines the placeholder for the captcha field. you can also change the label "
 "using WPML or LocoTranslate Plugins."
@@ -580,23 +664,23 @@ msgstr ""
 "Define o espaço reservado para o campo do captcha. Também pode alterar a "
 "etiqueta usando os plugins WPML ou LocoTranslate."
 
-#: ui/controller/UI_Dashboard.php:375 ui/controller/UI_Dashboard.php:435
+#: ui/controller/UI_Dashboard.php:378 ui/controller/UI_Dashboard.php:438
 msgid "Protection Method"
 msgstr "Método de Proteção"
 
-#: ui/controller/UI_Dashboard.php:387 ui/controller/UI_Dashboard.php:439
+#: ui/controller/UI_Dashboard.php:390 ui/controller/UI_Dashboard.php:442
 msgid "Honeypot"
 msgstr "Honeypot"
 
-#: ui/controller/UI_Dashboard.php:398 ui/controller/UI_Dashboard.php:447
+#: ui/controller/UI_Dashboard.php:401 ui/controller/UI_Dashboard.php:450
 msgid "Arithmetic"
 msgstr "Aritmético"
 
-#: ui/controller/UI_Dashboard.php:409 ui/controller/UI_Dashboard.php:455
+#: ui/controller/UI_Dashboard.php:412 ui/controller/UI_Dashboard.php:458
 msgid "Image"
 msgstr "Imagem"
 
-#: ui/controller/UI_Dashboard.php:423
+#: ui/controller/UI_Dashboard.php:426
 msgid ""
 "Captcha Protection allows you to add a specific protection to your forms. "
 "You can also use the minor protection methods without the captcha and vice "
@@ -606,12 +690,12 @@ msgstr ""
 "seus formulários. Também pode usar os métodos de proteção menores sem o "
 "captcha e vice-versa."
 
-#: ui/controller/UI_Dashboard.php:426
+#: ui/controller/UI_Dashboard.php:429
 msgid "The <strong>Label</strong> will be displayed for your website visitors."
 msgstr ""
 "A <strong>Etiqueta</strong> será exibida para os visitantes do seu site."
 
-#: ui/controller/UI_Dashboard.php:429
+#: ui/controller/UI_Dashboard.php:432
 msgid ""
 "The <strong>placeholder</strong> will be displayed within the captcha input "
 "field."
@@ -619,7 +703,7 @@ msgstr ""
 "O <strong>espaço reservado</strong> será exibido dentro do campo de entrada "
 "do captcha."
 
-#: ui/controller/UI_Dashboard.php:432
+#: ui/controller/UI_Dashboard.php:435
 msgid ""
 "If you use multiple languages use WPML String Translation or LocoTranslate "
 "to translate the label and placeholder"
@@ -627,7 +711,7 @@ msgstr ""
 "Se utilizar vários idiomas, use o WPML String Translation ou o LocoTranslate "
 "para traduzir a etiqueta e o espaço reservado."
 
-#: ui/controller/UI_Dashboard.php:443
+#: ui/controller/UI_Dashboard.php:446
 msgid ""
 "This is a hidden field that is not visible to humans, but visible for bots. "
 "It is used as a trap to catch spam bots."
@@ -635,7 +719,7 @@ msgstr ""
 "Este é um campo oculto que não é visível para humanos, mas é visível para "
 "bots. É usado como uma armadilha para capturar bots de spam."
 
-#: ui/controller/UI_Dashboard.php:451
+#: ui/controller/UI_Dashboard.php:454
 msgid ""
 "In this method, website visitors are required to solve a simple arithmetic "
 "problem before they can submit the form."
@@ -643,7 +727,7 @@ msgstr ""
 "Neste método, os visitantes do site são obrigados a resolver um problema "
 "aritmético simples antes de poderem submeter o formulário."
 
-#: ui/controller/UI_Dashboard.php:459
+#: ui/controller/UI_Dashboard.php:462
 msgid ""
 "In this method, the user is presented with an image containing distorted "
 "text they must identify. The User is then required to enter the characters "
@@ -653,54 +737,11 @@ msgstr ""
 "distorcido que deve identificar. O utilizador é então obrigado a inserir os "
 "caracteres visíveis na imagem para submeter o formulário."
 
-#: ui/controller/UI_Dashboard.php:475 ui/controller/UI_Extended.php:1469
-msgid "Need help?"
-msgstr "Precisa de ajuda?"
-
-#: ui/controller/UI_Dashboard.php:478 ui/controller/UI_Extended.php:1472
-#, php-format
-msgid "Take a look at our <a href='%s' target='_blank'>Documentation</a>."
-msgstr ""
-"Dê uma vista de olhos na nossa <a href='%s' target='_blank'>Documentação</a>."
-
-#: ui/controller/UI_Dashboard.php:486 ui/controller/UI_Extended.php:1480
-msgid "Hooks:"
-msgstr "Ganchos:"
-
-#: ui/controller/UI_Dashboard.php:489 ui/controller/UI_Extended.php:1483
-msgid "This hook can be used to skip specific protection methods for forms:"
-msgstr ""
-"Este gancho pode ser usado para ignorar métodos de proteção específicos para "
-"formulários:"
-
-#: ui/controller/UI_Dashboard.php:500 ui/controller/UI_Extended.php:1494
-msgid "This hook can be used to disable the protection for a plugin:"
-msgstr "Este gancho pode ser usado para desativar a proteção de um plugin:"
-
-#: ui/controller/UI_Dashboard.php:503 ui/controller/UI_Extended.php:1497
-msgid ""
-"Supported ids: avada, fluentform, elementor, cf7, wpforms, ultimatemember, "
-"gravityforms, wordpress_comments, wordpress, woocommerce."
-msgstr ""
-"IDs suportados: avada, fluentform, elementor, cf7, wpforms, ultimatemember, "
-"gravityforms, wordpress_comments, wordpress, woocommerce."
-
-#: ui/controller/UI_Dashboard.php:515 ui/controller/UI_Extended.php:1509
-msgid "This hook can be used to manipulate the layout of the captcha field:"
-msgstr ""
-"Este gancho pode ser usado para manipular o layout do campo do captcha:"
-
-#: ui/controller/UI_Dashboard.php:527 ui/controller/UI_Extended.php:1521
-msgid "This hook can be used to load a custom the reload icon:"
-msgstr ""
-"Este gancho pode ser usado para carregar um ícone de recarregar "
-"personalizado:"
-
-#: ui/controller/UI_Extended.php:350 ui/controller/UI_Extended.php:430
+#: ui/controller/UI_Extended.php:357 ui/controller/UI_Extended.php:437
 msgid "Available Protection Services"
 msgstr "Serviços de Proteção Disponíveis"
 
-#: ui/controller/UI_Extended.php:358
+#: ui/controller/UI_Extended.php:365
 msgid ""
 "Select the plugins that should be protected. You can enable multiple or only "
 "single elements. It is also possible to disable the protection for single "
@@ -712,7 +753,7 @@ msgstr ""
 "formulários individuais usando ganchos. Consulte a documentação para mais "
 "informações."
 
-#: ui/controller/UI_Extended.php:433
+#: ui/controller/UI_Extended.php:440
 msgid ""
 "This option allows you, to enable the captcha protection for WordPress, "
 "WooCommerce and supported plugins. You will only see plugins available on "
@@ -722,19 +763,19 @@ msgstr ""
 "WooCommerce e plugins suportados. Apenas verá os plugins disponíveis na sua "
 "instalação do WordPress."
 
-#: ui/controller/UI_Extended.php:436
+#: ui/controller/UI_Extended.php:443
 msgid "It is possible to enable the protection only for parts of your system."
 msgstr "É possível ativar a proteção apenas para partes do seu sistema."
 
-#: ui/controller/UI_Extended.php:439
+#: ui/controller/UI_Extended.php:446
 msgid "Supported Plugins"
 msgstr "Plugins Suportados"
 
-#: ui/controller/UI_Extended.php:457
+#: ui/controller/UI_Extended.php:464
 msgid "Is your Plugin missing?"
 msgstr "O seu plugin está em falta?"
 
-#: ui/controller/UI_Extended.php:460
+#: ui/controller/UI_Extended.php:467
 #, php-format
 msgid ""
 "Feel free to open a feature request within the wordpress community board: <a "
@@ -743,31 +784,31 @@ msgstr ""
 "Sinta-se à vontade para abrir uma solicitação de recurso no fórum da "
 "comunidade do WordPress: <a href=\"%s\">Clique aqui.</a>"
 
-#: ui/controller/UI_Extended.php:472
+#: ui/controller/UI_Extended.php:479
 msgid "Reload Icon"
 msgstr "Ícone de Recarregar"
 
-#: ui/controller/UI_Extended.php:489
+#: ui/controller/UI_Extended.php:496
 msgid "Black"
 msgstr "Preto"
 
-#: ui/controller/UI_Extended.php:506
+#: ui/controller/UI_Extended.php:513
 msgid "White"
 msgstr "Branco"
 
-#: ui/controller/UI_Extended.php:515
+#: ui/controller/UI_Extended.php:522
 msgid "Template"
 msgstr "Modelo"
 
-#: ui/controller/UI_Extended.php:593
+#: ui/controller/UI_Extended.php:600
 msgid "Captchas"
 msgstr "Captchas"
 
-#: ui/controller/UI_Extended.php:598
+#: ui/controller/UI_Extended.php:605
 msgid "Delete Captcha Entries"
 msgstr "Eliminar Entradas de Captcha"
 
-#: ui/controller/UI_Extended.php:601 ui/controller/UI_Extended.php:648
+#: ui/controller/UI_Extended.php:608 ui/controller/UI_Extended.php:655
 msgid ""
 "This entries will be deleted using a WP Cronjob. If you want to reset it "
 "manually, use the buttons below."
@@ -775,63 +816,63 @@ msgstr ""
 "Estas entradas serão eliminadas usando um WP Cronjob. Se quiser redefinir "
 "manualmente, use os botões abaixo."
 
-#: ui/controller/UI_Extended.php:604 ui/controller/UI_Extended.php:651
-#: ui/controller/UI_Extended.php:1165 ui/controller/UI_Extended.php:1193
-#: ui/controller/UI_Extended.php:1256
+#: ui/controller/UI_Extended.php:611 ui/controller/UI_Extended.php:658
+#: ui/controller/UI_Extended.php:1172 ui/controller/UI_Extended.php:1200
+#: ui/controller/UI_Extended.php:1263
 msgid "Entries:"
 msgstr "Entradas:"
 
-#: ui/controller/UI_Extended.php:605 ui/controller/UI_Extended.php:609
-#: ui/controller/UI_Extended.php:613 ui/controller/UI_Extended.php:652
-#: ui/controller/UI_Extended.php:1166 ui/controller/UI_Extended.php:1194
-#: ui/controller/UI_Extended.php:1257
+#: ui/controller/UI_Extended.php:612 ui/controller/UI_Extended.php:616
+#: ui/controller/UI_Extended.php:620 ui/controller/UI_Extended.php:659
+#: ui/controller/UI_Extended.php:1173 ui/controller/UI_Extended.php:1201
+#: ui/controller/UI_Extended.php:1264
 #, php-format
 msgid "%s entries in the database"
 msgstr "%s entradas na base de dados"
 
-#: ui/controller/UI_Extended.php:608
+#: ui/controller/UI_Extended.php:615
 msgid "Validated:"
 msgstr "Validados:"
 
-#: ui/controller/UI_Extended.php:612
+#: ui/controller/UI_Extended.php:619
 msgid "Non-Validated:"
 msgstr "Não Validados:"
 
-#: ui/controller/UI_Extended.php:616 ui/controller/UI_Extended.php:655
-#: ui/controller/UI_Extended.php:1169 ui/controller/UI_Extended.php:1197
-#: ui/controller/UI_Extended.php:1260
+#: ui/controller/UI_Extended.php:623 ui/controller/UI_Extended.php:662
+#: ui/controller/UI_Extended.php:1176 ui/controller/UI_Extended.php:1204
+#: ui/controller/UI_Extended.php:1267
 msgid "Delete All"
 msgstr "Eliminar Tudo"
 
-#: ui/controller/UI_Extended.php:618
+#: ui/controller/UI_Extended.php:625
 msgid "Delete Validated"
 msgstr "Eliminar Validados"
 
-#: ui/controller/UI_Extended.php:620
+#: ui/controller/UI_Extended.php:627
 msgid "Deleted Non-Validated"
 msgstr "Eliminar Não Validados"
 
-#: ui/controller/UI_Extended.php:622 ui/controller/UI_Extended.php:657
-#: ui/controller/UI_Extended.php:1171 ui/controller/UI_Extended.php:1199
-#: ui/controller/UI_Extended.php:1264
+#: ui/controller/UI_Extended.php:629 ui/controller/UI_Extended.php:664
+#: ui/controller/UI_Extended.php:1178 ui/controller/UI_Extended.php:1206
+#: ui/controller/UI_Extended.php:1271
 msgid "Make sure to backup your database before clicking one of these buttons."
 msgstr ""
 "Certifique-se de fazer uma cópia de segurança da sua base de dados antes de "
 "clicar num destes botões."
 
-#: ui/controller/UI_Extended.php:640
+#: ui/controller/UI_Extended.php:647
 msgid "Timers"
 msgstr "Temporizadores"
 
-#: ui/controller/UI_Extended.php:645
+#: ui/controller/UI_Extended.php:652
 msgid "Delete Timer Entries"
 msgstr "Eliminar Entradas do Temporizador"
 
-#: ui/controller/UI_Extended.php:667 ui/controller/UI_Extended.php:745
+#: ui/controller/UI_Extended.php:674 ui/controller/UI_Extended.php:752
 msgid "Minor Protection Services"
 msgstr "Serviços de Proteção Menores"
 
-#: ui/controller/UI_Extended.php:674
+#: ui/controller/UI_Extended.php:681
 msgid ""
 "There are multiple protection mechanism available that you can use to stop "
 "incoming spam. Feel free to enable / disable them as required."
@@ -840,11 +881,11 @@ msgstr ""
 "parar o spam. Sinta-se à vontade para ativá-los / desativá-los conforme "
 "necessário."
 
-#: ui/controller/UI_Extended.php:684 ui/controller/UI_Extended.php:752
+#: ui/controller/UI_Extended.php:691 ui/controller/UI_Extended.php:759
 msgid "Javascript Protection"
 msgstr "Proteção de JavaScript"
 
-#: ui/controller/UI_Extended.php:692
+#: ui/controller/UI_Extended.php:699
 msgid ""
 "Check if the user has javascript enabled. Most likely bots don't use or "
 "understand javascript."
@@ -852,21 +893,21 @@ msgstr ""
 "Verifique se o utilizador tem o JavaScript ativado. É provável que os bots "
 "não usem ou compreendam JavaScript."
 
-#: ui/controller/UI_Extended.php:713
+#: ui/controller/UI_Extended.php:720
 msgid "Check if the user has a valid user agent."
 msgstr "Verifique se o utilizador tem um agente de utilizador válido."
 
-#: ui/controller/UI_Extended.php:726 ui/controller/UI_Extended.php:765
+#: ui/controller/UI_Extended.php:733 ui/controller/UI_Extended.php:772
 msgid "Multiple Submission Protection"
 msgstr "Proteção de Submissão Múltipla"
 
-#: ui/controller/UI_Extended.php:734
+#: ui/controller/UI_Extended.php:741
 msgid "Ensure that a form can not submitted multiple times within 2 seconds."
 msgstr ""
 "Garanta que um formulário não pode ser submetido múltiplas vezes em 2 "
 "segundos."
 
-#: ui/controller/UI_Extended.php:748
+#: ui/controller/UI_Extended.php:755
 msgid ""
 "Bots are getting smarter these days, therefor we added a few additional "
 "protection methods, that will help to filter spam even better."
@@ -875,7 +916,7 @@ msgstr ""
 "alguns métodos de proteção adicionais, que ajudarão a filtrar o spam ainda "
 "melhor."
 
-#: ui/controller/UI_Extended.php:756
+#: ui/controller/UI_Extended.php:763
 msgid ""
 "Recommendation: Enable. This will check if the user supports JavaScript. As "
 "most of the bots are not able to interpret JavaScript, this will remove a "
@@ -885,7 +926,7 @@ msgstr ""
 "Como a maioria dos bots não é capaz de interpretar JavaScript, isso removerá "
 "uma grande quantidade de spam."
 
-#: ui/controller/UI_Extended.php:762
+#: ui/controller/UI_Extended.php:769
 msgid ""
 "Recommendation: Enable. This will check if the user agent is valid. This can "
 "help to identify spam, you can use it to extend your protection."
@@ -894,7 +935,7 @@ msgstr ""
 "Isso pode ajudar a identificar spam, pode usá-lo para estender a sua "
 "proteção."
 
-#: ui/controller/UI_Extended.php:768
+#: ui/controller/UI_Extended.php:775
 msgid ""
 "This will ensure that the user is not able to submit the form multiple times "
 "between 2 seconds."
@@ -902,43 +943,43 @@ msgstr ""
 "Isto garantirá que o utilizador não consegue submeter o formulário várias "
 "vezes num intervalo de 2 segundos."
 
-#: ui/controller/UI_Extended.php:777
+#: ui/controller/UI_Extended.php:784
 msgid "Protection Rules"
 msgstr "Regras de Proteção"
 
-#: ui/controller/UI_Extended.php:783 ui/controller/UI_Extended.php:794
-#: ui/controller/UI_Extended.php:844
+#: ui/controller/UI_Extended.php:790 ui/controller/UI_Extended.php:801
+#: ui/controller/UI_Extended.php:851
 msgid "URL Limiter"
 msgstr "Limitador de URL"
 
-#: ui/controller/UI_Extended.php:784
+#: ui/controller/UI_Extended.php:791
 msgid ""
 "Enable the URL Limiter to limit the number of allowed links in your forms."
 msgstr ""
 "Ative o Limitador de URL para limitar o número de links permitidos nos seus "
 "formulários."
 
-#: ui/controller/UI_Extended.php:809
+#: ui/controller/UI_Extended.php:816
 msgid "Allowed Links:"
 msgstr "Links Permitidos:"
 
-#: ui/controller/UI_Extended.php:810
+#: ui/controller/UI_Extended.php:817
 msgid "Defines how many links are allowed per Field."
 msgstr "Define quantos links são permitidos por campo."
 
-#: ui/controller/UI_Extended.php:824 ui/controller/UI_Extended.php:885
-#: ui/controller/UI_Extended.php:992
+#: ui/controller/UI_Extended.php:831 ui/controller/UI_Extended.php:892
+#: ui/controller/UI_Extended.php:999
 msgid "Error Message:"
 msgstr "Mensagem de Erro:"
 
-#: ui/controller/UI_Extended.php:825
+#: ui/controller/UI_Extended.php:832
 msgid ""
 "Defines the error message that should be displayed if the limit has been "
 "reached."
 msgstr ""
 "Define a mensagem de erro que deve ser exibida se o limite for atingido."
 
-#: ui/controller/UI_Extended.php:847
+#: ui/controller/UI_Extended.php:854
 msgid ""
 "The URL Limiter is limiting the number of hyperlinks that can be included in "
 "the content of a form submission. Keep in mind, that the limit is by field "
@@ -948,7 +989,7 @@ msgstr ""
 "conteúdo de um formulário. Tenha em atenção que o limite é por campo, e não "
 "por formulário."
 
-#: ui/controller/UI_Extended.php:850
+#: ui/controller/UI_Extended.php:857
 msgid ""
 "The custom error message will be displayed for website visitors if the error "
 "appears, therefor it would be helpful to explain them how to solve this issue"
@@ -957,25 +998,25 @@ msgstr ""
 "o erro ocorrer. Portanto, seria útil explicar-lhes como resolver este "
 "problema."
 
-#: ui/controller/UI_Extended.php:859 ui/controller/UI_Extended.php:905
+#: ui/controller/UI_Extended.php:866 ui/controller/UI_Extended.php:912
 msgid "BBCode Limiter"
 msgstr "Limitador de BBCode"
 
-#: ui/controller/UI_Extended.php:860
+#: ui/controller/UI_Extended.php:867
 msgid "Enable the BBCode limiter to mark BBCode as Spam on your website."
 msgstr "Ativar o limitador de BBCode para marcar BBCode como Spam no seu site."
 
-#: ui/controller/UI_Extended.php:870
+#: ui/controller/UI_Extended.php:877
 msgid "BBCode Filter"
 msgstr "Filtro de BBCode"
 
-#: ui/controller/UI_Extended.php:886 ui/controller/UI_Extended.php:993
+#: ui/controller/UI_Extended.php:893 ui/controller/UI_Extended.php:1000
 msgid ""
 "Defines the error message that should be displayed if BBCode has been found."
 msgstr ""
 "Define a mensagem de erro que deve ser exibida se BBCode for encontrado."
 
-#: ui/controller/UI_Extended.php:908
+#: ui/controller/UI_Extended.php:915
 msgid ""
 "The BBCode Limiter allows you to disable BBCode in your forms. BBCode, which "
 "stands for Bulletin Board Code, is a lightweight markup language used to "
@@ -988,12 +1029,12 @@ msgstr ""
 "fóruns online e secções de comentários. As etiquetas BBCode são semelhantes "
 "ao HTML, mas são mais simples e seguras."
 
-#: ui/controller/UI_Extended.php:918 ui/controller/UI_Extended.php:929
-#: ui/controller/UI_Extended.php:1012
+#: ui/controller/UI_Extended.php:925 ui/controller/UI_Extended.php:936
+#: ui/controller/UI_Extended.php:1019
 msgid "Blacklist"
 msgstr "Lista Negra"
 
-#: ui/controller/UI_Extended.php:919
+#: ui/controller/UI_Extended.php:926
 msgid ""
 "Enable the Blacklist for your forms. This allows you to define custom text "
 "combinations as spam."
@@ -1001,11 +1042,11 @@ msgstr ""
 "Ativar a Lista Negra para os seus formulários. Isso permite-lhe definir "
 "combinações de texto personalizadas como spam."
 
-#: ui/controller/UI_Extended.php:944
+#: ui/controller/UI_Extended.php:951
 msgid "Blacklisted Texts"
 msgstr "Textos na lista negra"
 
-#: ui/controller/UI_Extended.php:946
+#: ui/controller/UI_Extended.php:953
 msgid ""
 "Those are the values that will be triggering the blacklist to mark the input "
 "as spam."
@@ -1013,19 +1054,19 @@ msgstr ""
 "Estes são os valores que ativarão a lista negra para marcar a entrada como "
 "spam."
 
-#: ui/controller/UI_Extended.php:949
+#: ui/controller/UI_Extended.php:956
 msgid "Use one word / sentence per line."
 msgstr "Use uma palavra / frase por linha."
 
-#: ui/controller/UI_Extended.php:953
+#: ui/controller/UI_Extended.php:960
 msgid "Load predefined Blacklist"
 msgstr "Carregar Lista Negra predefinida"
 
-#: ui/controller/UI_Extended.php:974 ui/controller/UI_Extended.php:1031
+#: ui/controller/UI_Extended.php:981 ui/controller/UI_Extended.php:1038
 msgid "Make it greedy"
 msgstr "Torná-lo ganancioso"
 
-#: ui/controller/UI_Extended.php:983
+#: ui/controller/UI_Extended.php:990
 msgid ""
 "If the greedy filter is enabled, even parts of the word will causing the "
 "filter to trigger, e.g.: the word \"com\" is blacklisted and the greedy "
@@ -1037,7 +1078,7 @@ msgstr ""
 "lista negra e o filtro ganancioso estiver ativado, isso fará com que "
 "\"forge12.com\", \"composite\" e \"compose\" também sejam filtrados."
 
-#: ui/controller/UI_Extended.php:1015
+#: ui/controller/UI_Extended.php:1022
 msgid ""
 "The blacklist is a list of prohibited or undesirable input values. When a "
 "user submits a form, the data provided is checked against the blacklist. If "
@@ -1052,7 +1093,7 @@ msgstr ""
 "formulário será rejeitada e o utilizador será solicitado a fornecer "
 "informações diferentes."
 
-#: ui/controller/UI_Extended.php:1018
+#: ui/controller/UI_Extended.php:1025
 msgid ""
 "You can import a predefined blacklist from us. The predefined list contains "
 "roundabout 40.000 entries in multiple languages."
@@ -1060,11 +1101,11 @@ msgstr ""
 "Pode importar uma lista negra predefinida nossa. A lista predefinida contém "
 "cerca de 40.000 entradas em vários idiomas."
 
-#: ui/controller/UI_Extended.php:1023
+#: ui/controller/UI_Extended.php:1030
 msgid "Note"
 msgstr "Nota"
 
-#: ui/controller/UI_Extended.php:1026
+#: ui/controller/UI_Extended.php:1033
 msgid ""
 "If you notice long loading times when submitting the form, reduce the "
 "entries in the list."
@@ -1072,7 +1113,7 @@ msgstr ""
 "Se notar tempos de carregamento longos ao submeter o formulário, reduza as "
 "entradas na lista."
 
-#: ui/controller/UI_Extended.php:1034
+#: ui/controller/UI_Extended.php:1041
 msgid ""
 "Use the greed filter to find also parts of the word and mark them as "
 "blacklisted."
@@ -1080,11 +1121,11 @@ msgstr ""
 "Use o filtro ganancioso para encontrar também partes da palavra e marcá-las "
 "como estando na lista negra."
 
-#: ui/controller/UI_Extended.php:1039
+#: ui/controller/UI_Extended.php:1046
 msgid "Example"
 msgstr "Exemplo"
 
-#: ui/controller/UI_Extended.php:1042
+#: ui/controller/UI_Extended.php:1049
 msgid ""
 "If you have an entry name \"com\" and enable the greedy filter, this will "
 "also trigger for composite, compose and .com"
@@ -1092,7 +1133,7 @@ msgstr ""
 "Se tiver uma entrada chamada \"com\" e ativar o filtro ganancioso, isso "
 "também será ativado para 'composite', 'compose' e '.com'."
 
-#: ui/controller/UI_Extended.php:1059
+#: ui/controller/UI_Extended.php:1066
 msgid ""
 "Enable the IP Protection to automatically stop bots from submitting any "
 "forms as long as they are blocked."
@@ -1100,28 +1141,28 @@ msgstr ""
 "Ative a Proteção de IP para impedir automaticamente que os bots submetam "
 "quaisquer formulários enquanto estiverem bloqueados."
 
-#: ui/controller/UI_Extended.php:1084
+#: ui/controller/UI_Extended.php:1091
 msgid "Max Retries:"
 msgstr "Máximo de Tentativas:"
 
-#: ui/controller/UI_Extended.php:1085
+#: ui/controller/UI_Extended.php:1092
 msgid "Defines the number of retries till the IP gets automatically blocked."
 msgstr ""
 "Define o número de tentativas até que o IP seja bloqueado automaticamente."
 
-#: ui/controller/UI_Extended.php:1100
+#: ui/controller/UI_Extended.php:1107
 msgid "Time interval:"
 msgstr "Intervalo de tempo:"
 
-#: ui/controller/UI_Extended.php:1101
+#: ui/controller/UI_Extended.php:1108
 msgid "Defines the time interval for detection of subsequent attacks."
 msgstr "Define o intervalo de tempo para a deteção de ataques subsequentes."
 
-#: ui/controller/UI_Extended.php:1116
+#: ui/controller/UI_Extended.php:1123
 msgid "Unblock after X seconds:"
 msgstr "Desbloquear após X segundos:"
 
-#: ui/controller/UI_Extended.php:1117
+#: ui/controller/UI_Extended.php:1124
 msgid ""
 "The user will not be able to submit any forms until he gets unblocked after "
 "the given amount of seconds."
@@ -1129,11 +1170,11 @@ msgstr ""
 "O utilizador não poderá submeter nenhum formulário até que seja desbloqueado "
 "após o número de segundos especificado."
 
-#: ui/controller/UI_Extended.php:1131
+#: ui/controller/UI_Extended.php:1138
 msgid "Interval Protection:"
 msgstr "Proteção por Intervalo:"
 
-#: ui/controller/UI_Extended.php:1132
+#: ui/controller/UI_Extended.php:1139
 msgid ""
 "All submissions faster than the given period seconds will automatically be "
 "marked as spam."
@@ -1141,15 +1182,15 @@ msgstr ""
 "Todas as submissões mais rápidas do que o período de tempo especificado "
 "serão automaticamente marcadas como spam."
 
-#: ui/controller/UI_Extended.php:1150
+#: ui/controller/UI_Extended.php:1157
 msgid "IP Bans"
 msgstr "Proibições de IP"
 
-#: ui/controller/UI_Extended.php:1155
+#: ui/controller/UI_Extended.php:1162
 msgid "Delete IP Bans Entries"
 msgstr "Eliminar Entradas de Proibições de IP"
 
-#: ui/controller/UI_Extended.php:1158
+#: ui/controller/UI_Extended.php:1165
 msgid ""
 "This entries will be deleted after the blocked time is over using a WP "
 "Cronjob. If you want to reset it manually, use the button below."
@@ -1157,15 +1198,15 @@ msgstr ""
 "Estas entradas serão eliminadas após o tempo de bloqueio terminar, usando um "
 "Cronjob do WP. Se desejar redefinir manualmente, use o botão abaixo."
 
-#: ui/controller/UI_Extended.php:1178
+#: ui/controller/UI_Extended.php:1185
 msgid "IP Logs"
 msgstr "Registos de IP"
 
-#: ui/controller/UI_Extended.php:1183
+#: ui/controller/UI_Extended.php:1190
 msgid "Delete IP Log Entries"
 msgstr "Eliminar Entradas de Registo de IP"
 
-#: ui/controller/UI_Extended.php:1186 ui/controller/UI_Extended.php:1249
+#: ui/controller/UI_Extended.php:1193 ui/controller/UI_Extended.php:1256
 msgid ""
 "This entries will be deleted using a WP Cronjob. If you want to reset it "
 "manually, use the button below."
@@ -1173,15 +1214,15 @@ msgstr ""
 "Estas entradas serão eliminadas usando um Cronjob do WP. Se desejar "
 "redefinir manualmente, use o botão abaixo."
 
-#: ui/controller/UI_Extended.php:1208 ui/controller/UI_Extended.php:1241
+#: ui/controller/UI_Extended.php:1215 ui/controller/UI_Extended.php:1248
 msgid "Logs"
 msgstr "Registos"
 
-#: ui/controller/UI_Extended.php:1214
+#: ui/controller/UI_Extended.php:1221
 msgid "Submission Logging"
 msgstr "Registo de Submissões"
 
-#: ui/controller/UI_Extended.php:1215
+#: ui/controller/UI_Extended.php:1222
 msgid ""
 "Enable the logs if you need further informations about verified and blocked "
 "submissions."
@@ -1189,62 +1230,62 @@ msgstr ""
 "Ative os registos se precisar de mais informações sobre submissões "
 "verificadas e bloqueadas."
 
-#: ui/controller/UI_Extended.php:1225
+#: ui/controller/UI_Extended.php:1232
 msgid "Enable Logging"
 msgstr "Ativar Registo"
 
-#: ui/controller/UI_Extended.php:1246
+#: ui/controller/UI_Extended.php:1253
 msgid "Delete Log Entries"
 msgstr "Eliminar Entradas de Registo"
 
-#: ui/controller/UI_Extended.php:1262
+#: ui/controller/UI_Extended.php:1269
 msgid "Delete older than 3 Weeks"
 msgstr "Eliminar mais antigos que 3 semanas"
 
-#: ui/controller/UI_Extended.php:1274
+#: ui/controller/UI_Extended.php:1281
 msgid "Whitelist Settings"
 msgstr "Definições da Lista Branca"
 
-#: ui/controller/UI_Extended.php:1279
+#: ui/controller/UI_Extended.php:1286
 msgid "Whitelist Email Addresses"
 msgstr "Endereços de E-mail na Lista Branca"
 
-#: ui/controller/UI_Extended.php:1280
+#: ui/controller/UI_Extended.php:1287
 msgid ""
 "Add email addresses that should bypass all CAPTCHA checks, one per line."
 msgstr ""
 "Adicione endereços de e-mail que devem ignorar todas as verificações de "
 "CAPTCHA, um por linha."
 
-#: ui/controller/UI_Extended.php:1293
+#: ui/controller/UI_Extended.php:1300
 msgid "Whitelist IP Addresses"
 msgstr "Endereços de IP na Lista Branca"
 
-#: ui/controller/UI_Extended.php:1294
+#: ui/controller/UI_Extended.php:1301
 msgid "Add IP addresses that should bypass all CAPTCHA checks, one per line."
 msgstr ""
 "Adicione endereços de IP que devem ignorar todas as verificações de CAPTCHA, "
 "um por linha."
 
-#: ui/controller/UI_Extended.php:1295
+#: ui/controller/UI_Extended.php:1302
 msgid "Your Current IP Address"
 msgstr "O Seu Endereço de IP Atual"
 
-#: ui/controller/UI_Extended.php:1309
+#: ui/controller/UI_Extended.php:1316
 msgid "Backlist IP Addresses"
 msgstr "Endereços de IP na Lista Negra"
 
-#: ui/controller/UI_Extended.php:1310
+#: ui/controller/UI_Extended.php:1317
 msgid "Add IP addresses that should be blocked automatically, one per line."
 msgstr ""
 "Adicione endereços de IP que devem ser bloqueados automaticamente, um por "
 "linha."
 
-#: ui/controller/UI_Extended.php:1323
+#: ui/controller/UI_Extended.php:1330
 msgid "Whitelist for Administrator Role"
 msgstr "Lista Branca para a Função de Administrador"
 
-#: ui/controller/UI_Extended.php:1324
+#: ui/controller/UI_Extended.php:1331
 msgid ""
 "Enable this option to automatically whitelist all administrators while they "
 "are logged into the website."
@@ -1252,46 +1293,29 @@ msgstr ""
 "Ative esta opção para adicionar automaticamente à lista branca todos os "
 "administradores enquanto estiverem com sessão iniciada no site."
 
-#: ui/controller/UI_Extended.php:1334
+#: ui/controller/UI_Extended.php:1341
 msgid "Activate Whitelist for Administrator Role"
 msgstr "Ativar Lista Branca para a Função de Administrador"
 
-#: ui/controller/UI_Extended.php:1351
+#: ui/controller/UI_Extended.php:1358
 msgid "Whitelist for Logged-In Users"
 msgstr "Lista Branca para Utilizadores com Sessão Iniciada"
 
-#: ui/controller/UI_Extended.php:1352
+#: ui/controller/UI_Extended.php:1359
 msgid "Enable this option to automatically whitelist all Logged-in Users."
 msgstr ""
 "Ative esta opção para adicionar automaticamente à lista branca todos os "
 "utilizadores com sessão iniciada."
 
-#: ui/controller/UI_Extended.php:1362
+#: ui/controller/UI_Extended.php:1369
 msgid "Activate Whitelist for Logged-In Users"
 msgstr "Ativar Lista Branca para Utilizadores com Sessão Iniciada"
 
-#: ui/controller/UI_Extended.php:1382
-msgid "Support"
-msgstr "Apoio"
-
-#: ui/controller/UI_Extended.php:1387
-msgid "Support us"
-msgstr "Apoie-nos"
-
-#: ui/controller/UI_Extended.php:1388
-msgid "Enable this option to support us developing and updating the plugin."
-msgstr ""
-"Ative esta opção para nos apoiar no desenvolvimento e atualização do plugin."
-
-#: ui/controller/UI_Extended.php:1398
-msgid "Activate Support"
-msgstr "Ativar o Apoio"
-
-#: ui/controller/UI_Extended.php:1418 ui/controller/UI_Extended.php:1423
+#: ui/controller/UI_Extended.php:1389 ui/controller/UI_Extended.php:1394
 msgid "Telemetry"
 msgstr "Telemetria"
 
-#: ui/controller/UI_Extended.php:1425
+#: ui/controller/UI_Extended.php:1396
 msgid ""
 "Enable this option to allow anonymous telemetry data to be sent. This helps "
 "us improve and develop the plugin."
@@ -1299,15 +1323,15 @@ msgstr ""
 "Ative esta opção para permitir o envio de dados anónimos de telemetria. Isso "
 "ajuda-nos a melhorar e a desenvolver o plugin."
 
-#: ui/controller/UI_Extended.php:1437
+#: ui/controller/UI_Extended.php:1408
 msgid "Enable Telemetry"
 msgstr "Ativar Telemetria"
 
-#: ui/core/UI_Page_Form.php:61
+#: ui/core/UI_Page_Form.php:65
 msgid "Settings updated"
 msgstr "Definições atualizadas"
 
-#: ui/core/UI_Page_Form.php:181
+#: ui/core/UI_Page_Form.php:184
 msgid "Save"
 msgstr "Guardar"
 
@@ -1351,6 +1375,26 @@ msgstr "Forge12 Interactive GmbH"
 #. Author URI of the plugin/theme
 msgid "https://www.forge12.com"
 msgstr "https://www.forge12.com"
+
+#~ msgid "WooCommerce Login & Registration"
+#~ msgstr "Início de Sessão e Registo WooCommerce"
+
+#~ msgid "WordPress Login & Registration"
+#~ msgstr "Início de Sessão e Registo WordPress"
+
+#~ msgid "Support"
+#~ msgstr "Apoio"
+
+#~ msgid "Support us"
+#~ msgstr "Apoie-nos"
+
+#~ msgid "Enable this option to support us developing and updating the plugin."
+#~ msgstr ""
+#~ "Ative esta opção para nos apoiar no desenvolvimento e atualização do "
+#~ "plugin."
+
+#~ msgid "Activate Support"
+#~ msgstr "Ativar o Apoio"
 
 #~ msgid "CAPTCHA neu laden"
 #~ msgstr "Recarregar CAPTCHA"

@@ -4,26 +4,39 @@
  */
 window.f12cf7captcha_cf7 = {
     storedOnclicks: {}, // To store onclick handlers for submit buttons
+    allowNextClick: false,
+
+    // Logger aktivieren mit ?f12-debug=true
+    logger: (function () {
+        const enabled = (new URLSearchParams(window.location.search)).get("f12-debug") === "true";
+        function formatArgs(args) {
+            return ["[f12cf7captcha]"].concat(Array.from(args));
+        }
+        return {
+            log: function () { if (enabled) console.log.apply(console, formatArgs(arguments)); },
+            warn: function () { if (enabled) console.warn.apply(console, formatArgs(arguments)); },
+            error: function () { if (enabled) console.error.apply(console, formatArgs(arguments)); }
+        };
+    })(),
 
     /**
      * Save and remove onclick handlers for all forms containing js_end_time
      */
     processFormOnclicks: function () {
+        var self = this;
         jQuery('form').each(function () {
             var $form = jQuery(this);
-            // Check if the form has the input with class 'js_end_time'
             if ($form.find('.js_end_time').length > 0) {
-                // Find all submit buttons in the form
                 $form.find('button[type=submit], input[type=submit]').each(function () {
                     var $button = jQuery(this);
-                    var buttonId = $button.attr('id') || (Math.random().toString(36).substr(2, 9)); // Unique ID for the button
+                    var buttonId = $button.attr('id') || (Math.random().toString(36).substr(2, 9));
 
                     var inlineOnclick = $button.attr('onclick');
                     if (inlineOnclick) {
-                        // Store the inline onclick handler and remove it temporarily
-                        window.f12cf7captcha_cf7.storedOnclicks[buttonId] = inlineOnclick;
-                        $button.removeAttr('onclick'); // Disable onclick temporarily
-                        $button.attr('data-f12-stored-id', buttonId); // Mark the button with a unique identifier
+                        self.storedOnclicks[buttonId] = inlineOnclick;
+                        $button.removeAttr('onclick');
+                        $button.attr('data-f12-stored-id', buttonId);
+                        self.logger.log("Onclick gespeichert & entfernt", {buttonId, form: $form});
                     }
                 });
             }
@@ -34,38 +47,64 @@ window.f12cf7captcha_cf7 = {
      * Handle the click event for submit buttons and execute stored onclick logic
      */
     handleFormSubmission: function () {
+        var self = this;
         jQuery(document).on('click', 'button[type=submit], input[type=submit]', function (event) {
             var $button = jQuery(this);
             var $form = $button.closest('form');
 
-            // Check if the form contains 'js_end_time'
-            if ($form.find('.js_end_time').length > 0) {
-                event.preventDefault(); // Stop default submission for now
+            if (self.allowNextClick) {
+                self.allowNextClick = false;
+                self.logger.log("allowNextClick → Klick durchgelassen", $button);
+                return;
+            }
 
-                // Execute custom logic for setting js_end_time
+            if ($form.find('.js_end_time').length > 0) {
+                event.preventDefault();
+
                 var timestamp = Date.now();
-                var js_microtime = timestamp / 1000; // Convert milliseconds to seconds
+                var js_microtime = timestamp / 1000;
                 $form.find('.js_end_time').val(js_microtime);
 
-                // Execute dynamically bound click handlers (if any)
-                var events = jQuery._data(this, 'events');
-                if (events && events.click) {
-                    events.click.forEach(function (handler) {
-                        handler.handler.call(this);
-                    }.bind(this));
-                }
+                self.logger.log("js_end_time gesetzt", {form: $form, value: js_microtime});
 
-                // Fetch and execute stored onclick handler if it exists
-                var buttonId = $button.attr('data-f12-stored-id');
-                if (buttonId && window.f12cf7captcha_cf7.storedOnclicks[buttonId]) {
-                    var storedOnclick = window.f12cf7captcha_cf7.storedOnclicks[buttonId];
-                    eval(storedOnclick); // Execute the stored onclick logic
-                }
-
-                // Finally, trigger the form to submit
-                $form.submit(); // Submit the form programmatically
+                self.finalizeSubmit($form, $button);
             }
         });
+    },
+
+    finalizeSubmit: function ($form, $button) {
+        var buttonId = $button.attr('data-f12-stored-id');
+        if (buttonId && this.storedOnclicks[buttonId]) {
+            try {
+                eval(this.storedOnclicks[buttonId]);
+                this.logger.log("Inline-Onclick ausgeführt", buttonId);
+            } catch (e) {
+                this.logger.error("Fehler im Inline-Onclick", e);
+            }
+        }
+
+        // WICHTIG: kein jQuery($button).trigger('click') → verursacht Rekursion!
+
+        // Nur nativen Klick simulieren, aber Schleife mit allowNextClick vermeiden
+        this.allowNextClick = true;
+        if (typeof $button[0].click === 'function') {
+            $button[0].click();
+            this.logger.log("Nativer Click ausgeführt", $button);
+        } else {
+            $button[0].dispatchEvent(
+                new MouseEvent('click', { bubbles: true, cancelable: true })
+            );
+            this.logger.log("MouseEvent Click dispatched", $button);
+        }
+
+        // Formular absenden
+        if ($form[0].requestSubmit) {
+            $form[0].requestSubmit();
+            this.logger.log("Formular mit requestSubmit() abgesendet", $form);
+        } else {
+            $form[0].submit();
+            this.logger.log("Formular mit submit() abgesendet", $form);
+        }
     },
 
     showOverlay: function($container) {
@@ -74,27 +113,25 @@ window.f12cf7captcha_cf7 = {
         }
         if ($container.find('.f12-captcha-overlay').length === 0) {
             $container.append('<div class="f12-captcha-overlay"></div>');
+            this.logger.log("Overlay hinzugefügt", $container);
         }
     },
 
     hideOverlay: function($container) {
         $container.find('.f12-captcha-overlay').remove();
+        this.logger.log("Overlay entfernt", $container);
     },
 
-
-    /**
-     * Reload Captchas
-     */
     reloadAllCaptchas: function () {
-       jQuery(document).find('.f12c').each(function () {
-           window.f12cf7captcha_cf7.reloadCaptcha(jQuery(this));
+        var self = this;
+        jQuery(document).find('.f12c').each(function () {
+            self.logger.log("Reload Captcha gestartet", this);
+            self.reloadCaptcha(jQuery(this));
         });
     },
 
-    /**
-     * Reload Captchas
-     */
     reloadCaptcha: function (e) {
+        var self = this;
         var $container = e.closest('.f12-captcha');
         this.showOverlay($container);
 
@@ -105,6 +142,8 @@ window.f12cf7captcha_cf7 = {
             var hash = jQuery('#' + hash_id);
             var label = $container.find('.c-data');
             var method = jQuery(this).attr('data-method');
+
+            self.logger.log("Captcha Reload AJAX", {method, input_id});
 
             jQuery.ajax({
                 type: 'POST',
@@ -123,22 +162,20 @@ window.f12cf7captcha_cf7 = {
                         label.find('.captcha-calculation').html(data.label);
                     }
                     hash.val(data.hash);
+                    self.logger.log("Captcha neu gesetzt", {method, hash: data.hash});
                 },
                 complete: function () {
-                    window.f12cf7captcha_cf7.hideOverlay($container);
+                    self.hideOverlay($container);
                 },
                 error: function (xhr, textstatus, errorThrown) {
-                    console.log(errorThrown);
+                    self.logger.error("Captcha reload Fehler", errorThrown);
                 }
             });
         });
     },
 
-
-    /**
-     * Reload Timer
-     */
     reloadTimer: function () {
+        var self = this;
         jQuery(document).find('.f12t').each(function () {
             var fieldname = 'f12_timer';
             var field = jQuery(this).find('.' + fieldname);
@@ -146,85 +183,62 @@ window.f12cf7captcha_cf7 = {
             jQuery.ajax({
                 type: 'POST',
                 url: f12_cf7_captcha.ajaxurl,
-                data: {
-                    action: 'f12_cf7_captcha_timer_reload'
-                },
-                success: function (data, textStatus, XMLHttpRequest) {
+                data: { action: 'f12_cf7_captcha_timer_reload' },
+                success: function (data) {
                     data = JSON.parse(data);
                     field.val(data.hash);
+                    self.logger.log("Timer neu gesetzt", data.hash);
                 },
-                error: function (XMLHttpRequest, textstatus, errorThrown) {
-                    console.log(errorThrown);
+                error: function (xhr, textstatus, errorThrown) {
+                    self.logger.error("Timer reload Fehler", errorThrown);
                 }
             });
         });
     },
-    /**
-     * Init
-     */
-    init: function () {
-        // Identify and process onclicks in all relevant forms
-        this.processFormOnclicks();
 
-        // Handle form submission and reintegrate onclicks
+    init: function () {
+        this.logger.log("Init gestartet");
+
+        this.processFormOnclicks();
         this.handleFormSubmission();
 
-        /**
-         * Reload the Captcha by User
-         * @param document
-         */
         jQuery(document).on('click', '.cf7.captcha-reload', function (e) {
             e.preventDefault();
             e.stopPropagation();
-
             window.f12cf7captcha_cf7.reloadCaptcha(jQuery(this));
-            //window.f12cf7captcha_cf7.reloadTimer();
         });
 
-        /**
-         * Add timer information when the form has been loaded
-         */
         jQuery(document).ready(function () {
-            // Get the current timestamp in milliseconds using Date.now()
             var timestamp = Date.now();
-
-            // Combine the timestamp and date milliseconds to create a JavaScript microtime value
             var js_microtime = (timestamp / 1000);
-
             jQuery(document).find('form').each(function () {
                 jQuery(this).find('.js_start_time').val(js_microtime);
             });
+            window.f12cf7captcha_cf7.logger.log("js_start_time gesetzt", js_microtime);
         });
 
-        /**
-         * Add Event Listener from Contact Form 7
-         */
         var wpcf7Elm = document.querySelector('.wpcf7');
+        if (!wpcf7Elm) return;
 
-        if (typeof (wpcf7Elm) === 'undefined' || wpcf7Elm === null) {
-            return;
-        }
-
-        wpcf7Elm.addEventListener('wpcf7mailsent', function (event) {
+        wpcf7Elm.addEventListener('wpcf7mailsent', function () {
             window.f12cf7captcha_cf7.reloadAllCaptchas();
             window.f12cf7captcha_cf7.reloadTimer();
+            window.f12cf7captcha_cf7.logger.log("wpcf7mailsent → Captchas neu geladen");
         }, false);
 
-        wpcf7Elm.addEventListener('wpcf7submit', function (event) {
+        wpcf7Elm.addEventListener('wpcf7submit', function () {
             window.f12cf7captcha_cf7.reloadAllCaptchas();
             window.f12cf7captcha_cf7.reloadTimer();
+            window.f12cf7captcha_cf7.logger.log("wpcf7submit → Captchas neu geladen");
         }, false);
 
         wpcf7Elm.addEventListener('wpcf7spam', function (event) {
             var id = event.detail.apiResponse.into;
-
-            if (typeof (id) === 'undefined') {
-                return;
-            }
-
+            if (!id) return;
             jQuery(id).find('.f12c').addClass('wpcf7-not-valid not-valid');
+            window.f12cf7captcha_cf7.logger.warn("wpcf7spam → Captcha als not-valid markiert", id);
         }, false);
     }
-}
+};
 
 window.f12cf7captcha_cf7.init();

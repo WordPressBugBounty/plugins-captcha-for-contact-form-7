@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.2.48
+ * Version: 2.2.49
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.2.48' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.2.49' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -23,7 +23,6 @@ use f12_cf7_captcha\core\Compatibility;
 use f12_cf7_captcha\core\log\Log_Cleaner;
 use f12_cf7_captcha\core\Log_WordPress;
 use f12_cf7_captcha\core\protection\Protection;
-use f12_cf7_captcha\core\Support;
 use f12_cf7_captcha\core\TemplateController;
 use f12_cf7_captcha\core\timer\Timer_Controller;
 use f12_cf7_captcha\core\UserData;
@@ -59,7 +58,6 @@ require_once( 'core/protection/Protection.class.php' );
 
 require_once( 'core/Compatibility.class.php' );
 require_once( 'ui/UI_Manager.php' );
-require_once( 'core/Support.class.php' );
 
 /**
  * Class CF7Captcha
@@ -264,7 +262,6 @@ class CF7Captcha {
 			'template'      => TemplateController::class,
 			'log-cleaner'   => Log_Cleaner::class,
 			'compatibility' => Compatibility::class,
-			'support'       => Support::class,
 			'user-data'     => UserData::class,
 			'timer'         => Timer_Controller::class,
 			'protection'    => Protection::class,
@@ -516,6 +513,39 @@ class CF7Captcha {
 			'f12_cf7_captcha',
 			$atts
 		);
+
+		// Settings
+		$settings = $this->get_settings();
+		if (isset($settings['beta'], $settings['beta']['beta_captcha_enable'], $settings['beta']['beta_captcha_api_key']) && (bool)$settings['beta']['beta_captcha_enable'] === true) {
+			if(!empty( $settings['beta']['beta_captcha_api_key'])) {
+				$this->get_logger()->info( "Beta-API aktiviert" );
+				// JavaScript einfügen
+				wp_enqueue_script(
+					'f12-cf7-captcha-client',
+					plugin_dir_url( __FILE__ ) . 'core/assets/client.js',
+					array( 'jquery' ),
+					null,
+					true
+				);
+
+				// Daten für das Script lokal bereitstellen
+				wp_localize_script(
+					'f12-cf7-captcha-client',
+					'f12_client_data',
+					[
+						'key' => $settings['beta']['beta_captcha_api_key'],
+						'url' => 'https://silentshield.forge12.com'
+					]
+				);
+
+				$this->logger->debug( "API-Assets geladen", [
+					'plugin'  => 'f12-cf7-captcha',
+					'scripts' => [ 'f12-cf7-captcha-client' ], // Korrigierter Scriptname
+					'styles'  => [],                        // Aktuell keine Styles vorhanden
+					'context' => ( is_admin() ? 'admin' : ( is_user_logged_in() ? 'frontend-logged-in' : 'frontend-guest' ) )
+				] );
+			}
+		}
 
 		wp_enqueue_style(
 			'f12-cf7-captcha-style',

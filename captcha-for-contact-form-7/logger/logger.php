@@ -6,6 +6,10 @@ if (! interface_exists('Forge12\Shared\LoggerInterface')) {
 	require_once __DIR__ . '/logger.interface.php';
 }
 
+if (!defined('F12_DEBUG')) {
+	define('F12_DEBUG', false);
+}
+
 if ( ! class_exists( 'Forge12\Shared\Logger' ) ) {
 	class Logger implements LoggerInterface {
 		private static $instance;
@@ -21,6 +25,11 @@ if ( ! class_exists( 'Forge12\Shared\Logger' ) ) {
 		const CRITICAL = 500;
 
 		private function __construct() {
+			if ( ! defined( 'F12_DEBUG' ) || ! F12_DEBUG ) {
+				// Wenn F12_DEBUG nicht definiert ist oder false, beenden wir.
+				return;
+			}
+
 			$upload_dir   = wp_upload_dir();
 			$this->log_dir = $upload_dir['basedir'] . '/f12-logs';
 
@@ -109,6 +118,11 @@ if ( ! class_exists( 'Forge12\Shared\Logger' ) ) {
 		}
 
 		private function writeLog( $level, $levelName, $message, array $context = [] ) {
+			if ( ! defined( 'F12_DEBUG' ) || ! F12_DEBUG ) {
+				// Wenn F12_DEBUG nicht definiert ist oder false, beenden wir.
+				return;
+			}
+
 			if ( $level < $this->log_level ) {
 				return;
 			}

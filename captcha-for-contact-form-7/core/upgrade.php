@@ -126,7 +126,6 @@ function on_update() {
 			'protection_rules_error_message_blacklist' => __( 'The word %s is blacklisted.', 'captcha-for-contact-form-7' ),
 			'protection_browser_enable'                => 1,
 			'protection_javascript_enable'             => 1,
-			'protection_support_enable'                => 1,
 		];
 
 		// Mapping anwenden

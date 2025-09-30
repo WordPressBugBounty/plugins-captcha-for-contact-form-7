@@ -88,7 +88,7 @@ function send_telemetry_snapshot(): void {
 		'payload' => $payload,
 	]);
 
-	$response = wp_remote_post('https://silentshield.forge12.com/api/telemetry/snapshot', [
+	$response = wp_remote_post('https://api.silentshield.io/api/telemetry/snapshot', [
 		'headers' => [
 			'Content-Type' => 'application/json; charset=utf-8',
 		],

@@ -6,6 +6,7 @@ use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseModul;
 use f12_cf7_captcha\core\BaseProtection;
 use f12_cf7_captcha\core\Log_WordPress;
+use f12_cf7_captcha\core\protection\api\Api;
 use f12_cf7_captcha\core\protection\browser\Browser;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
 use f12_cf7_captcha\core\protection\ip\IPValidator;
@@ -20,6 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once( 'api/Api.class.php' );
 require_once( 'browser/Browser.php' );
 require_once( 'multiple_submission/Multiple_Submission_Validator.class.php' );
 require_once( 'time/Timer_Validator.class.php' );
@@ -66,6 +68,7 @@ class Protection extends BaseModul {
 
 		// Definiere die Module, die initialisiert werden sollen.
 		$moduls = [
+			'api-validator'                 => new Api( $this->Controller ),
 			'whitelist-validator'           => new Whitelist_Validator( $this->Controller ),
 			'ip-blacklist-validator'        => new IP_Blacklist_Validator( $this->Controller ),
 			'browser-validator'             => new Browser( $this->Controller ),
