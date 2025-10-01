@@ -6,6 +6,24 @@ use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
 
 class Api extends BaseProtection {
+	public function __construct( CF7Captcha $Controller ) {
+		parent::__construct( $Controller );
+		$this->get_logger()->info(
+			"__construct(): Api Controller initialisiert",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => __CLASS__
+			]
+		);
+
+		$this->set_message( __( 'behavior-protection', 'captcha-for-contact-form-7' ) );
+
+		$this->get_logger()->info(
+			"__construct(): Initialisierung abgeschlossen",
+			[ 'plugin' => 'f12-cf7-captcha' ]
+		);
+	}
+
 	protected function is_enabled(): bool {
 		$raw_setting = $this->Controller->get_settings( 'beta_captcha_enable', 'beta' );
 
@@ -14,9 +32,9 @@ class Api extends BaseProtection {
 			$raw_setting = 1;
 		}
 
-		$is_enabled = apply_filters( 'f12-cf7-captcha-skip-validation-browser', $raw_setting );
+		$is_enabled = apply_filters( 'f12-cf7-captcha-skip-validation-api', $raw_setting );
 
-		$this->get_logger()->debug( "Browser Protection Status geprüft", [
+		$this->get_logger()->debug( "API Protection Status geprüft", [
 			'plugin'      => 'f12-cf7-captcha',
 			'raw_setting' => $raw_setting,
 			'final_value' => $is_enabled
@@ -41,6 +59,14 @@ class Api extends BaseProtection {
 			return false;
 		}
 
+		$api_key = $this->Controller->get_settings( 'beta_captcha_api_key', 'beta' );
+
+		if ( $api_key === '' || $api_key === null ) {
+			$this->get_logger()->debug( "API Key not defined within the settings of the plugin. Skipping spam-check.", [ 'plugin' => 'f12-cf7-captcha' ] );
+
+			return false;
+		}
+
 		if ( empty( $_POST['behavior_nonce'] ) ) {
 			$this->get_logger()->debug( "Spam-Check - behavior_nonce missing. Mark as spam", [ 'plugin' => 'f12-cf7-captcha' ] );
 
@@ -49,10 +75,12 @@ class Api extends BaseProtection {
 		} else {
 
 
-			$nonce = sanitize_text_field( $_POST['behavior_nonce'] );
-
+			$nonce    = sanitize_text_field( $_POST['behavior_nonce'] );
 			$response = wp_remote_post( 'https://api.silentshield.io/api/captcha/verify-nonce', [
-				'headers' => [ 'Content-Type' => 'application/json' ],
+				'headers' => [
+					'Content-Type' => 'application/:qjson',
+					'api-key'      => $api_key,
+				],
 				'body'    => wp_json_encode( [ 'nonce' => $nonce ] ),
 				'timeout' => 5,
 			] );

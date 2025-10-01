@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.8.2
 Requires PHP: 8.1
-Stable tag: 2.2.49
+Stable tag: 2.2.50
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -109,6 +109,10 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.2.50 =
+- Fix [API v2]: Updated key and endpoint configuration.
+- Fix [JavaScript]: Adjusted script to align with latest Chrome behavior, resolving issues with event forwarding from WooCommerce/WordPress.
+
 = 2.2.49 =
 - New [API v2]: Started implementing the new Captcha SaaS solution.
 - Fix [JavaScript]: Fixed a bug that prevented WooCommerce from triggering its own events on form submit.

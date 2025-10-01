@@ -83,27 +83,22 @@ window.f12cf7captcha_cf7 = {
             }
         }
 
-        // WICHTIG: kein jQuery($button).trigger('click') → verursacht Rekursion!
-
-        // Nur nativen Klick simulieren, aber Schleife mit allowNextClick vermeiden
-        this.allowNextClick = true;
-        if (typeof $button[0].click === 'function') {
-            $button[0].click();
-            this.logger.log("Nativer Click ausgeführt", $button);
-        } else {
-            $button[0].dispatchEvent(
-                new MouseEvent('click', { bubbles: true, cancelable: true })
-            );
-            this.logger.log("MouseEvent Click dispatched", $button);
+        // Wichtig: zuerst die Click-Handler feuern, aber Rekursion vermeiden
+        if (!this.allowNextClick) {
+            this.allowNextClick = true;
+            $button[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            this.logger.log("Nativer Click-Event dispatched", $button);
+            this.allowNextClick = false;
         }
 
-        // Formular absenden
+        // Dann Formular absenden (triggert Submit-Handler)
         if ($form[0].requestSubmit) {
-            $form[0].requestSubmit();
+            $form[0].requestSubmit($button[0]);
             this.logger.log("Formular mit requestSubmit() abgesendet", $form);
         } else {
-            $form[0].submit();
-            this.logger.log("Formular mit submit() abgesendet", $form);
+            $form.trigger('submit'); // jQuery-Events feuern
+            $form[0].submit();       // nativer Fallback
+            this.logger.log("Formular mit trigger('submit') + submit() abgesendet", $form);
         }
     },
 
