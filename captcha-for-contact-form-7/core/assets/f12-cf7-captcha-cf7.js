@@ -9,13 +9,21 @@ window.f12cf7captcha_cf7 = {
     // Logger aktivieren mit ?f12-debug=true
     logger: (function () {
         const enabled = (new URLSearchParams(window.location.search)).get("f12-debug") === "true";
+
         function formatArgs(args) {
             return ["[f12cf7captcha]"].concat(Array.from(args));
         }
+
         return {
-            log: function () { if (enabled) console.log.apply(console, formatArgs(arguments)); },
-            warn: function () { if (enabled) console.warn.apply(console, formatArgs(arguments)); },
-            error: function () { if (enabled) console.error.apply(console, formatArgs(arguments)); }
+            log: function () {
+                if (enabled) console.log.apply(console, formatArgs(arguments));
+            },
+            warn: function () {
+                if (enabled) console.warn.apply(console, formatArgs(arguments));
+            },
+            error: function () {
+                if (enabled) console.error.apply(console, formatArgs(arguments));
+            }
         };
     })(),
 
@@ -67,8 +75,15 @@ window.f12cf7captcha_cf7 = {
 
                 self.logger.log("js_end_time gesetzt", {form: $form, value: js_microtime});
 
+                // SilentShield-Events ignorieren
+                if (window.silentShield) {
+                    self.logger.log("SilentShield-Events ignored", $button);
+                    return;
+                }
+
                 self.finalizeSubmit($form, $button);
             }
+
         });
     },
 
@@ -83,14 +98,6 @@ window.f12cf7captcha_cf7 = {
             }
         }
 
-        // Wichtig: zuerst die Click-Handler feuern, aber Rekursion vermeiden
-        if (!this.allowNextClick) {
-            this.allowNextClick = true;
-            $button[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            this.logger.log("Nativer Click-Event dispatched", $button);
-            this.allowNextClick = false;
-        }
-
         // Dann Formular absenden (triggert Submit-Handler)
         if ($form[0].requestSubmit) {
             $form[0].requestSubmit($button[0]);
@@ -102,7 +109,7 @@ window.f12cf7captcha_cf7 = {
         }
     },
 
-    showOverlay: function($container) {
+    showOverlay: function ($container) {
         if ($container.css('position') === 'static') {
             $container.css('position', 'relative');
         }
@@ -112,7 +119,7 @@ window.f12cf7captcha_cf7 = {
         }
     },
 
-    hideOverlay: function($container) {
+    hideOverlay: function ($container) {
         $container.find('.f12-captcha-overlay').remove();
         this.logger.log("Overlay entfernt", $container);
     },
@@ -178,7 +185,7 @@ window.f12cf7captcha_cf7 = {
             jQuery.ajax({
                 type: 'POST',
                 url: f12_cf7_captcha.ajaxurl,
-                data: { action: 'f12_cf7_captcha_timer_reload' },
+                data: {action: 'f12_cf7_captcha_timer_reload'},
                 success: function (data) {
                     data = JSON.parse(data);
                     field.val(data.hash);
