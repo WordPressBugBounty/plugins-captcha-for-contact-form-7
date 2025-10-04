@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.8.2
 Requires PHP: 8.1
-Stable tag: 2.2.51
+Stable tag: 2.2.52
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -109,6 +109,10 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.2.52 =
+- New [WooCommerce Checkout]: Now protected with Captcha. Enable or disable under Settings → Extended. More security. Less spam.
+- Improvement [API v2]: Refactored server-side validation for greater consistency and reduced error rate.
+
 = 2.2.51 =
 - Improvement [API v2/JavaScript]: Refactored client-side validation for consistency and reduced error rate
 

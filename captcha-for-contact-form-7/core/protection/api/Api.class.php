@@ -50,68 +50,74 @@ class Api extends BaseProtection {
 		] );
 	}
 
-	public function is_spam(): bool {
-		if ( ! $this->is_enabled() ) {
-			$this->get_logger()->debug( "Spam-Check übersprungen (Feature [API] deaktiviert)", [
-				'plugin' => 'f12-cf7-captcha'
-			] );
+    public function is_spam(): bool {
+        if ( ! $this->is_enabled() ) {
+            $this->get_logger()->debug( "Spam-Check übersprungen (Feature [API] deaktiviert)", [
+                'plugin' => 'f12-cf7-captcha'
+            ] );
+            return false;
+        }
 
-			return false;
-		}
+        $api_key = $this->Controller->get_settings( 'beta_captcha_api_key', 'beta' );
 
-		$api_key = $this->Controller->get_settings( 'beta_captcha_api_key', 'beta' );
+        if ( $api_key === '' || $api_key === null ) {
+            $this->get_logger()->debug( "API Key not defined within the settings of the plugin. Skipping spam-check.", [ 'plugin' => 'f12-cf7-captcha' ] );
+            return false;
+        }
 
-		if ( $api_key === '' || $api_key === null ) {
-			$this->get_logger()->debug( "API Key not defined within the settings of the plugin. Skipping spam-check.", [ 'plugin' => 'f12-cf7-captcha' ] );
+        // 🔎 behavior_nonce ermitteln (direkt oder aus formData)
+        $nonce = null;
 
-			return false;
-		}
+        if ( ! empty( $_POST['behavior_nonce'] ) ) {
+            $nonce = sanitize_text_field( $_POST['behavior_nonce'] );
+        } elseif ( ! empty( $_POST['formData'] ) || ! empty( $_POST['data'] ) ) {
+			// Avada & Fluent Forms special cases. Avada uses "formData". FluentForms uses "data"
+	        $parsed = [];
+	        $raw = $_POST['formData'] ?? $_POST['data']; // beide Varianten abfangen
+	        parse_str( $raw, $parsed );
+	        if ( ! empty( $parsed['behavior_nonce'] ) ) {
+		        $nonce = sanitize_text_field( $parsed['behavior_nonce'] );
+	        }
+        }
 
-		if ( empty( $_POST['behavior_nonce'] ) ) {
-			$this->get_logger()->debug( "Spam-Check - behavior_nonce missing. Mark as spam", [ 'plugin' => 'f12-cf7-captcha' ] );
+        if ( empty( $nonce ) ) {
+            $this->get_logger()->debug( "Spam-Check - behavior_nonce missing. Mark as spam", [ 'plugin' => 'f12-cf7-captcha' ] );
+            $is_spam = true; // kein Nonce → verdächtig / blocken
+        } else {
+            $response = wp_remote_post( 'https://api.silentshield.io/api/captcha/verify-nonce', [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'api-key'      => $api_key,
+                ],
+                'body'    => wp_json_encode( [ 'nonce' => $nonce ] ),
+                'timeout' => 5,
+            ] );
 
-			// kein Nonce → verdächtig / blocken
-			$is_spam = true;
-		} else {
+            if ( is_wp_error( $response ) ) {
+                $this->get_logger()->error( "API request failed, skip spam-block (fail-open)", [
+                    'plugin' => 'f12-cf7-captcha',
+                    'error'  => $response->get_error_message()
+                ] );
+                $is_spam = false;
+            } else {
+                $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
+                if ( empty( $data['ok'] ) || $data['verdict'] !== 'human' ) {
+                    $this->get_logger()->info( 'Spam-Check completed. Found spam.', [ 'plugin' => 'f12-cf7-captcha' ] );
+                    $is_spam = true; // blockieren
+                } else {
+                    $is_spam = false;
+                }
+				$this->get_logger()->debug( "Spam-Check completed. Found no spam.", [ 'plugin' => 'f12-cf7-captcha', 'protection' => 'API' ] );
+            }
+        }
 
-			$nonce    = sanitize_text_field( $_POST['behavior_nonce'] );
-			$response = wp_remote_post( 'https://api.silentshield.io/api/captcha/verify-nonce', [
-				'headers' => [
-					'Content-Type' => 'application/:qjson',
-					'api-key'      => $api_key,
-				],
-				'body'    => wp_json_encode( [ 'nonce' => $nonce ] ),
-				'timeout' => 5,
-			] );
+        $this->get_logger()->info( "Spam-Check durchgeführt", [
+            'plugin' => 'f12-cf7-captcha',
+            'result' => $is_spam ? 'SPAM erkannt' : 'kein Spam'
+        ] );
 
-			if ( is_wp_error( $response ) ) {
-				$this->get_logger()->error( "API request failed, skip spam-block (fail-open)", [
-					'plugin' => 'f12-cf7-captcha',
-					'error'  => $response->get_error_message()
-				] );
+        return $is_spam;
+    }
 
-				$is_spam = false;
-			} else {
-				$data = json_decode( wp_remote_retrieve_body( $response ), true );
-
-				if ( empty( $data['ok'] ) || $data['verdict'] !== 'human' ) {
-					$this->get_logger()->info( 'Spam-Check completed. Found spam.', [ 'plugin' => 'f12-cf7-captcha' ] );
-
-					// blockieren → z.B. Mail nicht senden
-					$is_spam = true;
-				} else {
-					$is_spam = false;
-				}
-			}
-		}
-
-
-		$this->get_logger()->info( "Spam-Check durchgeführt", [
-			'plugin' => 'f12-cf7-captcha',
-			'result' => $is_spam ? 'SPAM erkannt' : 'kein Spam'
-		] );
-
-		return $is_spam;
-	}
 }
