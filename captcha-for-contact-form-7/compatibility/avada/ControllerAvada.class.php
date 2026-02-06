@@ -115,11 +115,6 @@ class ControllerAvada extends BaseController {
 		add_filter( 'fusion_form_demo_mode', [ $this, 'wp_is_spam' ], 10, 1 );
 		$this->get_logger()->debug( 'Filter "fusion_form_demo_mode" für die Spam-Prüfung registriert.' );
 
-		// Adds an action to enqueue the necessary scripts and styles for the spam protection.
-		// This hook is used to add assets to the front-end of the website.
-		add_action( 'wp_enqueue_scripts', array( $this, 'wp_add_assets' ) );
-		$this->get_logger()->debug( 'Action "wp_enqueue_scripts" zum Laden der Assets registriert.' );
-
 		$this->get_logger()->info( 'Initialisierung der Avada-Komponente abgeschlossen. Hooks wurden registriert.' );
 	}
 
@@ -300,43 +295,6 @@ class ControllerAvada extends BaseController {
 				$last_visible_key => $message,
 			],
 		] );
-	}
-
-	/**
-	 * Add assets for Avada form
-	 */
-	public function wp_add_assets() {
-		// Logge den Beginn des Prozesses
-		$this->get_logger()->info( 'Starte das Einreihen von Skripten.' );
-
-		// Pfad zum Skript
-		$script_url = plugin_dir_url( __FILE__ ) . 'assets/f12-cf7-captcha-avada.js';
-
-		// Logge die Details zum Skript
-		$this->get_logger()->debug( 'Skript wird geladen.', [
-			'handle'       => 'f12-cf7-captcha-avada',
-			'url'          => $script_url,
-			'dependencies' => [ 'jquery' ],
-		] );
-
-		// Lade das Skript
-		wp_enqueue_script( 'f12-cf7-captcha-avada', $script_url, array( 'jquery' ) );
-
-		// Die Daten für die Lokalisierung
-		$localization_data = [
-			'ajaxurl' => admin_url( 'admin-ajax.php' )
-		];
-
-		// Logge die Lokalisierungsdaten
-		$this->get_logger()->debug( 'Skript wird lokalisiert.', [
-			'handle' => 'f12-cf7-captcha-avada',
-			'data'   => $localization_data,
-		] );
-
-		// Lokalisiere das Skript
-		wp_localize_script( 'f12-cf7-captcha-avada', 'f12_cf7_captcha_avada', $localization_data );
-
-		// Logge den erfolgreichen Abschluss
-		$this->get_logger()->info( 'Skripte erfolgreich eingereiht und lokalisiert.' );
+		return true;
 	}
 }

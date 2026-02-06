@@ -82,6 +82,24 @@ class Protection extends BaseModul {
 
 		$this->get_logger()->debug( 'Module wurden definiert.', [ 'module_count' => count( $moduls ) ] );
 
+		// 2️⃣ Prüfen, ob API aktiviert ist und API-Key vorhanden
+		/** @var Api $api */
+		$api = $moduls['api-validator'];
+		$api_key = $this->Controller->get_settings('beta_captcha_api_key', 'beta');
+
+		if ($api->is_enabled() && !empty($api_key)) {
+			$this->get_logger()->notice('API-Validator ist aktiv und API-Key vorhanden – deaktiviere lokale Schutzmodule.', [
+				'plugin' => 'f12-cf7-captcha',
+				'api-key' => substr($api_key, 0, 8) . '…',
+			]);
+
+			// Nur Whitelist & API aktiv lassen
+			$moduls = [
+				'api-validator'       => $api,
+				'whitelist-validator' => $moduls['whitelist-validator'],
+			];
+		}
+
 		// Füge jedes Modul dem internen Modul-Array hinzu.
 		foreach ( $moduls as $name => $BaseModul ) {
 			$this->_moduls[ $name ] = $BaseModul;
@@ -90,6 +108,7 @@ class Protection extends BaseModul {
 				'module_class' => get_class( $BaseModul ),
 			] );
 		}
+
 
 		$this->get_logger()->info( 'Alle Schutzmodule erfolgreich initialisiert.', [ 'plugin' => 'f12-cf7-captcha' ] );
 	}

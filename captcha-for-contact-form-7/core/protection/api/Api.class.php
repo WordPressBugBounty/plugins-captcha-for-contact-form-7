@@ -6,6 +6,8 @@ use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
 
 class Api extends BaseProtection {
+	private $api_endpoint = 'https://api.silentshield.io/v1/verify';
+
 	public function __construct( CF7Captcha $Controller ) {
 		parent::__construct( $Controller );
 		$this->get_logger()->info(
@@ -24,7 +26,7 @@ class Api extends BaseProtection {
 		);
 	}
 
-	protected function is_enabled(): bool {
+	public function is_enabled(): bool {
 		$raw_setting = $this->Controller->get_settings( 'beta_captcha_enable', 'beta' );
 
 		if ( $raw_setting === '' || $raw_setting === null ) {
@@ -51,6 +53,7 @@ class Api extends BaseProtection {
 	}
 
     public function is_spam(): bool {
+
         if ( ! $this->is_enabled() ) {
             $this->get_logger()->debug( "Spam-Check übersprungen (Feature [API] deaktiviert)", [
                 'plugin' => 'f12-cf7-captcha'
@@ -84,7 +87,7 @@ class Api extends BaseProtection {
             $this->get_logger()->debug( "Spam-Check - behavior_nonce missing. Mark as spam", [ 'plugin' => 'f12-cf7-captcha' ] );
             $is_spam = true; // kein Nonce → verdächtig / blocken
         } else {
-            $response = wp_remote_post( 'https://api.silentshield.io/api/captcha/verify-nonce', [
+            $response = wp_remote_post( $this->api_endpoint, [
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'api-key'      => $api_key,
@@ -103,7 +106,7 @@ class Api extends BaseProtection {
                 $data = json_decode( wp_remote_retrieve_body( $response ), true );
 
                 if ( empty( $data['ok'] ) || $data['verdict'] !== 'human' ) {
-                    $this->get_logger()->info( 'Spam-Check completed. Found spam.', [ 'plugin' => 'f12-cf7-captcha' ] );
+                    $this->get_logger()->info( 'Spam-Check completed. Found spam.', [ 'plugin' => 'f12-cf7-captcha', 'protection' => 'API', 'data' => $data, 'api-endpoint' => $this->api_endpoint, 'api-key' => $api_key, 'response' => $response ] );
                     $is_spam = true; // blockieren
                 } else {
                     $is_spam = false;

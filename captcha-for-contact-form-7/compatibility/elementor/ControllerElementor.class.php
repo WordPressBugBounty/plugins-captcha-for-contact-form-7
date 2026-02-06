@@ -109,52 +109,8 @@ class ControllerElementor extends BaseController
 		$this->get_logger()->debug('Füge den Filter "elementor_pro/forms/render/item" hinzu, um den Spamschutz anzuzeigen.');
 		add_filter('elementor_pro/forms/render/item', array($this, 'wp_add_spam_protection'), 10, 3);
 
-		// Add the action to enqueue scripts.
-		$this->get_logger()->debug('Füge die Aktion "wp_enqueue_scripts" hinzu, um die Skripte zu laden.');
-		add_action('wp_enqueue_scripts', array($this, 'wp_add_assets'));
-
 		// Log the successful completion of the initialization.
 		$this->get_logger()->info('Initialisierung abgeschlossen.');
-	}
-
-    /**
-     * Add assets for elementor
-     */
-	public function wp_add_assets()
-	{
-		// Logge den Beginn des Einreihens von Skripten.
-		$this->get_logger()->info('Starte das Einreihen von Skripten für Elementor.');
-
-		// Definiere den Handle und die URL des Skripts.
-		$handle = 'f12-cf7-captcha-elementor';
-		$script_url = plugin_dir_url(__FILE__) . 'assets/f12-cf7-captcha-elementor.js';
-
-		// Logge die Details des Skripts, das geladen wird.
-		$this->get_logger()->debug('Skript wird geladen.', [
-			'handle' => $handle,
-			'url' => $script_url,
-			'dependencies' => ['jquery'],
-		]);
-
-		// Lade das Skript in die Warteschlange.
-		wp_enqueue_script($handle, $script_url, array('jquery'));
-
-		// Definiere die Daten für die Lokalisierung.
-		$localization_data = [
-			'ajaxurl' => admin_url('admin-ajax.php')
-		];
-
-		// Logge die Lokalisierungsdaten, die dem Skript hinzugefügt werden.
-		$this->get_logger()->debug('Skript wird lokalisiert.', [
-			'handle' => $handle,
-			'data' => $localization_data,
-		]);
-
-		// Lokalisiere das Skript mit den definierten Daten.
-		wp_localize_script($handle, 'f12_cf7_captcha_elementor', $localization_data);
-
-		// Logge den erfolgreichen Abschluss des Vorgangs.
-		$this->get_logger()->info('Skripte erfolgreich eingereiht und lokalisiert.');
 	}
 
     /**

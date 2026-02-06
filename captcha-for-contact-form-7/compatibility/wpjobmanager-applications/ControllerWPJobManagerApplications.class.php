@@ -64,17 +64,27 @@ class ControllerWPJobManagerApplications extends BaseController {
 	 */
 	public function is_installed(): bool
 	{
-		// Log the start of the check.
-		$this->get_logger()->info('Starte Überprüfung, ob das WP Job Manager Applications-Modul installiert ist.');
+		$this->get_logger()->info('Starte Überprüfung, ob das WP Job Manager Plugin installiert und aktiv ist.');
 
-		// Since this function always returns true, log the outcome directly.
-		$is_installed = true;
+		// Prüfe, ob eine der typischen WP Job Manager Klassen existiert.
+		if ( class_exists( 'WP_Job_Manager' ) || function_exists( 'WPJM' ) ) {
+			$this->get_logger()->info('Klasse oder Funktion von WP Job Manager gefunden. Plugin gilt als installiert.');
+			return true;
+		}
 
-		// Log the result of the check.
-		$this->get_logger()->info('Das WP Job Manager Applications-Modul wird als installiert betrachtet. Gebe "true" zurück.');
+		// Alternative: Prüfen, ob Plugin-Datei in der Plugin-Liste aktiv ist.
+		if ( function_exists( 'is_plugin_active' ) ) {
+			// Pfad relativ zum Plugin-Verzeichnis
+			$plugin_file = 'wp-job-manager/wp-job-manager.php';
+			if ( is_plugin_active( $plugin_file ) ) {
+				$this->get_logger()->info('WP Job Manager ist in der Plugin-Liste aktiv.');
+				return true;
+			}
+		}
 
-		// Return the result.
-		return $is_installed;
+		// Falls Plugin nicht gefunden wurde
+		$this->get_logger()->warning('WP Job Manager wurde nicht gefunden oder ist inaktiv.');
+		return false;
 	}
 
 	/**

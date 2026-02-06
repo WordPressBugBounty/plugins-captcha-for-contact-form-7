@@ -291,7 +291,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		$Captcha->set_validated(1);
 		$Captcha->save();
 
-		if ($captcha_code !== $Captcha->get_code()) {
+		if ((int)$captcha_code !== (int)$Captcha->get_code()) {
 			$this->get_logger()->warning(
 				"is_valid(): Code stimmt nicht überein → ungültig",
 				[

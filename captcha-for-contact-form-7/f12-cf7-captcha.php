@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.2.52
+ * Version: 2.2.61
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.2.52' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.2.61' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -496,26 +496,9 @@ class CF7Captcha {
 	 * @return void
 	 */
 	public function load_frontend_assets() {
-		$atts = array(
-			'ajaxurl' => admin_url( 'admin-ajax.php' ),
-		);
-
-		wp_enqueue_script(
-			'f12-cf7-captcha-reload',
-			plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha-cf7.js',
-			array( 'jquery' ),
-			null,
-			true
-		);
-
-		wp_localize_script(
-			'f12-cf7-captcha-reload',
-			'f12_cf7_captcha',
-			$atts
-		);
-
 		// Settings
 		$settings = $this->get_settings();
+
 		if (isset($settings['beta'], $settings['beta']['beta_captcha_enable'], $settings['beta']['beta_captcha_api_key']) && (bool)$settings['beta']['beta_captcha_enable'] === true) {
 			if(!empty( $settings['beta']['beta_captcha_api_key'])) {
 				$this->get_logger()->info( "Beta-API aktiviert" );
@@ -534,7 +517,8 @@ class CF7Captcha {
 					'f12_client_data',
 					[
 						'key' => $settings['beta']['beta_captcha_api_key'],
-						'url' => 'https://api.silentshield.io'
+						//'url' => 'https://api.silentshield.io'
+						'url' => 'https://api.marc-wagner.eu'
 					]
 				);
 
@@ -545,6 +529,31 @@ class CF7Captcha {
 					'context' => ( is_admin() ? 'admin' : ( is_user_logged_in() ? 'frontend-logged-in' : 'frontend-guest' ) )
 				] );
 			}
+		}else{
+			// Hole aktive Komponenten aus dem Compatibility-Modul
+			$compatibility = $this->get_modul('compatibility');
+			$active_components = method_exists($compatibility, 'get_active_component_names')
+				? $compatibility->get_active_component_names()
+				: [];
+
+			$atts = array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'components' => $active_components,
+			);
+
+			wp_enqueue_script(
+				'f12-cf7-captcha-reload',
+				plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha-cf7.js',
+				array( 'jquery' ),
+				null,
+				true
+			);
+
+			wp_localize_script(
+				'f12-cf7-captcha-reload',
+				'f12_cf7_captcha',
+				$atts
+			);
 		}
 
 		wp_enqueue_style(

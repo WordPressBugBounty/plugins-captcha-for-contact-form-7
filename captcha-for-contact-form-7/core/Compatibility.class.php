@@ -107,6 +107,34 @@ class Compatibility extends BaseModul {
 		return $this->components;
 	}
 
+	public function get_active_component_names(): array {
+		$active = [];
+
+		foreach ($this->components as $name => $component) {
+			if (!isset($component['object']) || !$component['object'] instanceof BaseController) {
+				continue;
+			}
+
+			$object = $component['object'];
+
+			try {
+				// Prüfe über is_enabled(), falls die Methode existiert
+				if (method_exists($object, 'is_enabled') && $object->is_enabled()) {
+					$active[] = basename(str_replace('\\', '/', $name));
+				}
+			} catch (\Throwable $e) {
+				// Falls ein Controller Fehler wirft (z. B. fehlendes Plugin), logge das und überspringe ihn
+				$this->get_logger()->warning(
+					sprintf('Fehler beim Prüfen von is_enabled() in %s: %s', $name, $e->getMessage()),
+					['file' => $e->getFile(), 'line' => $e->getLine()]
+				);
+			}
+		}
+
+		return $active;
+	}
+
+
 	/**
 	 * Get a component by name.
 	 *

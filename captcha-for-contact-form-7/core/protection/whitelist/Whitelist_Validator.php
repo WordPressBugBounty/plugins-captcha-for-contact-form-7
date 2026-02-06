@@ -123,6 +123,147 @@ class Whitelist_Validator extends BaseProtection {
 	}
 
 	/**
+	 * Prüft, ob der aktuelle Request ein bekannter AJAX- oder REST-Endpunkt ist,
+	 * der vom Captcha-Schutz ausgenommen werden soll.
+	 *
+	 * @return bool True, wenn die Anfrage übersprungen werden soll.
+	 */
+	private function is_whitelisted_ajax_or_rest(): bool {
+		// WooCommerce / PayPal AJAX
+		$is_ajax_request = defined('DOING_AJAX') && DOING_AJAX;
+		$wc_ajax_action  = isset($_REQUEST['wc-ajax']) ? sanitize_text_field($_REQUEST['wc-ajax']) : '';
+
+		$ajax_whitelist = [
+			// PayPal Payments (WooCommerce PayPal Payments)
+			'ppc-create-order',
+			'ppc-check-order-status',
+			'ppc-capture-order',
+			'ppc-add-payment-method',
+			'ppc-get-funding-sources',
+
+			// Stripe (WooCommerce Stripe Gateway, Blocks)
+			'wc_stripe_create_order',
+			'wc_stripe_verify_intent',
+			'stripe_verify_payment_intent',
+			'stripe_create_order',
+			'wc_stripe_checkout',
+			'wc_stripe_process_payment',
+
+			// Klarna Payments / Checkout
+			'kco_wc_payment',
+			'kco_wc_push',
+			'kco_wc_iframe',
+			'kco_checkout',
+			'klarna_checkout_update',
+			'klarna_payments_session',
+
+			// Mollie
+			'mollie_create_order',
+			'mollie_checkout',
+			'mollie_return',
+			'mollie_webhook',
+
+			// Amazon Pay
+			'amazon_payments_advanced_process_payment',
+			'amazon_checkout_session',
+			'amazon_pay_confirm_order',
+			'amazon_pay_create_checkout_session',
+
+			// WooCommerce Standard Requests
+			//'checkout', -> FINALER SUBMIT
+			'update_order_review',
+			'apply_coupon',
+			'remove_coupon',
+			'get_refreshed_fragments',
+			'update_shipping_method',
+			'get_variation',
+			'get_customer_location',
+
+			// WooCommerce Payments
+			'wc_payments_process_payment',
+			'wc_payments_create_order',
+			'wc_payments_verify_intent',
+			'wc_payments_capture',
+
+			// Giro / Sofort
+			'wc_gateway_giropay_process',
+			'wc_gateway_sofort_process',
+			'wc_gateway_sepa_process',
+			'wc_gateway_eps_process',
+			'wc_gateway_ideal_process',
+			'wc_gateway_skrill_process',
+			'wc_gateway_unzer_process',
+			'wc_gateway_novalnet_process',
+
+			// Heidelpay
+			'heidelpay_process_payment',
+			'unzer_process_payment',
+			'unzer_finalize_payment',
+
+			// PayOne
+			'payone_process_payment',
+			'payone_ajax_checkout',
+			'payone_ajax_finalize',
+
+			// Sage Pay / Opayo
+			'sagepay_process_payment',
+			'sagepay_ajax_checkout',
+			'opayo_process_payment',
+
+			// Square
+			'wc_square_process_payment',
+			'wc_square_create_order',
+
+			// Authorize Net
+			'wc_authorize_net_process_payment',
+			'wc_authorize_net_ajax_checkout',
+
+			// Moneybrookers
+			'wc_gateway_skrill_process',
+			'skrill_process_payment',
+
+			// Worldline (Six payment service, saferpay)
+			'saferpay_process_payment',
+			'saferpay_finalize_payment',
+
+			// Paymill
+			'paymill_process_payment',
+			'wirecard_checkout',
+			'nets_process_payment',
+			'bambora_process_payment',
+
+			// Afterpay, Rate Pay, BillPay
+			'afterpay_process_payment',
+			'ratepay_process_payment',
+			'billpay_process_payment',
+		];
+
+		// Ermögliche Erweiterung durch Filter
+		$ajax_whitelist = apply_filters('f12_cf7_captcha_ajax_whitelist', $ajax_whitelist);
+
+		if ($is_ajax_request && in_array($wc_ajax_action, $ajax_whitelist, true)) {
+			$this->get_logger()->info('Whitelist: WooCommerce/PayPal-AJAX erkannt.', [
+				'wc-ajax' => $wc_ajax_action,
+			]);
+			return true;
+		}
+
+		// WooCommerce Store API / REST API
+		if (defined('REST_REQUEST') && REST_REQUEST) {
+			$route = $_SERVER['REQUEST_URI'] ?? '';
+			if (strpos($route, '/wc/store/') !== false || strpos($route, '/wc/v3/') !== false) {
+				$this->get_logger()->info('Whitelist: WooCommerce REST-API erkannt.', [
+					'route' => $route,
+				]);
+				return true;
+			}
+		}
+
+		// Kein Treffer → kein Whitelist-Treffer
+		return false;
+	}
+
+	/**
 	 * Determines if the submitted form is considered spam.
 	 *
 	 * This method checks if the submitted form is spam based on certain criteria.
@@ -134,6 +275,12 @@ class Whitelist_Validator extends BaseProtection {
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		] );
+
+		// 1. Globale Whitelist für AJAX/REST-Requests prüfen
+		if ($this->is_whitelisted_ajax_or_rest()) {
+			$this->get_logger()->info('Whitelist: AJAX/REST-Request erkannt – Captcha-Schutz global übersprungen.');
+			return true;
+		}
 
 		// Wenn Modul deaktiviert ist → kein Spam
 		if ( ! $this->is_enabled() ) {
