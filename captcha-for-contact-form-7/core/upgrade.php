@@ -4,7 +4,7 @@ namespace f12_cf7_captcha;
 use Forge12\Shared\Logger;
 
 /**
- * Führt Updates / Migrationen durch, wenn Plugin-Version sich ändert.
+ * Performs updates / migrations when the plugin version changes.
  */
 function on_update() {
 	$logger = Logger::getInstance();
@@ -15,10 +15,10 @@ function on_update() {
 		update_option( 'f12_cf7_captcha_installed_at', time() );
 	}
 
-	// 🔹 Installation-UUID nachziehen (falls noch nicht gesetzt)
+	// Pull installation UUID (if not yet set)
 	if ( ! get_option('f12_cf7_captcha_installation_uuid') ) {
 		update_option('f12_cf7_captcha_installation_uuid', wp_generate_uuid4(), true);
-		$logger->info("Neue Installation UUID gesetzt", ['plugin' => 'f12-cf7-captcha']);
+		$logger->info("New installation UUID set", ['plugin' => 'f12-cf7-captcha']);
 	}
 
 	// 🔹 Upgrade auf 1.7 (alte Settings migrieren)
@@ -27,7 +27,7 @@ function on_update() {
 		update_option( 'f12-cf7-captcha-settings', $settings_old );
 		update_option( 'f12-cf7-captcha_version', '1.7' );
 
-		$logger->info( "Upgrade durchgeführt", [
+		$logger->info( "Upgrade performed", [
 			'plugin' => 'f12-cf7-captcha',
 			'from'   => $currentVersion ?: 'none',
 			'to'     => '1.7'
@@ -100,7 +100,7 @@ function on_update() {
 			],
 		];
 
-		// Standardwerte für neue Struktur
+		// Default values for new structure
 		$settings_defaults = [
 			'protection_time_enable'                   => 0,
 			'protection_time_field_name'               => 'f12_timer',
@@ -143,16 +143,35 @@ function on_update() {
 		update_option( 'f12-cf7-captcha-settings-backup', $settings_old );
 		update_option( 'f12-cf7-captcha_version', '2.0.0' );
 
-		$logger->info( "Upgrade durchgeführt", [
+		$logger->info( "Upgrade performed", [
 			'plugin'   => 'f12-cf7-captcha',
 			'from'     => $currentVersion,
 			'to'       => '2.0.0',
 			'mappings' => array_keys( $settings_defaults )
 		] );
-	} else {
-		$logger->debug( "Kein Upgrade erforderlich", [
-			'plugin'  => 'f12-cf7-captcha',
-			'version' => $currentVersion
+	}
+
+	// 🔹 Upgrade auf 2.2.71 (Hash-Indexes auf Custom Tables)
+	if ( version_compare( $currentVersion, '2.2.71', '<' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$tables = [
+			new \f12_cf7_captcha\core\protection\captcha\Captcha( $logger, '' ),
+			new \f12_cf7_captcha\core\timer\CaptchaTimer( $logger ),
+			new \f12_cf7_captcha\core\protection\ip\IPLog( $logger ),
+			new \f12_cf7_captcha\core\protection\ip\IPBan( $logger ),
+		];
+
+		foreach ( $tables as $table ) {
+			$table->create_table();
+		}
+
+		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );
+
+		$logger->info( "Upgrade performed: Hash indexes added", [
+			'plugin' => 'f12-cf7-captcha',
+			'from'   => $currentVersion ?: 'none',
+			'to'     => '2.2.71',
 		] );
 	}
 }

@@ -9,15 +9,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once( 'Rule.class.php' );
-require_once( 'RulesAjax.class.php' );
-require_once( 'RuleRegex.class.php' );
-require_once( 'RuleSearch.class.php' );
-
 /**
  * Handle Filters that will be used to validate input fields.
  */
 class RulesHandler extends BaseProtection {
+	/**
+	 * Cache group for rule caching.
+	 */
+	private const CACHE_GROUP = 'f12-captcha-rules';
+
+	/**
+	 * Cache TTL in seconds (5 minutes).
+	 */
+	private const CACHE_TTL = 300;
+
 	/**
 	 * @var array<Rule>
 	 */
@@ -27,6 +32,8 @@ class RulesHandler extends BaseProtection {
 	 * @var array<Rule>
 	 */
 	private $spam = [];
+
+	private RulesAjax $_Rules_Ajax;
 
 	/**
 	 * __construct method for initializing the object.
@@ -38,20 +45,30 @@ class RulesHandler extends BaseProtection {
 	{
 		parent::__construct($Controller);
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Laden von Submodulen
-		$this->get_logger()->info('Lade Submodul: RulesAjax.');
-		new RulesAjax($Controller);
+		// Load submodules
+		$this->get_logger()->info('Loading submodule: RulesAjax.');
+		$this->_Rules_Ajax = new RulesAjax($Controller);
 
-		// Hinzufügen des Filters für die Anzeige von Nachrichten
+		// Add filter for displaying messages
 		add_filter('wpcf7_display_message', [$this, 'get_spam_message'], 10, 2);
-		$this->get_logger()->debug('Filter "wpcf7_display_message" für die Methode "get_spam_message" hinzugefügt.');
+		$this->get_logger()->debug('Filter "wpcf7_display_message" added for method "get_spam_message".');
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		$this->get_logger()->info('Constructor completed.');
+	}
+
+	/**
+	 * Retrieves the instance of the RulesAjax submodule.
+	 *
+	 * @return RulesAjax
+	 */
+	public function get_rules_ajax(): RulesAjax
+	{
+		return $this->_Rules_Ajax;
 	}
 
 	/**
@@ -63,7 +80,7 @@ class RulesHandler extends BaseProtection {
 	{
 		$is_enabled = true;
 
-		$this->get_logger()->info('Überprüfe, ob das Modul aktiviert ist. Es ist standardmäßig aktiviert.', [
+		$this->get_logger()->info('Checking if module is enabled. Enabled by default.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'is_enabled' => $is_enabled,
@@ -81,18 +98,18 @@ class RulesHandler extends BaseProtection {
 	 */
 	public function get_captcha(...$args): string
 	{
-		$this->get_logger()->info('Rufe die Methode get_captcha auf.', [
+		$this->get_logger()->info('Calling get_captcha method.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Da die Methode nur einen leeren String zurückgibt,
-		// gibt es hier keine spezifische Logik, die eine Rückmeldung erfordert.
-		// Die Rückgabe eines leeren Strings könnte darauf hindeuten, dass
-		// dieses Modul keine sichtbaren Captcha-Felder hinzufügt, sondern
-		// nur im Hintergrund Validierungen durchführt.
+		// Since the method only returns an empty string,
+		// there is no specific logic here that requires feedback.
+		// Returning an empty string could indicate that
+		// this module does not add visible captcha fields, but
+		// only performs validations in the background.
 
-		$this->get_logger()->debug('Die Methode gibt einen leeren String zurück.');
+		$this->get_logger()->debug('Method returns empty string.');
 
 		return '';
 	}
@@ -107,24 +124,24 @@ class RulesHandler extends BaseProtection {
 	 */
 	private function maybe_load_rules(): void
 	{
-		$this->get_logger()->info('Versuche, die Schutzregeln zu laden.', [
+		$this->get_logger()->info('Attempting to load protection rules.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Lade die URL-Regeln
+		// Load the URL rules
 		$this->add_rule_url();
-		$this->get_logger()->debug('URL-Regel hinzugefügt.');
+		$this->get_logger()->debug('URL rule added.');
 
-		// Lade die BBCode-Regeln
+		// Load the BBCode rules
 		$this->add_rule_bbcode();
-		$this->get_logger()->debug('BBCode-Regel hinzugefügt.');
+		$this->get_logger()->debug('BBCode rule added.');
 
-		// Lade die Blacklist-Regeln
+		// Load the blacklist rules
 		$this->add_rule_blacklist();
-		$this->get_logger()->debug('Blacklist-Regel hinzugefügt.');
+		$this->get_logger()->debug('Blacklist rule added.');
 
-		$this->get_logger()->info('Alle Schutzregeln geladen.');
+		$this->get_logger()->info('All protection rules loaded.');
 	}
 
 	/**
@@ -134,7 +151,7 @@ class RulesHandler extends BaseProtection {
 	 */
 	public function reset_rules(): void
 	{
-		$this->get_logger()->info('Setze die Regeln und den Spam-Status zurück.', [
+		$this->get_logger()->info('Resetting rules and spam status.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -142,11 +159,54 @@ class RulesHandler extends BaseProtection {
 		$this->rules = [];
 		$this->spam  = [];
 
-		$this->get_logger()->debug('Regel- und Spam-Arrays sind jetzt leer.');
+		$this->get_logger()->debug('Rule and spam arrays are now empty.');
+	}
+
+	/**
+	 * Retrieves cached blacklist words or loads them from database.
+	 *
+	 * Uses WordPress object cache to avoid repeated database calls
+	 * and string processing on every validation.
+	 *
+	 * @return array Array of blacklist words, empty array if none.
+	 */
+	private function get_cached_blacklist(): array {
+		$cache_key = 'blacklist_words';
+		$cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+
+		if ( $cached !== false ) {
+			$this->get_logger()->debug( 'Blacklist loaded from cache.', [
+				'words_count' => count( $cached ),
+			] );
+			return $cached;
+		}
+
+		$rule_value = get_option( 'disallowed_keys', '' );
+
+		if ( empty( $rule_value ) ) {
+			$words = [];
+		} else {
+			// Convert line breaks to an array of words
+			$words = preg_split( '/\r\n|[\r\n]/', $rule_value, -1, PREG_SPLIT_NO_EMPTY );
+			// Trim each word and filter empty ones
+			$words = array_filter( array_map( 'trim', $words ) );
+		}
+
+		wp_cache_set( $cache_key, $words, self::CACHE_GROUP, self::CACHE_TTL );
+
+		$this->get_logger()->debug( 'Blacklist cached from database.', [
+			'words_count' => count( $words ),
+			'ttl'         => self::CACHE_TTL,
+		] );
+
+		return $words;
 	}
 
 	/**
 	 * Adds a rule to the blacklist.
+	 *
+	 * Uses caching to improve performance by avoiding repeated
+	 * database calls and string processing.
 	 *
 	 * @access private
 	 *
@@ -154,7 +214,7 @@ class RulesHandler extends BaseProtection {
 	 */
 	private function add_rule_blacklist()
 	{
-		$this->get_logger()->info('Versuche, die Blacklist-Regel hinzuzufügen.', [
+		$this->get_logger()->info('Attempting to add blacklist rule.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -162,44 +222,37 @@ class RulesHandler extends BaseProtection {
 		$rule_enabled = (int)$this->Controller->get_settings('protection_rules_blacklist_enable', 'global');
 
 		if ($rule_enabled !== 1) {
-			$this->get_logger()->warning('Blacklist-Regel ist deaktiviert. Überspringe Hinzufügung.');
+			$this->get_logger()->warning('Blacklist rule is disabled. Skipping addition.');
 			return;
 		}
 
-		// Überspringe, wenn die Regel bereits geladen wurde
+		// Skip if the rule is already loaded
 		if (isset($this->rules['blacklist'])) {
-			$this->get_logger()->warning('Blacklist-Regel ist bereits geladen. Überspringe Hinzufügung.');
+			$this->get_logger()->warning('Blacklist rule is already loaded. Skipping addition.');
 			return;
 		}
 
-		$rule_value = get_option('disallowed_keys');
+		// Use cached blacklist words
+		$words = $this->get_cached_blacklist();
 
-		if (empty($rule_value)) {
-			$this->get_logger()->warning('Keine Blacklist-Wörter in den Optionen gefunden.');
+		if (empty($words)) {
+			$this->get_logger()->warning('No blacklist words found.');
 			return;
 		}
 
 		$error_message = $this->Controller->get_settings('protection_rules_error_message_blacklist', 'global');
 		if (empty($error_message)) {
 			$error_message = __('The word %s is blacklisted. Please remove it to continue.', 'captcha-for-contact-form-7');
-			$this->get_logger()->debug('Standard-Fehlermeldung für Blacklist verwendet.');
+			$this->get_logger()->debug('Default error message for blacklist used.');
 		}
 
 		$rule_greedy = $this->Controller->get_settings('protection_rules_blacklist_greedy', 'global');
 		if (!is_numeric($rule_greedy)) {
 			$rule_greedy = 0;
-			$this->get_logger()->debug('Greedy-Einstellung ist keine Zahl. Standardwert 0 verwendet.');
+			$this->get_logger()->debug('Greedy setting is not a number. Default value 0 used.');
 		}
 
-		// Konvertiere Zeilenumbrüche in ein Array von Wörtern
-		$words = preg_split('/\r\n|[\r\n]/', $rule_value, -1, PREG_SPLIT_NO_EMPTY);
-
-		if (empty($words)) {
-			$this->get_logger()->warning('Das Blacklist-Feld enthält keine gültigen Wörter nach dem Split.');
-			return;
-		}
-
-		$this->get_logger()->info('Erstelle eine neue RuleSearch-Instanz für die Blacklist-Regel.', [
+		$this->get_logger()->info('Creating new RuleSearch instance for blacklist rule.', [
 			'words_count' => count($words),
 			'greedy' => (int)$rule_greedy,
 		]);
@@ -207,7 +260,7 @@ class RulesHandler extends BaseProtection {
 		$Rule = new RuleSearch($this->get_logger(), $words, $error_message, (int)$rule_greedy);
 		$this->add_rule('blacklist', $Rule);
 
-		$this->get_logger()->info('Blacklist-Regel erfolgreich hinzugefügt.');
+		$this->get_logger()->info('Blacklist rule successfully added.');
 	}
 
 
@@ -228,7 +281,7 @@ class RulesHandler extends BaseProtection {
 	 */
 	private function add_rule_bbcode()
 	{
-		$this->get_logger()->info('Versuche, die BBCode-Regel hinzuzufügen.', [
+		$this->get_logger()->info('Attempting to add BBCode rule.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -236,13 +289,13 @@ class RulesHandler extends BaseProtection {
 		$rule_enabled = (int)$this->Controller->get_settings('protection_rules_bbcode_enable', 'global');
 
 		if ($rule_enabled !== 1) {
-			$this->get_logger()->warning('BBCode-Regel ist deaktiviert. Überspringe Hinzufügung.');
+			$this->get_logger()->warning('BBCode rule is disabled. Skipping addition.');
 			return;
 		}
 
-		// Überspringe, wenn die Regel bereits geladen wurde
+		// Skip if the rule is already loaded
 		if (isset($this->rules['bbcode'])) {
-			$this->get_logger()->warning('BBCode-Regel ist bereits geladen. Überspringe Hinzufügung.');
+			$this->get_logger()->warning('BBCode rule is already loaded. Skipping addition.');
 			return;
 		}
 
@@ -250,10 +303,10 @@ class RulesHandler extends BaseProtection {
 
 		if (empty($error_message)) {
 			$error_message = __('BBCode is not allowed.', 'captcha-for-contact-form-7');
-			$this->get_logger()->debug('Standard-Fehlermeldung für BBCode verwendet.');
+			$this->get_logger()->debug('Default error message for BBCode used.');
 		}
 
-		$this->get_logger()->info('Erstelle eine neue RuleRegex-Instanz für die BBCode-Regel.', [
+		$this->get_logger()->info('Creating new RuleRegex instance for BBCode rule.', [
 			'regex' => '\[url=(.+)\](.+)\[\/url\]',
 			'limit' => 0,
 		]);
@@ -261,7 +314,7 @@ class RulesHandler extends BaseProtection {
 		$Rule = new RuleRegex($this->get_logger(), '\[url=(.+)\](.+)\[\/url\]', 0, $error_message);
 		$this->add_rule('bbcode', $Rule);
 
-		$this->get_logger()->info('BBCode-Regel erfolgreich hinzugefügt.');
+		$this->get_logger()->info('BBCode rule successfully added.');
 	}
 
 	/**
@@ -277,7 +330,7 @@ class RulesHandler extends BaseProtection {
 	 */
 	private function add_rule_url()
 	{
-		$this->get_logger()->info('Versuche, die URL-Regel hinzuzufügen.', [
+		$this->get_logger()->info('Attempting to add URL rule.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -285,13 +338,13 @@ class RulesHandler extends BaseProtection {
 		$rule_enabled = (int)$this->Controller->get_settings('protection_rules_url_enable', 'global');
 
 		if ($rule_enabled !== 1) {
-			$this->get_logger()->warning('URL-Regel ist deaktiviert. Überspringe Hinzufügung.');
+			$this->get_logger()->warning('URL rule is disabled. Skipping addition.');
 			return;
 		}
 
-		// Überspringe, wenn die Regel bereits geladen wurde
+		// Skip if the rule is already loaded
 		if (isset($this->rules['url'])) {
-			$this->get_logger()->warning('URL-Regel ist bereits geladen. Überspringe Hinzufügung.');
+			$this->get_logger()->warning('URL rule is already loaded. Skipping addition.');
 			return;
 		}
 
@@ -299,17 +352,17 @@ class RulesHandler extends BaseProtection {
 
 		if (!is_numeric($rule_limit)) {
 			$rule_limit = 0;
-			$this->get_logger()->debug('Limit-Einstellung ist keine Zahl. Standardwert 0 verwendet.');
+			$this->get_logger()->debug('Limit setting is not a number. Default value 0 used.');
 		}
 
 		$error_message = $this->Controller->get_settings('protection_rules_error_message_url', 'global');
 
 		if (empty($error_message)) {
 			$error_message = __('The Limit %d for URLs has been reached. Remove the %s to continue.', 'captcha-for-contact-form-7');
-			$this->get_logger()->debug('Standard-Fehlermeldung für URLs verwendet.');
+			$this->get_logger()->debug('Default error message for URLs used.');
 		}
 
-		$this->get_logger()->info('Erstelle eine neue RuleRegex-Instanz für die URL-Regel.', [
+		$this->get_logger()->info('Creating new RuleRegex instance for URL rule.', [
 			'regex' => '(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,6}(\/\S*)?',
 			'limit' => $rule_limit,
 		]);
@@ -317,7 +370,7 @@ class RulesHandler extends BaseProtection {
 		$Rule = new RuleRegex($this->get_logger(), '(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,6}(\/\S*)?', $rule_limit, $error_message);
 		$this->add_rule('url', $Rule);
 
-		$this->get_logger()->info('URL-Regel erfolgreich hinzugefügt.');
+		$this->get_logger()->info('URL rule successfully added.');
 	}
 
 	/**
@@ -329,7 +382,7 @@ class RulesHandler extends BaseProtection {
 	 */
 	private function add_rule(string $name, $Rule)
 	{
-		$this->get_logger()->info("Füge eine neue Regel zum Regel-Array hinzu.", [
+		$this->get_logger()->info("Adding new rule to rule array.", [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'rule_name' => $name,
@@ -338,7 +391,7 @@ class RulesHandler extends BaseProtection {
 
 		$this->rules[$name] = $Rule;
 
-		$this->get_logger()->debug("Regel '{$name}' erfolgreich hinzugefügt. Anzahl der Regeln: " . count($this->rules));
+		$this->get_logger()->debug("Rule '{$name}' successfully added. Number of rules: " . count($this->rules));
 	}
 
 	/**
@@ -348,15 +401,15 @@ class RulesHandler extends BaseProtection {
 	 */
 	private function get_spam()
 	{
-		$this->get_logger()->info('Rufe die gesammelten Spam-Meldungen ab.', [
+		$this->get_logger()->info('Retrieving collected spam messages.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (empty($this->spam)) {
-			$this->get_logger()->debug('Das Spam-Array ist leer.');
+			$this->get_logger()->debug('Spam array is empty.');
 		} else {
-			$this->get_logger()->debug('Spam-Meldungen erfolgreich abgerufen.', [
+			$this->get_logger()->debug('Spam messages successfully retrieved.', [
 				'total_messages' => count($this->spam),
 			]);
 		}
@@ -374,7 +427,7 @@ class RulesHandler extends BaseProtection {
 	 */
 	public function get_spam_message($message, $status)
 	{
-		$this->get_logger()->info('Führe den Filter "wpcf7_display_message" aus, um die Spam-Nachricht abzurufen.', [
+		$this->get_logger()->info('Executing filter "wpcf7_display_message" to retrieve spam message.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'current_status' => $status,
@@ -383,29 +436,29 @@ class RulesHandler extends BaseProtection {
 		$spam_rules = $this->get_spam();
 
 		if (empty($spam_rules)) {
-			$this->get_logger()->debug('Keine Spam-Regeln wurden ausgelöst. Gebe die ursprüngliche Nachricht zurück.');
+			$this->get_logger()->debug('No spam rules were triggered. Returning original message.');
 			return $message;
 		}
 
 		$response = '';
 
 		foreach ($spam_rules as $Rule) {
-			// Überprüfe, ob die Methode get_messages() existiert, um Fehler zu vermeiden
+			// Check if the get_messages() method exists to avoid errors
 			if (method_exists($Rule, 'get_messages')) {
 				$messages = $Rule->get_messages();
 				$response .= $messages;
-				$this->get_logger()->debug('Nachrichten von einer ausgelösten Regel hinzugefügt.', [
+				$this->get_logger()->debug('Messages from triggered rule added.', [
 					'rule_class' => get_class($Rule),
 					'messages' => $messages,
 				]);
 			} else {
-				$this->get_logger()->error('Die Regel-Instanz hat keine get_messages()-Methode.', [
+				$this->get_logger()->error('Rule instance does not have get_messages() method.', [
 					'rule_class' => get_class($Rule),
 				]);
 			}
 		}
 
-		$this->get_logger()->info('Spam-Nachrichten erfolgreich aggregiert und für die Ausgabe vorbereitet.', [
+		$this->get_logger()->info('Spam messages successfully aggregated and prepared for output.', [
 			'final_response_length' => strlen($response),
 		]);
 
@@ -421,43 +474,43 @@ class RulesHandler extends BaseProtection {
 	 */
 	public function is_spam($value): bool
 	{
-		$this->get_logger()->info('Starte die allgemeine Spam-Überprüfung basierend auf allen Regeln.', [
+		$this->get_logger()->info('Starting general spam check based on all rules.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'input_type' => is_array($value) ? 'array' : 'string',
 		]);
 
-		// Setze den Spam-Status vor der Ausführung zurück
-		$this->get_logger()->debug('Spam-Array wurde zurückgesetzt.');
+		// Reset the spam status before execution
+		$this->get_logger()->debug('Spam array was reset.');
 
-		// Lade die konfigurierten Regeln
+		// Load the configured rules
 		$this->maybe_load_rules();
-		$this->get_logger()->debug('Regeln wurden geladen. Anzahl der Regeln: ' . count($this->rules));
+		$this->get_logger()->debug('Rules loaded. Number of rules: ' . count($this->rules));
 
-		// Iteriere über jede geladene Regel
+		// Iterate over each loaded rule
 		foreach ($this->rules as $key => $Rule) {
-			$this->get_logger()->info("Überprüfe Wert gegen Regel: {$key}", [
+			$this->get_logger()->info("Checking value against rule: {$key}", [
 				'rule_class' => get_class($Rule),
 			]);
 
 			$is_spam = false;
 			if (is_array($value)) {
-				// Wenn der Wert ein Array ist, überprüfe jedes Element einzeln
+				// If the value is an array, check each element individually
 				foreach ($value as $skey => $svalue) {
 					if ($Rule->is_spam($svalue)) {
 						$is_spam = true;
-						break; // Ein Element ist Spam, beende innere Schleife
+						break; // One element is spam, end inner loop
 					}
 				}
 			} else {
-				// Wenn der Wert ein String ist, überprüfe ihn direkt
+				// If the value is a string, check it directly
 				if ($Rule->is_spam($value)) {
 					$is_spam = true;
 				}
 			}
 
 			if ($is_spam) {
-				$this->get_logger()->warning("Regel '{$key}' hat Spam gefunden.", [
+				$this->get_logger()->warning("Rule '{$key}' found spam.", [
 					'input_value' => is_array($value) ? 'Array' : $value,
 				]);
 
@@ -465,25 +518,25 @@ class RulesHandler extends BaseProtection {
 				$this->set_message(sprintf(__('rule-protection: %s', 'captcha-for-contact-form-7'), $message));
 				$this->spam[] = $Rule;
 
-				// Sobald eine Regel zuschlägt, betrachten wir das gesamte Formular als Spam
+				// As soon as one rule triggers, we consider the entire form as spam
 				return true;
 			}
 		}
 
-		$this->get_logger()->info('Keine der Regeln hat Spam gefunden.');
+		$this->get_logger()->info('None of the rules found spam.');
 
 		return false;
 	}
 
 	public function success(): void
 	{
-		$this->get_logger()->info('Erfolgreiche Validierung der Regel-Überprüfung.', [
+		$this->get_logger()->info('Successful rule validation.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// TODO: Implementieren Sie hier die Logik, die nach einer erfolgreichen Überprüfung ausgeführt werden soll.
-		// In diesem Kontext ist es unwahrscheinlich, dass zusätzliche Aktionen erforderlich sind,
-		// da die Überprüfung primär in der is_spam()-Methode stattfindet.
+		// TODO: Implement the logic here that should be executed after a successful check.
+		// In this context, it is unlikely that additional actions are required,
+		// since the check primarily takes place in the is_spam() method.
 	}
 }

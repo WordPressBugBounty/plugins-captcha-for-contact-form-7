@@ -19,7 +19,7 @@ class RuleRegex extends Rule {
 	{
 		parent::__construct($logger);
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -28,7 +28,7 @@ class RuleRegex extends Rule {
 		$this->regex = $regex;
 		$this->limit = $limit;
 
-		$this->get_logger()->debug('Initialisiere Regex- und Limit-Werte.', [
+		$this->get_logger()->debug('Initializing regex and limit values.', [
 			'regex' => $this->regex,
 			'limit' => $this->limit,
 			'error_message' => $this->error_message,
@@ -36,7 +36,7 @@ class RuleRegex extends Rule {
 
 		add_filter('f12-cf7-captcha-ruleregex-exclusion-counter', [$this, 'wp_add_exclusions'], 10, 2);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen. Filter "f12-cf7-captcha-ruleregex-exclusion-counter" hinzugefügt.');
+		$this->get_logger()->info('Constructor completed. Filter "f12-cf7-captcha-ruleregex-exclusion-counter" added.');
 	}
 
 	/**
@@ -49,34 +49,34 @@ class RuleRegex extends Rule {
 	 */
 	public function wp_add_exclusions(int $counter, array $matches): int
 	{
-		$this->get_logger()->info('Führe wp_add_exclusions-Filter aus, um die Übereinstimmungszählung anzupassen.', [
+		$this->get_logger()->info('Executing wp_add_exclusions filter to adjust match count.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'initial_counter' => $counter,
 		]);
 
-		// Stelle sicher, dass $matches[0] ein Array ist
+		// Ensure $matches[0] is an array
 		if (!isset($matches[0]) || !is_array($matches[0])) {
-			$this->get_logger()->warning('Ungültiges Format für Übereinstimmungen. Gib den ursprünglichen Zähler zurück.', [
+			$this->get_logger()->warning('Invalid format for matches. Returning original counter.', [
 				'matches_type' => gettype($matches[0]),
 			]);
 			return $counter;
 		}
 
 		$site_url = get_site_url();
-		$this->get_logger()->debug('Aktuelle Site-URL: ' . $site_url);
+		$this->get_logger()->debug('Current site URL: ' . $site_url);
 
 		foreach ($matches[0] as $match) {
-			if (str_contains($match, $site_url)) {
+			if (strpos($match, $site_url) !== false) {
 				$counter--;
-				$this->get_logger()->debug('Übereinstimmung mit der aktuellen Site-URL gefunden und Zähler dekrementiert.', [
+				$this->get_logger()->debug('Match with current site URL found and counter decremented.', [
 					'match' => $match,
 					'new_counter' => $counter,
 				]);
 			}
 		}
 
-		$this->get_logger()->info('wp_add_exclusions-Filter abgeschlossen. Endgültiger Zählerstand.', [
+		$this->get_logger()->info('wp_add_exclusions filter completed. Final counter.', [
 			'final_counter' => $counter,
 		]);
 
@@ -92,44 +92,44 @@ class RuleRegex extends Rule {
 	 */
 	public function is_spam($value): bool
 	{
-		$this->get_logger()->info('Starte die Spam-Überprüfung basierend auf Regex-Regeln.', [
+		$this->get_logger()->info('Starting spam check based on regex rules.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'input_type' => is_array($value) ? 'array' : 'string',
 		]);
 
-		// Rekursive Überprüfung für Arrays
+		// Recursive check for arrays
 		if (is_array($value)) {
 			foreach ($value as $keyword) {
 				if ($this->is_spam($keyword)) {
-					$this->get_logger()->debug('Spam in einem Unterelement des Arrays gefunden.');
+					$this->get_logger()->debug('Spam found in array subelement.');
 					return true;
 				}
 			}
-			$this->get_logger()->debug('Kein Spam in den Array-Elementen gefunden.');
+			$this->get_logger()->debug('No spam found in array elements.');
 			return false;
 		}
 
 		$error_message = $this->get_error_message();
 		$pattern = "!" . $this->regex . "!im";
 
-		$this->get_logger()->debug('Führe Regex-Überprüfung durch.', [
+		$this->get_logger()->debug('Performing regex check.', [
 			'pattern' => $pattern,
 			'limit' => $this->limit,
 		]);
 
 		$count = preg_match_all($pattern, $value, $matches);
 
-		// Filter zur Anpassung des Zählers
+		// Filter to adjust counter
 		$count = apply_filters('f12-cf7-captcha-ruleregex-exclusion-counter', $count, $matches);
-		$this->get_logger()->debug('Regex-Übereinstimmungen gezählt.', [
+		$this->get_logger()->debug('Regex matches counted.', [
 			'raw_count' => count($matches[0] ?? []),
 			'filtered_count' => $count,
 		]);
 
-		// Überprüfung des Limits
+		// Check limit
 		if ($count > $this->limit) {
-			$this->get_logger()->warning('Das Limit für Regex-Übereinstimmungen wurde überschritten.', [
+			$this->get_logger()->warning('Regex match limit exceeded.', [
 				'count' => $count,
 				'limit' => $this->limit,
 			]);
@@ -141,7 +141,7 @@ class RuleRegex extends Rule {
 			return true;
 		}
 
-		$this->get_logger()->info('Kein Spam basierend auf dieser Regel gefunden.');
+		$this->get_logger()->info('No spam found based on this rule.');
 		return false;
 	}
 }

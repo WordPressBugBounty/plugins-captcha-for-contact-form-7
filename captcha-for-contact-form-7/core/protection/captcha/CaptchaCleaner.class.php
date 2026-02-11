@@ -15,6 +15,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class CaptchaCleaner extends BaseModul {
 	/**
+	 * @var CaptchaPool|null Captcha pool instance for pre-generation.
+	 */
+	private ?CaptchaPool $pool = null;
+
+	/**
 	 * @param CF7Captcha $Controller
 	 */
 	public function __construct(CF7Captcha $Controller)
@@ -22,14 +27,101 @@ class CaptchaCleaner extends BaseModul {
 		parent::__construct($Controller);
 
 		add_action('dailyCaptchaClear', [$this, 'clean']);
+		add_action('dailyCaptchaClear', [$this, 'maybe_fill_captcha_pool']);
+
+		// Also add a more frequent hook for pool filling (every 15 minutes)
+		add_action('f12_captcha_pool_fill', [$this, 'maybe_fill_captcha_pool']);
+
+		// Schedule the pool fill hook if not already scheduled
+		if (!wp_next_scheduled('f12_captcha_pool_fill')) {
+			wp_schedule_event(time(), 'f12_fifteen_minutes', 'f12_captcha_pool_fill');
+		}
+
+		// Register custom cron interval
+		add_filter('cron_schedules', [$this, 'add_cron_intervals']);
 
 		$this->get_logger()->info(
-			"__construct(): Cron-Job 'dailyCaptchaClear' registriert",
+			"__construct(): Cron jobs registered (dailyCaptchaClear, f12_captcha_pool_fill)",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
 			]
 		);
+	}
+
+	/**
+	 * Adds custom cron intervals.
+	 *
+	 * @param array $schedules Existing schedules.
+	 *
+	 * @return array Modified schedules.
+	 */
+	public function add_cron_intervals(array $schedules): array
+	{
+		$schedules['f12_fifteen_minutes'] = [
+			'interval' => 15 * MINUTE_IN_SECONDS,
+			'display'  => __('Every 15 Minutes', 'captcha-for-contact-form-7'),
+		];
+
+		return $schedules;
+	}
+
+	/**
+	 * Gets the CaptchaPool instance (lazy initialization).
+	 *
+	 * @return CaptchaPool
+	 */
+	private function get_pool(): CaptchaPool
+	{
+		if ($this->pool === null) {
+			$this->pool = new CaptchaPool($this->Controller);
+		}
+
+		return $this->pool;
+	}
+
+	/**
+	 * Fills the captcha pool if it needs refilling.
+	 *
+	 * Called by cron to maintain a pool of pre-generated captchas.
+	 *
+	 * @return int Number of captchas generated.
+	 */
+	public function maybe_fill_captcha_pool(): int
+	{
+		// Only fill pool if image captcha is enabled
+		$captcha_method = $this->Controller->get_settings('protection_captcha_method', 'global');
+
+		if ($captcha_method !== 'image') {
+			$this->get_logger()->debug(
+				"maybe_fill_captcha_pool(): Skipping - image captcha not enabled",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'method' => $captcha_method
+				]
+			);
+			return 0;
+		}
+
+		$pool = $this->get_pool();
+
+		if (!$pool->needs_refill()) {
+			$this->get_logger()->debug(
+				"maybe_fill_captcha_pool(): Pool does not need refill",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'size'   => $pool->get_pool_size()
+				]
+			);
+			return 0;
+		}
+
+		$this->get_logger()->info(
+			"maybe_fill_captcha_pool(): Filling captcha pool",
+			['plugin' => 'f12-cf7-captcha']
+		);
+
+		return $pool->fill_pool();
 	}
 
 	/**
@@ -46,7 +138,7 @@ class CaptchaCleaner extends BaseModul {
 		$cutoff = $date_time->format('Y-m-d H:i:s');
 
 		$this->get_logger()->debug(
-			"clean(): Starte Bereinigung alter Captchas",
+			"clean(): Starting cleanup of old captchas",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'cutoff' => $cutoff
@@ -58,7 +150,7 @@ class CaptchaCleaner extends BaseModul {
 
 		if ($deleted > 0) {
 			$this->get_logger()->info(
-				"clean(): Alte Captchas gelöscht",
+				"clean(): Old captchas deleted",
 				[
 					'plugin'  => 'f12-cf7-captcha',
 					'deleted' => $deleted,
@@ -67,7 +159,7 @@ class CaptchaCleaner extends BaseModul {
 			);
 		} else {
 			$this->get_logger()->warning(
-				"clean(): Keine alten Captchas gefunden",
+				"clean(): No old captchas found",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'cutoff' => $cutoff
@@ -82,7 +174,7 @@ class CaptchaCleaner extends BaseModul {
 	public function reset_table(): int
 	{
 		$this->get_logger()->warning(
-			"reset_table(): Starte Zurücksetzen der Captcha-Tabelle",
+			"reset_table(): Starting captcha table reset",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -94,7 +186,7 @@ class CaptchaCleaner extends BaseModul {
 
 		if ($deleted > 0) {
 			$this->get_logger()->info(
-				"reset_table(): Tabelle geleert",
+				"reset_table(): Table emptied",
 				[
 					'plugin'  => 'f12-cf7-captcha',
 					'deleted' => $deleted
@@ -102,7 +194,7 @@ class CaptchaCleaner extends BaseModul {
 			);
 		} else {
 			$this->get_logger()->debug(
-				"reset_table(): Keine Einträge in der Tabelle gefunden",
+				"reset_table(): No entries found in the table",
 				[
 					'plugin' => 'f12-cf7-captcha'
 				]
@@ -120,7 +212,7 @@ class CaptchaCleaner extends BaseModul {
 	public function clean_validated(): int
 	{
 		$this->get_logger()->debug(
-			"clean_validated(): Starte Bereinigung validierter Captchas",
+			"clean_validated(): Starting cleanup of validated captchas",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -132,7 +224,7 @@ class CaptchaCleaner extends BaseModul {
 
 		if ($deleted > 0) {
 			$this->get_logger()->info(
-				"clean_validated(): Validierte Captchas gelöscht",
+				"clean_validated(): Validated captchas deleted",
 				[
 					'plugin'  => 'f12-cf7-captcha',
 					'deleted' => $deleted
@@ -140,7 +232,7 @@ class CaptchaCleaner extends BaseModul {
 			);
 		} else {
 			$this->get_logger()->debug(
-				"clean_validated(): Keine validierten Captchas zum Löschen gefunden",
+				"clean_validated(): No validated captchas found to delete",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		}
@@ -157,7 +249,7 @@ class CaptchaCleaner extends BaseModul {
 	public function clean_non_validated(): int
 	{
 		$this->get_logger()->debug(
-			"clean_non_validated(): Starte Bereinigung nicht validierter Captchas",
+			"clean_non_validated(): Starting cleanup of non-validated captchas",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -169,7 +261,7 @@ class CaptchaCleaner extends BaseModul {
 
 		if ($deleted > 0) {
 			$this->get_logger()->info(
-				"clean_non_validated(): Nicht validierte Captchas gelöscht",
+				"clean_non_validated(): Non-validated captchas deleted",
 				[
 					'plugin'  => 'f12-cf7-captcha',
 					'deleted' => $deleted
@@ -177,7 +269,7 @@ class CaptchaCleaner extends BaseModul {
 			);
 		} else {
 			$this->get_logger()->debug(
-				"clean_non_validated(): Keine nicht validierten Captchas zum Löschen gefunden",
+				"clean_non_validated(): No non-validated captchas found to delete",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		}

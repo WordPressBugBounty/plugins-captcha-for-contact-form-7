@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.2.61
+ * Version: 2.3.0
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.2.61' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.3.1' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -23,6 +23,7 @@ use f12_cf7_captcha\core\Compatibility;
 use f12_cf7_captcha\core\log\Log_Cleaner;
 use f12_cf7_captcha\core\Log_WordPress;
 use f12_cf7_captcha\core\protection\Protection;
+use f12_cf7_captcha\core\rest\RestController;
 use f12_cf7_captcha\core\TemplateController;
 use f12_cf7_captcha\core\timer\Timer_Controller;
 use f12_cf7_captcha\core\UserData;
@@ -33,31 +34,10 @@ use Forge12\Shared\LoggerInterface;
 /**
  * Dependencies
  */
+require_once( 'autoload.php' );
 require_once( 'logger/logger.php' );
 require_once( 'core/helpers/uuid.php' );
 require_once( 'core/bootstrap.php' );
-
-require_once( 'core/BaseController.class.php' );
-require_once( 'core/BaseModul.class.php' );
-require_once( 'core/BaseProtection.class.php' );
-require_once( 'core/Validator.class.php' );
-
-require_once( 'core/TemplateController.class.php' );
-
-require_once( 'core/UserData.class.php' );
-
-# Logs
-require_once( 'core/log/Log_Cleaner.class.php' );
-require_once( 'core/log/Log_WordPress.class.php' );
-
-# Timer
-require_once( 'core/timer/Timer_Controller.class.php' );
-
-# Protections
-require_once( 'core/protection/Protection.class.php' );
-
-require_once( 'core/Compatibility.class.php' );
-require_once( 'ui/UI_Manager.php' );
 
 /**
  * Class CF7Captcha
@@ -79,15 +59,26 @@ class CF7Captcha {
 	/**
 	 * @var BaseModul[]
 	 */
-	private array $_moduls = [];
+	private array $_modules = [];
+
+	/**
+	 * @var array
+	 */
+	private array $plugins = [];
+
+	/**
+	 * Request-level cache for settings to avoid repeated get_option() calls.
+	 */
+	private ?array $_settings_cache = null;
 
 	/**
 	 * Get the instance of the class
 	 *
 	 * @return CF7Captcha
-	 * @deprecated
+	 * @deprecated Use get_instance() instead.
 	 */
 	public static function getInstance() {
+		_deprecated_function( __METHOD__, '2.3.0', 'CF7Captcha::get_instance()' );
 		return self::get_instance();
 	}
 
@@ -97,7 +88,7 @@ class CF7Captcha {
 	 * @return CF7Captcha The singleton instance of CF7Captcha.
 	 */
 	public static function get_instance(): CF7Captcha {
-		if ( self::$_instance == null ) {
+		if ( self::$_instance === null ) {
 			self::$_instance = new CF7Captcha();
 		}
 
@@ -123,82 +114,43 @@ class CF7Captcha {
 	 *               provided. If the settings or the specific setting is not found, an empty array is returned.
 	 */
 	public function get_settings( $single = '', $container = null ) {
-		$default = array();
+		// Use request-level cache
+		if ( $this->_settings_cache === null ) {
+			$default = apply_filters( 'f12-cf7-captcha_settings', array() );
 
-		$default = apply_filters( 'f12-cf7-captcha_settings', $default );
-		$this->logger->debug( "Default Settings geladen", [
-			'plugin'  => 'f12-cf7-captcha',
-			'default' => $default
-		] );
+			$settings = get_option( 'f12-cf7-captcha-settings' );
 
-		$settings = get_option( 'f12-cf7-captcha-settings' );
-
-		if ( ! is_array( $settings ) ) {
-			$this->logger->debug( "Keine Settings gefunden, benutze leeres Array", [
-				'plugin' => 'f12-cf7-captcha'
-			] );
-			$settings = array();
-		} else {
-			$this->logger->debug( "Settings geladen", [ 'plugin' => 'f12-cf7-captcha' ] );
-		}
-
-		// Load Settings for Blacklist
-		$settings['global']['protection_rules_blacklist_value'] = get_option( 'disallowed_keys', '' );
-
-		foreach ( $default as $key => $data ) {
-			if ( isset( $settings[ $key ] ) ) {
-				$default[ $key ] = array_merge( $data, $settings[ $key ] );
+			if ( ! is_array( $settings ) ) {
+				$settings = array();
 			}
+
+			// Load Settings for Blacklist
+			$settings['global']['protection_rules_blacklist_value'] = get_option( 'disallowed_keys', '' );
+
+			foreach ( $default as $key => $data ) {
+				if ( isset( $settings[ $key ] ) ) {
+					$default[ $key ] = array_merge( $data, $settings[ $key ] );
+				}
+			}
+
+			$this->_settings_cache = $default;
 		}
 
-		$settings = $default;
+		$settings = $this->_settings_cache;
 
-		// Komplettes Setting zurückgeben
+		// Return complete setting
 		if ( empty( $single ) && $container == null ) {
-			$this->logger->debug( "Alle Settings geladen", [
-				'plugin' => 'f12-cf7-captcha',
-				'keys'   => array_keys( $settings )
-			] );
-
 			return $settings;
 		}
 
-		// Container zurückgeben
+		// Return container
 		if ( empty( $single ) && $container != null ) {
-			if ( isset( $settings[ $container ] ) ) {
-				$this->logger->debug( "Settings-Container geladen", [
-					'plugin'    => 'f12-cf7-captcha',
-					'container' => $container,
-					'keys'      => array_keys( $settings[ $container ] )
-				] );
-
-				return $settings[ $container ];
-			} else {
-				$this->logger->debug( "Settings-Container nicht gefunden", [
-					'plugin'    => 'f12-cf7-captcha',
-					'container' => $container
-				] );
-			}
+			return $settings[ $container ] ?? null;
 		}
 
-		// Einzelnes Setting zurückgeben
+		// Return single setting
 		if ( ! empty( $single ) && $container != null ) {
-			if ( isset( $settings[ $container ][ $single ] ) ) {
-				$this->logger->debug( "Einzelnes Setting geladen", [
-					'plugin'    => 'f12-cf7-captcha',
-					'container' => $container,
-					'setting'   => $single,
-					'value'     => is_scalar( $settings[ $container ][ $single ] ) ? $settings[ $container ][ $single ] : 'complex'
-				] );
-
-				return $settings[ $container ][ $single ];
-			} else {
-				$this->logger->debug( "Einzelnes Setting nicht gefunden", [
-					'plugin'    => 'f12-cf7-captcha',
-					'container' => $container,
-					'setting'   => $single
-				] );
-			}
+			return $settings[ $container ][ $single ] ?? null;
 		}
 
 		return null;
@@ -220,31 +172,14 @@ class CF7Captcha {
 
 		if ( null === $container ) {
 			$settings[ $single ] = $value;
-			$this->logger->info( "Setting aktualisiert", [
-				'plugin'  => 'f12-cf7-captcha',
-				'setting' => $single,
-				'value'   => $value
-			] );
 		} else {
 			$settings[ $container ][ $single ] = $value;
-			$this->logger->info( "Setting im Container aktualisiert", [
-				'plugin'    => 'f12-cf7-captcha',
-				'container' => $container,
-				'setting'   => $single,
-				'value'     => $value
-			] );
 		}
 
-		$updated = update_option( 'f12-cf7-captcha-settings', $settings );
+		update_option( 'f12-cf7-captcha-settings', $settings );
 
-		if ( ! $updated ) {
-			$this->logger->error( "Fehler beim Speichern der Settings", [
-				'plugin'    => 'f12-cf7-captcha',
-				'container' => $container ?: 'root',
-				'setting'   => $single,
-				'value'     => $value
-			] );
-		}
+		// Invalidate request-level cache
+		$this->_settings_cache = null;
 	}
 
 
@@ -255,8 +190,8 @@ class CF7Captcha {
 	 *
 	 * @return void
 	 */
-	private function init_moduls(): void {
-		$this->_moduls = [];
+	private function init_modules(): void {
+		$this->_modules = [];
 
 		$modules = [
 			'template'      => TemplateController::class,
@@ -265,25 +200,26 @@ class CF7Captcha {
 			'user-data'     => UserData::class,
 			'timer'         => Timer_Controller::class,
 			'protection'    => Protection::class,
+			'rest'          => RestController::class,
 		];
 
 		foreach ( $modules as $key => $class ) {
 			try {
-				// Manche brauchen Logger als Dependency
+				// Some require Logger as dependency
 				if ( in_array( $key, [ 'log-cleaner', 'compatibility', 'protection' ], true ) ) {
-					$this->_moduls[ $key ] = new $class( $this, Log_WordPress::get_instance() );
+					$this->_modules[ $key ] = new $class( $this, Log_WordPress::get_instance() );
 				} else {
-					$this->_moduls[ $key ] = new $class( $this );
+					$this->_modules[ $key ] = new $class( $this );
 				}
 
-				$this->logger->info( "Modul initialisiert", [
+				$this->logger->info( "Module initialized", [
 					'plugin' => 'f12-cf7-captcha',
 					'module' => $key,
 					'class'  => $class
 				] );
 
 			} catch ( \Throwable $e ) {
-				$this->logger->error( "Fehler beim Initialisieren eines Moduls", [
+				$this->logger->error( "Failed to initialize module", [
 					'plugin' => 'f12-cf7-captcha',
 					'module' => $key,
 					'class'  => $class,
@@ -302,24 +238,33 @@ class CF7Captcha {
 	 * @return BaseModul The specified module.
 	 * @throws \Exception If the specified module does not exist.
 	 */
-	public function get_modul( string $name ): BaseModul {
-		if ( ! isset( $this->_moduls[ $name ] ) ) {
-			$this->logger->error( "Angefordertes Modul existiert nicht", [
+	public function get_module( string $name ): BaseModul {
+		if ( ! isset( $this->_modules[ $name ] ) ) {
+			$this->logger->error( "Requested module does not exist", [
 				'plugin'         => 'f12-cf7-captcha',
 				'module'         => $name,
-				'loaded_modules' => array_keys( $this->_moduls )
+				'loaded_modules' => array_keys( $this->_modules )
 			] );
 
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
 			throw new \Exception( sprintf( 'Modul %s does not exist.', $name ) );
 		}
 
-		$this->logger->debug( "Modul erfolgreich abgerufen", [
+		$this->logger->debug( "Module retrieved successfully", [
 			'plugin' => 'f12-cf7-captcha',
 			'module' => $name,
-			'class'  => get_class( $this->_moduls[ $name ] )
+			'class'  => get_class( $this->_modules[ $name ] )
 		] );
 
-		return $this->_moduls[ $name ];
+		return $this->_modules[ $name ];
+	}
+
+	/**
+	 * @deprecated Use get_module() instead.
+	 */
+	public function get_modul( string $name ): BaseModul {
+		_deprecated_function( __METHOD__, '2.3.0', 'CF7Captcha::get_module()' );
+		return $this->get_module( $name );
 	}
 
 
@@ -342,28 +287,28 @@ class CF7Captcha {
 		// Forge12 Logger initialisieren
 		$this->logger = Logger::getInstance();
 
-		$this->logger->info( "Plugin gestartet", [
+		$this->logger->info( "Plugin started", [
 			'plugin'  => 'f12-cf7-captcha',
 			'version' => FORGE12_CAPTCHA_VERSION
 		] );
 
-		$this->init_moduls();
-		$this->logger->debug( "Module initialisiert", [ 'plugin' => 'f12-cf7-captcha' ] );
+		$this->init_modules();
+		$this->logger->debug( "Modules initialized", [ 'plugin' => 'f12-cf7-captcha' ] );
 
 		// Remove Filter which will not work with our filter list
 		add_action( 'init', function () {
 			remove_filter( 'wpcf7_spam', 'wpcf7_disallowed_list', 10 );
-			$this->logger->debug( "Spam-Filter entfernt", [ 'plugin' => 'f12-cf7-captcha', 'filter' => 'wpcf7_spam' ] );
+			$this->logger->debug( "Spam filter removed", [ 'plugin' => 'f12-cf7-captcha', 'filter' => 'wpcf7_spam' ] );
 		} );
 
 		add_action( 'init', function () {
 			load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-			$this->logger->debug( "Textdomain geladen", [ 'plugin' => 'f12-cf7-captcha' ] );
+			$this->logger->debug( "Textdomain loaded", [ 'plugin' => 'f12-cf7-captcha' ] );
 		} );
 
 		// Filter for Blacklist
 		add_filter( 'f12-cf7-captcha_settings_loaded', [ $this, 'wp_load_blacklist' ] );
-		$this->logger->debug( "Blacklist-Filter hinzugefügt", [ 'plugin' => 'f12-cf7-captcha' ] );
+		$this->logger->debug( "Blacklist filter added", [ 'plugin' => 'f12-cf7-captcha' ] );
 
 		$UI_Manager = UI_Manager::register_instance( $this->logger, 'f12-cf7-captcha',
 			plugin_dir_url( __FILE__ ),
@@ -373,13 +318,13 @@ class CF7Captcha {
 			'manage_options',
 			plugins_url( 'ui/assets/icon-captcha-20x20.png', __FILE__ )
 		);
-		$this->logger->debug( "UI Manager registriert", [ 'plugin' => 'f12-cf7-captcha' ] );
+		$this->logger->debug( "UI Manager registered", [ 'plugin' => 'f12-cf7-captcha' ] );
 
 		// Load assets
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_admin_assets' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'load_frontend_assets' ) );
 		add_action( 'login_enqueue_scripts', array( $this, 'load_frontend_assets' ) );
-		$this->logger->debug( "Asset-Loader Hooks gesetzt", [ 'plugin' => 'f12-cf7-captcha' ] );
+		$this->logger->debug( "Asset loader hooks registered", [ 'plugin' => 'f12-cf7-captcha' ] );
 
 		// Check Upgrade Notice
 		add_action( 'in_plugin_update_message-f12-cf7-captcha/f12-cf7-captcha.php', [
@@ -409,17 +354,17 @@ class CF7Captcha {
 			$settings['global']['protection_rules_blacklist_value'] = $blacklist;
 
 			if ( empty( trim( $blacklist ) ) ) {
-				$this->logger->debug( "Blacklist geladen, aber leer", [
+				$this->logger->debug( "Blacklist loaded but empty", [
 					'plugin' => 'f12-cf7-captcha'
 				] );
 			} else {
-				$this->logger->info( "Blacklist erfolgreich geladen", [
+				$this->logger->info( "Blacklist loaded successfully", [
 					'plugin'   => 'f12-cf7-captcha',
 					'keywords' => substr( $blacklist, 0, 50 ) . ( strlen( $blacklist ) > 50 ? '...' : '' )
 				] );
 			}
 		} else {
-			$this->logger->debug( "Blacklist-Option nicht im Settings-Array vorhanden", [
+			$this->logger->debug( "Blacklist option not found in settings", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 		}
@@ -444,7 +389,7 @@ class CF7Captcha {
 
 		$merged = array_merge( $action_links, $links );
 
-		$this->logger->debug( "Plugin Action-Links hinzugefügt", [
+		$this->logger->debug( "Plugin action links added", [
 			'plugin' => 'f12-cf7-captcha',
 			'links'  => array_keys( $action_links )
 		] );
@@ -471,19 +416,147 @@ class CF7Captcha {
 
 			printf(
 				'<div class="update-message">%s</div>',
-				wpautop( $notice )
+				wp_kses_post( wpautop( $notice ) )
 			);
 
-			// Log upgrade notice (gekürzt, um Log nicht zu überfluten)
-			$this->logger->info( "Upgrade-Hinweis angezeigt", [
+			// Log upgrade notice (shortened to avoid log flooding)
+			$this->logger->info( "Upgrade notice displayed", [
 				'plugin' => 'f12-cf7-captcha',
 				'notice' => substr( strip_tags( $notice ), 0, 100 ) . ( strlen( $notice ) > 100 ? '...' : '' )
 			] );
 		} else {
-			$this->logger->debug( "Kein Upgrade-Hinweis vorhanden", [
+			$this->logger->debug( "No upgrade notice available", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 		}
+	}
+
+	/**
+	 * Determines whether frontend assets should be loaded on the current page.
+	 *
+	 * Assets are loaded when:
+	 * 1. Force-load filter returns true
+	 * 2. CF7 shortcode is present in post content
+	 * 3. Other supported form plugin shortcodes are present
+	 * 4. Current page is login or registration
+	 * 5. WooCommerce checkout/account pages
+	 * 6. Page Builders (Elementor, Avada/Fusion Builder) are active
+	 *
+	 * @return bool True if assets should be loaded, false otherwise.
+	 */
+	private function should_load_assets(): bool {
+		// 1. Filter for Force-Load (allows themes/plugins to force asset loading)
+		if ( apply_filters( 'f12_captcha_force_load_assets', false ) ) {
+			$this->logger->debug( "Assets force-loaded via filter", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
+
+		// 2. Login/Register pages always need assets
+		$pagenow = $GLOBALS['pagenow'] ?? '';
+		if ( in_array( $pagenow, [ 'wp-login.php', 'wp-register.php' ], true ) ) {
+			$this->logger->debug( "Assets loaded for login/register page", [ 'plugin' => 'f12-cf7-captcha', 'page' => $pagenow ] );
+			return true;
+		}
+
+		// 3. Check for form shortcodes in post content
+		global $post;
+		if ( $post && ! empty( $post->post_content ) ) {
+			// CF7 shortcode
+			if ( has_shortcode( $post->post_content, 'contact-form-7' ) ) {
+				$this->logger->debug( "Assets loaded - CF7 shortcode detected", [ 'plugin' => 'f12-cf7-captcha' ] );
+				return true;
+			}
+
+			// Other supported form plugins
+			$form_shortcodes = [
+				'wpforms',
+				'gravityform',
+				'gravityforms',
+				'formidable',
+				'ninja_form',
+				'ninja_forms',
+				'fluentform',
+				'fusion_form', // Avada Fusion Builder forms
+			];
+
+			foreach ( $form_shortcodes as $shortcode ) {
+				if ( has_shortcode( $post->post_content, $shortcode ) ) {
+					$this->logger->debug( "Assets loaded - form shortcode detected", [ 'plugin' => 'f12-cf7-captcha', 'shortcode' => $shortcode ] );
+					return true;
+				}
+			}
+		}
+
+		// 4. WooCommerce pages (checkout, my-account)
+		if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+			$this->logger->debug( "Assets loaded for WooCommerce checkout", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
+		if ( function_exists( 'is_account_page' ) && is_account_page() ) {
+			$this->logger->debug( "Assets loaded for WooCommerce account page", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
+
+		// 5. Check for Elementor (forms can be in Elementor widgets)
+		if ( $post ) {
+			// Check if Elementor is used on this page
+			$elementor_data = get_post_meta( $post->ID, '_elementor_data', true );
+			if ( ! empty( $elementor_data ) ) {
+				// Check for form widget in Elementor data
+				if ( is_string( $elementor_data ) && (
+					strpos( $elementor_data, '"widgetType":"form"' ) !== false ||
+					strpos( $elementor_data, '"widgetType":"login"' ) !== false
+				) ) {
+					$this->logger->debug( "Assets loaded - Elementor form widget detected", [ 'plugin' => 'f12-cf7-captcha' ] );
+					return true;
+				}
+			}
+
+			// Also check post content for Elementor markers
+			if ( ! empty( $post->post_content ) && (
+				strpos( $post->post_content, 'elementor-widget-form' ) !== false ||
+				strpos( $post->post_content, 'elementor-form' ) !== false
+			) ) {
+				$this->logger->debug( "Assets loaded - Elementor form in content", [ 'plugin' => 'f12-cf7-captcha' ] );
+				return true;
+			}
+		}
+
+		// 6. Check for Avada/Fusion Builder forms
+		if ( $post ) {
+			// Fusion Builder stores data in post content with specific markers
+			if ( ! empty( $post->post_content ) && (
+				strpos( $post->post_content, '[fusion_form' ) !== false ||
+				strpos( $post->post_content, 'fusion-form' ) !== false ||
+				strpos( $post->post_content, 'class="fusion-form"' ) !== false
+			) ) {
+				$this->logger->debug( "Assets loaded - Avada Fusion form detected", [ 'plugin' => 'f12-cf7-captcha' ] );
+				return true;
+			}
+
+			// Check Avada-specific meta
+			$fusion_builder_status = get_post_meta( $post->ID, 'fusion_builder_status', true );
+			if ( $fusion_builder_status === 'active' ) {
+				// Avada page - load assets to be safe (Fusion forms might be included dynamically)
+				$this->logger->debug( "Assets loaded - Avada Fusion Builder active", [ 'plugin' => 'f12-cf7-captcha' ] );
+				return true;
+			}
+		}
+
+		// 7. Check for comment forms on singular pages
+		if ( is_singular() && comments_open() ) {
+			$this->logger->debug( "Assets loaded for comment form", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
+
+		// 8. AJAX requests - always load (forms might be loaded dynamically)
+		if ( wp_doing_ajax() ) {
+			$this->logger->debug( "Assets loaded for AJAX request", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
+
+		$this->logger->debug( "Assets not loaded - no form detected on page", [ 'plugin' => 'f12-cf7-captcha' ] );
+		return false;
 	}
 
 	/**
@@ -496,33 +569,42 @@ class CF7Captcha {
 	 * @return void
 	 */
 	public function load_frontend_assets() {
+		// Check if assets should be loaded on this page
+		if ( ! $this->should_load_assets() ) {
+			return;
+		}
+
 		// Settings
 		$settings = $this->get_settings();
 
 		if (isset($settings['beta'], $settings['beta']['beta_captcha_enable'], $settings['beta']['beta_captcha_api_key']) && (bool)$settings['beta']['beta_captcha_enable'] === true) {
 			if(!empty( $settings['beta']['beta_captcha_api_key'])) {
-				$this->get_logger()->info( "Beta-API aktiviert" );
-				// JavaScript einfügen
+				$this->get_logger()->info( "Behavior API enabled" );
+				// Insert JavaScript
 				wp_enqueue_script(
 					'f12-cf7-captcha-client',
 					plugin_dir_url( __FILE__ ) . 'core/assets/client.js',
-					array( 'jquery' ),
-					null,
+					array(),
+					FORGE12_CAPTCHA_VERSION,
 					true
 				);
+				wp_script_add_data( 'f12-cf7-captcha-client', 'strategy', 'defer' );
 
-				// Daten für das Script lokal bereitstellen
+				// Provide data for the script locally
+				$api_url = defined( 'F12_CAPTCHA_API_URL' )
+					? F12_CAPTCHA_API_URL
+					: 'https://api.silentshield.io';
+
 				wp_localize_script(
 					'f12-cf7-captcha-client',
 					'f12_client_data',
 					[
 						'key' => $settings['beta']['beta_captcha_api_key'],
-						//'url' => 'https://api.silentshield.io'
-						'url' => 'https://api.marc-wagner.eu'
+						'url' => $api_url,
 					]
 				);
 
-				$this->logger->debug( "API-Assets geladen", [
+				$this->logger->debug( "API assets loaded", [
 					'plugin'  => 'f12-cf7-captcha',
 					'scripts' => [ 'f12-cf7-captcha-client' ], // Korrigierter Scriptname
 					'styles'  => [],                        // Aktuell keine Styles vorhanden
@@ -531,13 +613,22 @@ class CF7Captcha {
 			}
 		}else{
 			// Hole aktive Komponenten aus dem Compatibility-Modul
-			$compatibility = $this->get_modul('compatibility');
-			$active_components = method_exists($compatibility, 'get_active_component_names')
-				? $compatibility->get_active_component_names()
-				: [];
+			$active_components = [];
+			try {
+				$compatibility = $this->get_module('compatibility');
+				if ( method_exists( $compatibility, 'get_active_component_names' ) ) {
+					$active_components = $compatibility->get_active_component_names();
+				}
+			} catch ( \Exception $e ) {
+				$this->logger->error( 'Compatibility module not available', [
+					'plugin' => 'f12-cf7-captcha',
+					'error'  => $e->getMessage(),
+				] );
+			}
 
 			$atts = array(
-				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'resturl'    => rest_url( 'f12-cf7-captcha/v1/' ),
+				'restnonce'  => wp_create_nonce( 'wp_rest' ),
 				'components' => $active_components,
 			);
 
@@ -545,9 +636,10 @@ class CF7Captcha {
 				'f12-cf7-captcha-reload',
 				plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha-cf7.js',
 				array( 'jquery' ),
-				null,
+				FORGE12_CAPTCHA_VERSION,
 				true
 			);
+			wp_script_add_data( 'f12-cf7-captcha-reload', 'strategy', 'defer' );
 
 			wp_localize_script(
 				'f12-cf7-captcha-reload',
@@ -558,10 +650,12 @@ class CF7Captcha {
 
 		wp_enqueue_style(
 			'f12-cf7-captcha-style',
-			plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha.css'
+			plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha.css',
+			[],
+			FORGE12_CAPTCHA_VERSION
 		);
 
-		$this->logger->debug( "Frontend-Assets geladen", [
+		$this->logger->debug( "Frontend assets loaded", [
 			'plugin'  => 'f12-cf7-captcha',
 			'scripts' => [ 'f12-cf7-captcha-reload' ],
 			'styles'  => [ 'f12-cf7-captcha-style' ],
@@ -574,10 +668,11 @@ class CF7Captcha {
 			'f12-cf7-captcha-toggle',
 			plugins_url( 'core/assets/toggle.js', __FILE__ ),
 			array( 'jquery' ),
-			'1.0'
+			FORGE12_CAPTCHA_VERSION,
+			true
 		);
 
-		$this->logger->debug( "Admin-Assets geladen", [
+		$this->logger->debug( "Admin assets loaded", [
 			'plugin'  => 'f12-cf7-captcha',
 			'scripts' => [ 'f12-cf7-captcha-toggle' ],
 			'context' => ( is_admin() ? 'admin' : 'unknown' )
@@ -603,7 +698,7 @@ class CF7Captcha {
 
 		$activated = in_array( $plugin, $this->plugins ) || array_key_exists( $plugin, $this->plugins );
 
-		$this->logger->debug( "Plugin-Aktivierungsstatus geprüft", [
+		$this->logger->debug( "Plugin activation status checked", [
 			'plugin'       => 'f12-cf7-captcha',
 			'checked'      => $plugin,
 			'is_activated' => $activated ? 'yes' : 'no'
@@ -612,17 +707,6 @@ class CF7Captcha {
 		return $activated;
 	}
 }
-
-/**
- * Helper Function
- */
-/*add_action( 'load_textdomain', function( $domain ) {
-	if ( $domain === 'captcha-for-contact-form-7' && did_action( 'init' ) === 0 ) {
-		error_log( "❌  Textdomain zu früh geladen" );
-		error_log( print_r( debug_backtrace( DEBUG_BACKTRACE_IGNORE_ARGS, 10 ), true ) );
-	}
-}, 10, 1 );*/
-
 
 /**
  * Init the contact form 7 captcha

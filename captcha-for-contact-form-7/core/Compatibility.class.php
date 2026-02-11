@@ -22,56 +22,56 @@ class Compatibility extends BaseModul {
 	 */
 	private $components = array();
 	/**
-	 * @var Log_WordPress
+	 * @var Log_WordPress_Interface
 	 */
-	private Log_WordPress $Logger;
+	private Log_WordPress_Interface $Logger;
 
 	/**
 	 * Constructs a new instance of the class.
 	 *
 	 * @param CF7Captcha    $Controller The CF7Captcha object.
-	 * @param Log_WordPress $Logger     The Log_WordPress object.
+	 * @param Log_WordPress_Interface $Logger     The Log_WordPress object.
 	 */
-	public function __construct(CF7Captcha $Controller, Log_WordPress $Logger)
+	public function __construct(CF7Captcha $Controller, Log_WordPress_Interface $Logger)
 	{
 		parent::__construct($Controller);
 
-		// Protokollierung der Instanziierung.
-		// Anmerkung: Die Logger-Instanz wird hier direkt vom Konstruktor-Parameter übernommen.
-		// Dies kann zu Problemen führen, wenn parent::__construct() auch einen Logger setzt.
-		// Es ist besser, eine konsistente Methode zur Logger-Verwaltung zu verwenden.
+		// Logging the instantiation.
+		// Note: The logger instance is taken directly from the constructor parameter here.
+		// This can lead to issues if parent::__construct() also sets a logger.
+		// It is better to use a consistent method for logger management.
 		$this->Logger = $Logger;
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Lade die Kompatibilitäts-Dateien aus dem angegebenen Verzeichnis.
-		// Der zweite Parameter '0' deutet an, dass die Unterverzeichnisse nicht rekursiv durchsucht werden.
+		// Load the compatibility files from the specified directory.
+		// The second parameter '0' indicates that subdirectories are not searched recursively.
 		$this->load(dirname(dirname(__FILE__)) . '/compatibility', 0);
-		$this->get_logger()->debug('Kompatibilitäten geladen.');
+		$this->get_logger()->debug('Compatibilities loaded.');
 
-		// Füge einen anonymen Hook zu 'after_setup_theme' hinzu.
+		// Add an anonymous hook to 'after_setup_theme'.
 		add_action('after_setup_theme', function () {
 
-			// Füge einen weiteren Hook hinzu, der die Methode 'wp_register_components' aufruft.
+			// Add another hook that calls the 'wp_register_components' method.
 			add_action('f12_cf7_captcha_ui_after_load_compatibilities', array(
 				$this,
 				'wp_register_components'
 			), 10, 1);
-			$this->get_logger()->debug('Hook "f12_cf7_captcha_ui_after_load_compatibilities" für die Komponentenregistrierung hinzugefügt.');
+			$this->get_logger()->debug('Hook "f12_cf7_captcha_ui_after_load_compatibilities" added for component registration.');
 
-			// Löst die 'f12_cf7_captcha_ui_after_load_compatibilities'-Aktion aus.
-			// Dies ermöglicht es Entwicklern, eigene Kompatibilitäts-Hooks hinzuzufügen.
+			// Triggers the 'f12_cf7_captcha_ui_after_load_compatibilities' action.
+			// This allows developers to add their own compatibility hooks.
 			do_action('f12_cf7_captcha_ui_after_load_compatibilities', $this);
-			$this->get_logger()->debug('Aktion "f12_cf7_captcha_ui_after_load_compatibilities" ausgelöst.');
+			$this->get_logger()->debug('Action "f12_cf7_captcha_ui_after_load_compatibilities" triggered.');
 
-			// Löst die 'f12_cf7_captcha_compatibilities_loaded'-Aktion aus.
-			// Signalisiert den Validatoren, dass die Kompatibilitäten geladen wurden.
+			// Triggers the 'f12_cf7_captcha_compatibilities_loaded' action.
+			// Signals to validators that compatibilities have been loaded.
 			do_action('f12_cf7_captcha_compatibilities_loaded');
-			$this->get_logger()->debug('Aktion "f12_cf7_captcha_compatibilities_loaded" ausgelöst.');
+			$this->get_logger()->debug('Action "f12_cf7_captcha_compatibilities_loaded" triggered.');
 		});
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		$this->get_logger()->info('Constructor completed.');
 	}
 
 	/**
@@ -95,14 +95,14 @@ class Compatibility extends BaseModul {
 	 */
 	public function get_components(): array
 	{
-		$this->get_logger()->info('Rufe die registrierten Komponenten ab.', [
+		$this->get_logger()->info('Retrieving registered components.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Zähle die Anzahl der Komponenten und gib sie im Debug-Log aus.
+		// Count the number of components and output them in the debug log.
 		$component_count = count($this->components);
-		$this->get_logger()->debug("Es wurden {$component_count} Komponenten gefunden.");
+		$this->get_logger()->debug("{$component_count} components found.");
 
 		return $this->components;
 	}
@@ -118,14 +118,14 @@ class Compatibility extends BaseModul {
 			$object = $component['object'];
 
 			try {
-				// Prüfe über is_enabled(), falls die Methode existiert
+				// Check via is_enabled() if the method exists
 				if (method_exists($object, 'is_enabled') && $object->is_enabled()) {
 					$active[] = basename(str_replace('\\', '/', $name));
 				}
 			} catch (\Throwable $e) {
-				// Falls ein Controller Fehler wirft (z. B. fehlendes Plugin), logge das und überspringe ihn
+				// If a controller throws errors (e.g., missing plugin), log it and skip it
 				$this->get_logger()->warning(
-					sprintf('Fehler beim Prüfen von is_enabled() in %s: %s', $name, $e->getMessage()),
+					sprintf('Error checking is_enabled() in %s: %s', $name, $e->getMessage()),
 					['file' => $e->getFile(), 'line' => $e->getLine()]
 				);
 			}
@@ -146,30 +146,32 @@ class Compatibility extends BaseModul {
 	 */
 	public function get_component(string $name): BaseController
 	{
-		$this->get_logger()->info('Versuche, eine Komponente nach ihrem Namen abzurufen.', [
+		$this->get_logger()->info('Attempting to retrieve a component by name.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'requested_component' => $name,
 		]);
 
-		// Überprüfe, ob die Komponente überhaupt existiert.
+		// Check if the component exists at all.
 		if (!isset($this->components[$name])) {
 			$available_components = implode(", ", array_keys($this->components));
-			$error_message = sprintf('Komponente nicht gefunden: %s. Verfügbare Komponenten: %s', $name, $available_components);
+			$error_message = sprintf('Component not found: %s. Available components: %s', $name, $available_components);
 
 			$this->get_logger()->error($error_message);
-			throw new RuntimeException($error_message);
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+			throw new RuntimeException( $error_message );
 		}
 
-		// Überprüfe, ob die Komponente bereits instanziiert wurde.
+		// Check if the component has already been instantiated.
 		if (!isset($this->components[$name]['object'])) {
-			$error_message = sprintf('Komponente "%s" wurde noch nicht initialisiert.', $name);
+			$error_message = sprintf('Component "%s" has not been initialized yet.', $name);
 
 			$this->get_logger()->error($error_message);
-			throw new RuntimeException($error_message);
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+			throw new RuntimeException( $error_message );
 		}
 
-		$this->get_logger()->info('Komponente erfolgreich abgerufen.', [
+		$this->get_logger()->info('Component successfully retrieved.', [
 			'component_name' => $name,
 		]);
 
@@ -185,47 +187,49 @@ class Compatibility extends BaseModul {
 	 */
 	public function wp_register_components(Compatibility $Compatibility): void
 	{
-		$this->get_logger()->info('Starte die Registrierung der Kompatibilitätskomponenten.', [
+		$this->get_logger()->info('Starting registration of compatibility components.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		foreach ($this->components as $key => $component) {
-			// Sicherstellen, dass die notwendigen Array-Schlüssel existieren, bevor darauf zugegriffen wird.
+			// Ensure that the necessary array keys exist before accessing them.
 			if (!isset($component['name']) || !isset($component['path'])) {
 				$error_message = sprintf(
-					'Komponenten-Schlüssel: %s, Name: %s, Pfad: %s nicht korrekt initialisiert.',
+					'Component key: %s, Name: %s, Path: %s not correctly initialized.',
 					$key,
-					$component['name'] ?? 'nicht definiert', // Verwende Null Coalescing Operator für sicheren Zugriff
-					$component['path'] ?? 'nicht definiert'
+					$component['name'] ?? 'not defined', // Use Null Coalescing Operator for safe access
+					$component['path'] ?? 'not defined'
 				);
 				$this->get_logger()->error($error_message);
-				throw new \RuntimeException($error_message);
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+				throw new \RuntimeException( $error_message );
 			}
 
-			$this->get_logger()->debug('Registriere Komponente.', ['name' => $component['name'], 'path' => $component['path']]);
+			$this->get_logger()->debug('Registering component.', ['name' => $component['name'], 'path' => $component['path']]);
 
 			try {
-				// Lade die Datei der Komponente
+				// Load the component file
 				require_once($component['path']);
 
-				// Instanziiere die Komponente und speichere das Objekt
+				// Instantiate the component and store the object
 				$this->components[$key]['object'] = new $component['name']($this->Controller, $this->Logger);
-				$this->get_logger()->info('Komponente erfolgreich instanziiert.', ['name' => $component['name']]);
+				$this->get_logger()->info('Component successfully instantiated.', ['name' => $component['name']]);
 
 			} catch (\Throwable $e) {
-				$error_message = sprintf('Fehler beim Laden oder Instanziieren der Komponente "%s".', $component['name']);
+				$error_message = sprintf('Error loading or instantiating component "%s".', $component['name']);
 				$this->get_logger()->critical($error_message, [
 					'error' => $e->getMessage(),
 					'file' => $e->getFile(),
 					'line' => $e->getLine(),
 				]);
-				// Ein kritischer Fehler, der die Ausführung beenden sollte, um weitere Probleme zu vermeiden.
-				throw new \RuntimeException($error_message);
+				// A critical error that should terminate execution to avoid further problems.
+				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+				throw new \RuntimeException( $error_message );
 			}
 		}
 
-		$this->get_logger()->info('Registrierung aller Kompatibilitätskomponenten abgeschlossen.');
+		$this->get_logger()->info('Registration of all compatibility components completed.');
 	}
 
 	/**
@@ -244,78 +248,80 @@ class Compatibility extends BaseModul {
 	 */
 	private function load($directory, $lvl)
 	{
-		$this->get_logger()->info('Starte den Ladevorgang für Komponenten in einem Verzeichnis.', [
+		$this->get_logger()->info('Starting component loading process in a directory.', [
 			'class'     => __CLASS__,
 			'method'    => __METHOD__,
 			'directory' => $directory,
 			'level'     => $lvl,
 		]);
 
-		// Überprüfe, ob das Verzeichnis existiert.
+		// Check if the directory exists.
 		if (!is_dir($directory)) {
-			$error_message = sprintf('Verzeichnis %s existiert nicht.', $directory);
+			$error_message = sprintf('Directory %s does not exist.', $directory);
 			$this->get_logger()->error($error_message);
-			throw new \RuntimeException($error_message);
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+			throw new \RuntimeException( $error_message );
 		}
 
-		// Versuche, das Verzeichnis zu öffnen.
-		$handle = @opendir($directory); // Nutze @, um PHP-Warnungen zu unterdrücken, wenn opendir fehlschlägt.
+		// Try to open the directory.
+		$handle = @opendir($directory); // Use @ to suppress PHP warnings if opendir fails.
 
 		if ($handle === false) {
-			$error_message = sprintf('Verzeichnis %s ist nicht lesbar.', $directory);
+			$error_message = sprintf('Directory %s is not readable.', $directory);
 			$this->get_logger()->error($error_message);
-			throw new \RuntimeException($error_message);
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+			throw new \RuntimeException( $error_message );
 		}
 
-		$this->get_logger()->debug('Verzeichnis erfolgreich geöffnet.');
+		$this->get_logger()->debug('Directory successfully opened.');
 
-		// Iteriere durch die Einträge im Verzeichnis.
+		// Iterate through the entries in the directory.
 		while (false !== ($entry = readdir($handle))) {
-			// Überspringe die '.' und '..'-Einträge.
+			// Skip the '.' and '..' entries.
 			if ($entry === '.' || $entry === '..') {
 				continue;
 			}
 
 			$current_directory = $directory . '/' . $entry;
 
-			// Wenn der Eintrag ein Unterverzeichnis ist und der Level 0 ist, lade rekursiv.
+			// If the entry is a subdirectory and the level is 0, load recursively.
 			if (is_dir($current_directory) && $lvl === 0) {
-				$this->get_logger()->debug('Wechsle in Unterverzeichnis.', ['subdir' => $current_directory]);
+				$this->get_logger()->debug('Switching to subdirectory.', ['subdir' => $current_directory]);
 				$this->load($current_directory, $lvl + 1);
 				continue;
 			}
 
-			// Finde Dateien, die dem Namensmuster 'Controller[Name].class.php' entsprechen.
+			// Find files that match the naming pattern 'Controller[Name].class.php'.
 			if (!preg_match('!Controller([a-zA-Z_0-9]+)\.class\.php!', $entry, $matches)) {
-				$this->get_logger()->debug('Datei entspricht nicht dem Namensmuster.', ['file' => $entry]);
+				$this->get_logger()->debug('File does not match the naming pattern.', ['file' => $entry]);
 				continue;
 			}
 
-			// Stelle sicher, dass der zweite Match-Treffer existiert.
+			// Ensure that the second match result exists.
 			if (!isset($matches[1])) {
-				$this->get_logger()->warning('Kein Klassenname im Dateinamen gefunden.', ['file' => $entry]);
+				$this->get_logger()->warning('No class name found in filename.', ['file' => $entry]);
 				continue;
 			}
 
 			$class_name_part = $matches[1];
 
-			// Bestimme den vollständigen Namespace für die Klasse.
-			// Der Namespace sollte abhängig vom Pfad korrekt gebildet werden.
+			// Determine the full namespace for the class.
+			// The namespace should be correctly formed depending on the path.
 			$namespace = 'f12_cf7_captcha\\compatibility';
 			/*if ($lvl > 0) {
-				// Wenn in einem Unterverzeichnis, füge den Namen des Unterverzeichnisses zum Namespace hinzu.
+				// If in a subdirectory, add the subdirectory name to the namespace.
 				$sub_dir_name = basename($directory);
 				$namespace .= '\\' . $sub_dir_name;
 			}*/
 
 			$name = '\\' . $namespace . '\\Controller' . $class_name_part;
 
-			$this->get_logger()->debug('Komponente zur Registrierung hinzugefügt.', [
+			$this->get_logger()->debug('Component added for registration.', [
 				'class_name' => $name,
 				'file_path'  => $current_directory,
 			]);
 
-			// Füge die Komponente zur Liste hinzu.
+			// Add the component to the list.
 			$this->components[$name] = [
 				'name' => $name,
 				'path' => $current_directory
@@ -323,6 +329,6 @@ class Compatibility extends BaseModul {
 		}
 
 		closedir($handle);
-		$this->get_logger()->info('Ladevorgang abgeschlossen.');
+		$this->get_logger()->info('Loading process completed.');
 	}
 }

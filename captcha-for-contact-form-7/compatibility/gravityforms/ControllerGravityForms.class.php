@@ -12,125 +12,42 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerGravityForms
  */
 class ControllerGravityForms extends BaseController {
-	/**
-	 * @var string
-	 */
 	protected string $name = 'GravityForms';
-
-	/**
-	 * @var string $id  The unique identifier for the entity.
-	 *                  This should be a string value.
-	 */
 	protected string $id = 'gravityforms';
+	protected string $settings_key = 'protection_gravityforms_enable';
 
 	/**
-	 * Check if the captcha is enabled for Gravity Forms
-	 *
-	 * @return bool True if the captcha is enabled, false otherwise
+	 * Cached spam check result to avoid calling is_spam() twice.
+	 * The captcha hash is single-use and invalidated after the first check.
+	 * GF calls gform_validation first, then gform_entry_is_spam,
+	 * so we cache the result from wp_validation for wp_is_spam.
 	 */
-	public function is_enabled(): bool {
-		// Log the start of the check.
-		$this->get_logger()->info( 'Starte Überprüfung, ob das Gravity Forms-Modul aktiviert ist.' );
+	private ?bool $spam_result = null;
 
-		// Check if the Gravity Forms plugin is installed.
-		$is_installed = $this->is_installed();
-		$this->get_logger()->debug( 'Installationsstatus des Moduls: ' . ( $is_installed ? 'Installiert' : 'Nicht installiert' ) );
+	protected array $hooks = [
+		['type' => 'filter', 'hook' => 'gform_get_form_filter', 'method' => 'wp_add_spam_protection', 'priority' => 10, 'args' => 2],
+		['type' => 'filter', 'hook' => 'gform_entry_is_spam', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 3],
+		['type' => 'filter', 'hook' => 'gform_validation', 'method' => 'wp_validation', 'priority' => 10, 'args' => 3],
+	];
 
-		// Get the global setting for Gravity Forms protection.
-		$setting_value = $this->Controller->get_settings( 'protection_gravityforms_enable', 'global' );
-		$this->get_logger()->debug( 'Wert der Einstellung "protection_gravityforms_enable": ' . $setting_value );
-
-		// Determine if the module should be active.
-		if ( $setting_value === '' || $setting_value === null ) {
-			// Default: aktiv, wenn nicht explizit gesetzt
-			$setting_value = 1;
-			$this->get_logger()->debug( 'Wert der Einstellung "protection_gravityforms_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
-		}
-
-		$is_active = $is_installed && ( (int) $setting_value === 1 );
-
-
-		// Log the status before applying any filters.
-		$this->get_logger()->debug( 'Modulstatus vor dem Filter: ' . ( $is_active ? 'Aktiv' : 'Inaktiv' ) );
-
-		// Apply a filter to allow other plugins to modify the status.
-		$result = apply_filters( 'f12_cf7_captcha_is_installed_gravityforms', $is_active );
-
-		// Log the final result after the filter.
-		$this->get_logger()->info( 'Endgültiger Status nach dem Filter: ' . ( $result ? 'Aktiv' : 'Inaktiv' ) );
-
-		return $result;
-	}
-
-	/**
-	 * Check if the Gravity Forms plugin is installed
-	 *
-	 * @return bool Returns true if the Gravity Forms plugin is installed, false otherwise
-	 */
 	public function is_installed(): bool {
-		// Log the start of the check.
-		$this->get_logger()->info( 'Starte Überprüfung, ob Gravity Forms installiert ist.' );
-
-		// Check if the 'GFCommon' class exists, which is a reliable indicator of Gravity Forms.
 		$is_installed = class_exists( 'GFCommon' );
-
-		// Log the result of the check.
-		if ( $is_installed ) {
-			$this->get_logger()->info( 'Gravity Forms wurde gefunden.' );
-		} else {
-			$this->get_logger()->critical( 'Gravity Forms wurde nicht gefunden. Das Modul kann nicht korrekt funktionieren.' );
-		}
-
-		// Return the result.
+		$this->get_logger()->debug( 'Gravity Forms installed: ' . ( $is_installed ? 'Yes' : 'No' ) );
 		return $is_installed;
-	}
-
-	/**
-	 * @private WordPress Hook
-	 */
-	public function on_init(): void {
-		// Log the start of the initialization process for the Gravity Forms module.
-		$this->get_logger()->info( 'Starte die Initialisierung des Gravity Forms-Moduls.', [ 'plugin' => 'f12-cf7-captcha' ] );
-
-		// Set the module name.
-		$this->name = __( 'GravityForms', 'captcha-for-contact-form-7' );
-		$this->get_logger()->debug( 'Modulname wurde gesetzt.', [
-			'name'   => $this->name,
-			'plugin' => 'f12-cf7-captcha'
-		] );
-
-		// Add a filter to modify the form HTML and insert the captcha.
-		//if ( class_exists( '\GFCommon' ) && version_compare( \GFCommon::$version, '2.9', '<' ) ) {
-		// älter als 2.9
-		add_filter( 'gform_get_form_filter', [ $this, 'wp_add_spam_protection' ], 10, 2 );
-		$this->get_logger()->debug( 'Füge den Filter "gform_get_form_filter" hinzu, um Formulareinträge auf Spam zu prüfen.', [ 'plugin' => 'f12-cf7-captcha' ] );
-		/*} else {
-			// 2.9 oder neuer
-			add_filter( 'gform_form_markup', [ $this, 'wp_add_spam_protection' ], 10, 2 );
-			$this->get_logger()->debug( 'Füge den Filter "gform_form_markup" hinzu, um Formulareinträge auf Spam zu prüfen.', [ 'plugin' => 'f12-cf7-captcha' ] );
-		}*/
-
-		// Add a filter for spam validation.
-		$this->get_logger()->debug( 'Füge den Filter "gform_entry_is_spam" hinzu, um Formulareinträge auf Spam zu prüfen.', [ 'plugin' => 'f12-cf7-captcha' ] );
-		// Mark entry as spam
-		add_filter( 'gform_entry_is_spam', array( $this, 'wp_is_spam' ), 10, 3 );
-		// Show error in form without sending the form
-		add_filter( 'gform_validation', array( $this, 'wp_validation' ), 10, 3 );
-
-		// Log the successful completion of the initialization.
-		$this->get_logger()->info( 'Initialisierung abgeschlossen.', [ 'plugin' => 'f12-cf7-captcha' ] );
 	}
 
 	public function wp_validation( $validation_result ) {
 		$form       = $validation_result['form'];
-		$Protection = $this->Controller->get_modul( 'protection' );
+		$Protection = $this->Controller->get_module( 'protection' );
 
-		if ( $Protection->is_spam( $_POST ) ) {
-			$this->get_logger()->warning( 'Spam erkannt in wp_validation – Formular wird blockiert.' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Gravity Forms
+		$this->spam_result = $Protection->is_spam( $_POST );
+
+		if ( $this->spam_result ) {
+			$this->get_logger()->warning( 'Spam detected in wp_validation - form will be blocked.' );
 
 			$validation_result['is_valid'] = false;
 
-			// Hole das letzte Feld im Formular
 			if ( ! empty( $form['fields'] ) ) {
 				$last_index = array_key_last( $form['fields'] );
 				if ( $last_index !== null ) {
@@ -147,104 +64,66 @@ class ControllerGravityForms extends BaseController {
 	}
 
 	/**
-	 * Add spam protection to the given content.
-	 *
-	 * This method adds spam protection to the given content by injecting a captcha field based on the specified
-	 * validation method.
-	 *
-	 * @param mixed ...$args Any number of arguments.
-	 *
-	 * @return mixed The content with spam protection added.
-	 *
-	 * @throws \Exception
-	 * @since 1.12.2
-	 *
+	 * @param mixed ...$args
+	 * @return mixed
 	 */
 	public function wp_add_spam_protection( ...$args ) {
-		// Log the beginning of the process.
-		$this->get_logger()->info( 'Starte die Einfügung des Captcha-Codes in ein Gravity Forms-Formular.' );
+		$this->get_logger()->info( 'Starting captcha code insertion into Gravity Forms form.' );
 
 		$form_string = $args[0];
 
-		// Get the captcha HTML from the protection module.
-		$captcha = $this->Controller->get_modul( 'protection' )->get_captcha();
-		$this->get_logger()->debug( 'Captcha-Code wurde abgerufen. Größe: ' . strlen( $captcha ) . ' Zeichen.' );
+		$captcha = $this->Controller->get_module( 'protection' )->get_captcha();
 
-		// Check if the captcha code is empty.
 		if ( empty( $captcha ) ) {
-			$this->get_logger()->warning( 'Der Captcha-Code ist leer. Es wird nichts zum Formular hinzugefügt.' );
-
 			return $form_string;
 		}
 
-		// Check for a specific marker in the form string to place the captcha.
-		if ( str_contains( $form_string, "<div class='gform_footer" ) ) {
-			// Place the captcha before the form's footer.
+		if ( strpos( $form_string, "<div class='gform_footer" ) !== false ) {
 			$form_string = str_replace( "<div class='gform_footer", $captcha . "<div class='gform_footer", $form_string );
-			$this->get_logger()->info( 'Captcha wurde erfolgreich vor dem Footer eingefügt.' );
-		} elseif ( str_contains( $form_string, "<div class='gform-footer" ) ) {
-			// Place the captcha before the form's footer.
+		} elseif ( strpos( $form_string, "<div class='gform-footer" ) !== false ) {
 			$form_string = str_replace( "<div class='gform-footer", $captcha . "<div class='gform-footer", $form_string );
-			$this->get_logger()->info( 'Captcha wurde erfolgreich vor dem Footer eingefügt.' );
 		} else {
-			// If the marker is not found, append the captcha to the end of the form.
 			$form_string .= $captcha;
-			$this->get_logger()->warning( 'Kein gform_footer-Marker gefunden. Captcha wurde am Ende des Formulars angehängt.' );
 		}
 
-		// Return the modified form string.
 		return $form_string;
 	}
 
 	/**
-	 * Check if a post is considered as spam
-	 *
-	 * @param bool  $is_spam         Whether the post is considered as spam initially.
-	 * @param array $array_post_data The array containing the POST data.
-	 *
-	 * @return bool Whether the post is considered as spam.
+	 * @param mixed ...$args
+	 * @return bool
 	 */
 	public function wp_is_spam( ...$args ) {
-		// Log the start of the spam check for Gravity Forms entries.
-		$this->get_logger()->info( 'Starte Spam-Überprüfung für Gravity Forms Eintrag.' );
+		$this->get_logger()->info( 'Starting spam check for Gravity Forms entry.' );
 
 		$is_spam = $args[0];
 
-		// Check if the entry is already marked as spam by another plugin or process.
 		if ( $is_spam === true ) {
-			$this->get_logger()->notice( 'Eintrag wurde bereits als Spam markiert. Überspringe weitere Überprüfung.' );
-
 			return true;
 		}
 
-		// Get the POST data to check for spam.
-		$array_post_data = $_POST;
-		$this->get_logger()->debug( 'Überprüfe die folgenden POST-Daten auf Spam.', [
-			'post_data_keys' => array_keys( $array_post_data ),
-		] );
+		// Use cached result from wp_validation() to avoid calling is_spam()
+		// again (the captcha hash is single-use and already consumed).
+		if ( $this->spam_result !== null ) {
+			$result            = $this->spam_result;
+			$this->spam_result = null;
 
-		// Get the protection module.
-		$Protection = $this->Controller->get_modul( 'protection' );
+			if ( $result ) {
+				$this->get_logger()->warning( 'Spam detected! Marking entry as spam.' );
+				return true;
+			}
 
-		// Perform the spam check using the module.
-		if ( $Protection->is_spam( $array_post_data ) ) {
-			$message = $Protection->get_message();
-			$this->get_logger()->warning( 'Spam erkannt! Markiere den Eintrag als Spam.' );
-
-			// It is recommended to add a custom message or a hook here
-			// to provide feedback to the user or admin, as Gravity Forms
-			// might not show a specific message by default.
-			// For example:
-			// do_action('gform_after_spam', $Protection->get_message());
-
-			// Log the final decision to return true.
-			$this->get_logger()->critical( 'Spam erkannt. Gebe "true" zurück, um den Eintrag zu blockieren.' );
-
-			return true;
+			return $is_spam;
 		}
 
-		// If no spam is detected, log the outcome and return the original value.
-		$this->get_logger()->info( 'Kein Spam erkannt. Der ursprüngliche Spam-Status bleibt unverändert.' );
+		// Fallback: if wp_validation didn't run (shouldn't happen)
+		$Protection = $this->Controller->get_module( 'protection' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Gravity Forms
+		if ( $Protection->is_spam( $_POST ) ) {
+			$this->get_logger()->warning( 'Spam detected! Marking entry as spam.' );
+			return true;
+		}
 
 		return $is_spam;
 	}

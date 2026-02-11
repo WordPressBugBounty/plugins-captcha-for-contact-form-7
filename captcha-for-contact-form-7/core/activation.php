@@ -19,35 +19,35 @@ function on_activation() {
 		// User Data
 		$Captcha = new Captcha( $logger, '' );
 		$Captcha->create_table();
-		$logger->info( "Tabelle erstellt", [
+		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'captcha'
 		] );
 
 		$Salt = new Salt( $logger );
 		$Salt->create_table();
-		$logger->info( "Tabelle erstellt", [
+		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'salt'
 		] );
 
 		$Captcha_Timer = new CaptchaTimer( $logger );
 		$Captcha_Timer->create_table();
-		$logger->info( "Tabelle erstellt", [
+		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'captcha_timer'
 		] );
 
 		$IP_Log = new IPLog( $logger );
 		$IP_Log->create_table();
-		$logger->info( "Tabelle erstellt", [
+		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'ip_log'
 		] );
 
 		$IP_Ban = new IPBan( $logger );
 		$IP_Ban->create_table();
-		$logger->info( "Tabelle erstellt", [
+		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'ip_ban'
 		] );
@@ -57,11 +57,11 @@ function on_activation() {
 		}
 
 	} catch ( \Throwable $e ) {
-		$logger->error( "Fehler bei Plugin-Aktivierung", [
+		$logger->error( "Error during plugin activation", [
 			'plugin' => 'f12-cf7-captcha',
 			'error'  => $e->getMessage(),
 			'trace'  => $e->getTraceAsString()
 		] );
-		throw $e; // wichtig: Fehler nicht verschlucken
+		throw $e; // important: do not swallow errors
 	}
 }

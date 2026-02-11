@@ -1,17 +1,35 @@
 <?php
-namespace Forge12\Shared;
+namespace Forge12\Shared {
 
-// Sicherstellen, dass Interface existiert
+// Ensure interface exists
 if (! interface_exists('Forge12\Shared\LoggerInterface')) {
-	require_once __DIR__ . '/logger.interface.php';
+    require_once __DIR__ . '/logger.interface.php';
 }
 
 if (!defined('F12_DEBUG')) {
-	define('F12_DEBUG', false);
+    define('F12_DEBUG', false);
 }
 
 if (!defined('F12_DEBUG_LOG_LEVEL')) {
-	define('F12_DEBUG_LOG_LEVEL', 200);
+    define('F12_DEBUG_LOG_LEVEL', 200);
+}
+
+/**
+ * Check if debug mode is enabled.
+ *
+ * Use this function BEFORE expensive logger calls to avoid
+ * building arrays that will never be used.
+ *
+ * @return bool True if debug is enabled, false otherwise.
+ */
+if (!function_exists('Forge12\Shared\f12_is_debug')) {
+    function f12_is_debug(): bool {
+        static $is_debug = null;
+        if ($is_debug === null) {
+            $is_debug = defined('F12_DEBUG') && F12_DEBUG;
+        }
+        return $is_debug;
+    }
 }
 
 if (!class_exists('Forge12\Shared\Logger')) {
@@ -89,7 +107,7 @@ if (!class_exists('Forge12\Shared\Logger')) {
 			// Backslashes → Slashes
 			$path = str_replace('\\', '/', $path);
 
-			// Doppelte Slashes entfernen, außer nach C:
+			// Remove double slashes, except after C:
 			$path = preg_replace('#(?<!:)/{2,}#', '/', $path);
 
 			return rtrim($path, '/');
@@ -112,7 +130,7 @@ if (!class_exists('Forge12\Shared\Logger')) {
 				return $path;
 			}
 
-			// → Pfad ist relativ → ABSPATH davor hängen
+			// → Path is relative → prepend ABSPATH
 			$absolute = $this->normalizePath(ABSPATH . '/' . $path);
 
 			return $absolute;
@@ -230,32 +248,49 @@ if (!class_exists('Forge12\Shared\Logger')) {
 
 		public function debug($message, array $context = []): void
 		{
+			if ( ! F12_DEBUG ) { return; }
 			$this->writeLog(self::DEBUG, 'DEBUG', $message, $context);
 		}
 
 		public function info($message, array $context = []): void
 		{
+			if ( ! F12_DEBUG ) { return; }
 			$this->writeLog(self::INFO, 'INFO', $message, $context);
 		}
 
 		public function error($message, array $context = []): void
 		{
+			if ( ! F12_DEBUG ) { return; }
 			$this->writeLog(self::ERROR, 'ERROR', $message, $context);
 		}
 
 		public function warning($message, array $context = []): void
 		{
+			if ( ! F12_DEBUG ) { return; }
 			$this->writeLog(self::WARNING, 'WARNING', $message, $context);
 		}
 
 		public function notice($message, array $context = []): void
 		{
+			if ( ! F12_DEBUG ) { return; }
 			$this->writeLog(self::NOTICE, 'NOTICE', $message, $context);
 		}
 
 		public function critical($message, array $context = []): void
 		{
+			if ( ! F12_DEBUG ) { return; }
 			$this->writeLog(self::CRITICAL, 'CRITICAL', $message, $context);
 		}
 	}
+}
+
+} // End namespace Forge12\Shared
+
+// Global alias function - defined in global namespace
+namespace {
+    if (!function_exists('f12_is_debug')) {
+        function f12_is_debug(): bool {
+            return \Forge12\Shared\f12_is_debug();
+        }
+    }
 }

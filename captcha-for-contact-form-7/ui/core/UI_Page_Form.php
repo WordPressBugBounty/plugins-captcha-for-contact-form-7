@@ -19,62 +19,62 @@ namespace f12_cf7_captcha\ui {
 		 * @return mixed
 		 */
 		protected function maybe_save(): void {
-			$this->get_logger()->info( 'Starte den "Maybe Save" Prozess, um die Einstellungen zu speichern, wenn die Nonce gültig ist.', [
+			$this->get_logger()->info( 'Starting the "Maybe Save" process to save settings if the nonce is valid.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 
-			// Überprüfe die Nonce (eine Sicherheitsmaßnahme von WordPress), um die Authentizität der Anfrage sicherzustellen.
+			// Verify the nonce (a WordPress security measure) to ensure the authenticity of the request.
 			$nonce_name   = $this->get_domain() . '_nonce';
 			$nonce_action = $this->get_domain() . '_action';
 
-			if ( isset( $_POST[ $nonce_name ] ) && wp_verify_nonce( $_POST[ $nonce_name ], $nonce_action ) ) {
-				$this->get_logger()->info( 'Nonce-Validierung erfolgreich. Starte den Speichervorgang.' );
+			if ( isset( $_POST[ $nonce_name ] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ $nonce_name ] ) ), $nonce_action ) ) {
+				$this->get_logger()->info( 'Nonce validation successful. Starting the save process.' );
 
 				$settings = [];
 
-				// Lade die Standardeinstellungen durch einen Filter.
-				// Andere Komponenten können hier ihre Standardeinstellungen in das Array einfügen.
+				// Load the default settings through a filter.
+				// Other components can insert their default settings into the array here.
 				$settings = apply_filters( $this->get_domain() . '_get_settings', $settings );
-				$this->get_logger()->debug( 'Einstellungen über den Filter "_get_settings" abgerufen.' );
+				$this->get_logger()->debug( 'Settings retrieved via the "_get_settings" filter.' );
 
-				// Ermögliche es Entwicklern, Aktionen vor dem Speichern der Einstellungen auszuführen.
+				// Allow developers to perform actions before saving the settings.
 				$settings = apply_filters( $this->get_domain() . '_ui_' . $this->slug . '_before_on_save', $settings );
-				$this->get_logger()->debug( 'Filter "_before_on_save" angewendet.', [
+				$this->get_logger()->debug( 'Filter "_before_on_save" applied.', [
 					'domain' => $this->get_domain(),
 					'slug'   => $this->get_slug(),
 					'filter' => $this->get_domain() . '_ui_' . $this->slug . '_before_on_save',
 					'plugin' => 'f12-cf7-captcha'
 				] );
 
-				// Überprüfe, ob die Einstellungen tatsächlich gespeichert werden sollen.
-				// Ein Entwickler kann diesen Filter nutzen, um das Speichern zu deaktivieren,
-				// z.B. wenn ein benutzerdefinierter Button eine andere Aktion auslösen soll.
+				// Check if the settings should actually be saved.
+				// A developer can use this filter to disable saving,
+				// e.g., if a custom button should trigger a different action.
 				$do_save = apply_filters( $this->get_domain() . '_ui_do_save_settings', true );
 
 				if ( $do_save ) {
-					$this->get_logger()->info( 'Speichern der Einstellungen ist erlaubt. Führe on_save() aus.' );
+					$this->get_logger()->info( 'Saving settings is allowed. Executing on_save().' );
 
-					// Führe die spezifische on_save-Logik der jeweiligen UI-Seite aus.
+					// Execute the specific on_save logic of the respective UI page.
 					$settings = $this->on_save( $settings );
 
-					// Speichere die finalen Einstellungen in der WordPress-Datenbank.
+					// Save the final settings to the WordPress database.
 					update_option( $this->get_domain() . '-settings', $settings );
 
-					// Füge eine Erfolgsmeldung für den Benutzer hinzu.
+					// Add a success message for the user.
 					$this->get_ui_manager()->get_ui_message()->add( __( 'Settings updated', 'captcha-for-contact-form-7' ), 'success' );
 
-					$this->get_logger()->info( 'Einstellungen erfolgreich in der Datenbank aktualisiert.' );
+					$this->get_logger()->info( 'Settings successfully updated in the database.' );
 				} else {
-					$this->get_logger()->info( 'Speichern der Einstellungen wurde durch den Filter "_ui_do_save_settings" unterdrückt.' );
+					$this->get_logger()->info( 'Saving settings was suppressed by the "_ui_do_save_settings" filter.' );
 				}
 
-				// Ermögliche es Entwicklern, Aktionen nach dem Speichern der Einstellungen auszuführen.
+				// Allow developers to perform actions after saving the settings.
 				$settings = apply_filters( $this->get_domain() . '_ui_' . $this->slug . '_after_on_save', $settings );
-				$this->get_logger()->debug( 'Filter "_after_on_save" angewendet.' );
+				$this->get_logger()->debug( 'Filter "_after_on_save" applied.' );
 
 			} else {
-				$this->get_logger()->warning( 'Nonce-Validierung fehlgeschlagen oder Nonce nicht vorhanden. Speichervorgang abgebrochen.' );
+				$this->get_logger()->warning( 'Nonce validation failed or nonce not present. Save process aborted.' );
 			}
 		}
 
@@ -86,16 +86,16 @@ namespace f12_cf7_captcha\ui {
 		 * @return void
 		 */
 		protected function hide_submit_button( bool $hide ): void {
-			$this->get_logger()->info( 'Lege fest, ob der Senden-Button versteckt werden soll.', [
+			$this->get_logger()->info( 'Setting whether the submit button should be hidden.', [
 				'class'       => __CLASS__,
 				'method'      => __METHOD__,
 				'hide_button' => $hide,
 			] );
 
-			// Setzt die private/protected Eigenschaft, die den Status speichert.
+			// Set the private/protected property that stores the status.
 			$this->hide_submit_button = $hide;
 
-			$this->get_logger()->debug( 'Senden-Button-Status erfolgreich auf ' . ( $hide ? 'versteckt' : 'sichtbar' ) . ' gesetzt.' );
+			$this->get_logger()->debug( 'Submit button status successfully set to ' . ( $hide ? 'hidden' : 'visible' ) . '.' );
 		}
 
 		/**
@@ -104,14 +104,14 @@ namespace f12_cf7_captcha\ui {
 		 * @return bool
 		 */
 		protected function is_submit_button_hidden(): bool {
-			$this->get_logger()->info( 'Überprüfe, ob der Senden-Button ausgeblendet ist.', [
+			$this->get_logger()->info( 'Checking if the submit button is hidden.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 
 			$is_hidden = $this->hide_submit_button;
 
-			$this->get_logger()->debug( 'Senden-Button-Status: ' . ( $is_hidden ? 'versteckt' : 'sichtbar' ) );
+			$this->get_logger()->debug( 'Submit button status: ' . ( $is_hidden ? 'hidden' : 'visible' ) );
 
 			return $is_hidden;
 		}
@@ -130,7 +130,7 @@ namespace f12_cf7_captcha\ui {
 		 * @private WordPress HOOK
 		 */
 		public function render_content( string $slug, string $page ): void {
-			$this->get_logger()->info( 'Starte das Rendering des Seiteninhalts.', [
+			$this->get_logger()->info( 'Starting the rendering of the page content.', [
 				'class'          => __CLASS__,
 				'method'         => __METHOD__,
 				'requested_slug' => $slug,
@@ -138,45 +138,45 @@ namespace f12_cf7_captcha\ui {
 				'expected_slug'  => $this->get_slug(),
 			] );
 
-			// Überprüfe, ob der angeforderte Seiten-Slug mit dem der aktuellen Seite übereinstimmt.
+			// Check if the requested page slug matches the current page.
 			if ( $this->get_slug() !== $page ) {
-				$this->get_logger()->debug( 'Die angeforderte Seite stimmt nicht mit der aktuellen überein. Rendering wird übersprungen.' );
+				$this->get_logger()->debug( 'The requested page does not match the current one. Rendering will be skipped.' );
 
 				return;
 			}
 
-			$this->get_logger()->info( 'Rendering-Prozess gestartet. Führe maybe_save() aus.' );
+			$this->get_logger()->info( 'Rendering process started. Executing maybe_save().' );
 
-			// Versuche, die Einstellungen zu speichern. Diese Methode überprüft selbstständig, ob ein POST-Request vorliegt und ob die Nonce gültig ist.
+			// Attempt to save the settings. This method independently checks if a POST request is present and if the nonce is valid.
 			$this->maybe_save();
 
-			// Rufe die globalen Einstellungen über einen Filter ab.
+			// Retrieve the global settings via a filter.
 			$settings = apply_filters( $this->get_domain() . '_get_settings', [] );
-			$this->get_logger()->debug( 'Einstellungen über Filter abgerufen.' );
+			$this->get_logger()->debug( 'Settings retrieved via filter.' );
 
-			// Rende die UI-Nachrichten (z.B. Erfolgs- oder Fehlermeldungen).
+			// Render the UI messages (e.g., success or error messages).
 			$this->get_ui_manager()->get_ui_message()->render();
 
 			?>
             <div class="box">
                 <form action="" method="post">
 					<?php
-					// Löse einen Hook aus, der vor dem Hauptinhalt liegt.
+					// Trigger a hook that is placed before the main content.
 					do_action( $this->get_domain() . '_ui_' . $page . '_before_content', $settings );
-					$this->get_logger()->debug( 'Hook "before_content" ausgelöst.', [ 'hook' => $this->get_domain() . '_ui_' . $page . '_before_content' ] );
+					$this->get_logger()->debug( 'Hook "before_content" triggered.', [ 'hook' => $this->get_domain() . '_ui_' . $page . '_before_content' ] );
 
-					// Rende den eigentlichen Inhalt der Seite.
+					// Render the actual page content.
 					$this->the_content( $slug, $page, $settings );
 
-					// Löse einen Hook aus, der nach dem Hauptinhalt liegt.
+					// Trigger a hook that is placed after the main content.
 					do_action( $this->get_domain() . '_ui_' . $page . '_after_content', $settings );
-					$this->get_logger()->debug( 'Hook "after_content" ausgelöst.', [ 'hook' => $this->get_domain() . '_ui_' . $page . '_after_content' ] );
+					$this->get_logger()->debug( 'Hook "after_content" triggered.', [ 'hook' => $this->get_domain() . '_ui_' . $page . '_after_content' ] );
 					?>
 
 					<?php
-					// Zeige den "Speichern"-Button und das Nonce-Feld nur an, wenn er nicht explizit ausgeblendet wurde.
+					// Show the "Save" button and nonce field only if it has not been explicitly hidden.
 					if ( ! $this->is_submit_button_hidden() ):
-						// Füge das Nonce-Feld hinzu, um die Anfrage vor Cross-Site Request Forgery (CSRF) zu schützen.
+						// Add the nonce field to protect the request from Cross-Site Request Forgery (CSRF).
 						wp_nonce_field( $this->get_domain() . '_action', $this->get_domain() . '_nonce' );
 						?>
                         <input type="submit" name="<?php echo esc_attr( $this->get_domain() ); ?>-settings-submit"
@@ -186,7 +186,7 @@ namespace f12_cf7_captcha\ui {
                 </form>
             </div>
 			<?php
-			$this->get_logger()->info( 'Rendering des Seiteninhalts abgeschlossen.' );
+			$this->get_logger()->info( 'Page content rendering completed.' );
 		}
 	}
 }

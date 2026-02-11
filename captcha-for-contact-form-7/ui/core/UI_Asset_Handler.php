@@ -34,33 +34,33 @@ namespace f12_cf7_captcha\ui {
 			public function __construct( UI_Manager $UI_Manager ) {
 				$this->UI_Manager = $UI_Manager;
 
-				$this->get_logger()->info( 'Konstruktor der UI-Seite gestartet.', [
+				$this->get_logger()->info( 'UI Asset Handler constructor started.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				] );
 
-				// Füge Hooks hinzu, um Skripte und Stile im WordPress-Adminbereich zu laden.
+				// Add hooks to load scripts and styles in the WordPress admin area.
 				add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
-				$this->get_logger()->debug( 'Hook "admin_enqueue_scripts" für das Laden der Skripte hinzugefügt.' );
+				$this->get_logger()->debug( 'Hook "admin_enqueue_scripts" added for loading scripts.' );
 
 				add_action( 'admin_enqueue_scripts', array( $this, 'load_styles' ) );
-				$this->get_logger()->debug( 'Hook "admin_enqueue_scripts" für das Laden der Stile hinzugefügt.' );
+				$this->get_logger()->debug( 'Hook "admin_enqueue_scripts" added for loading styles.' );
 
-				// Registriere die Standard-Styles.
+				// Register the default styles.
 				$this->register_style(
 					'f12-ui-admin-styles',
 					$UI_Manager->get_plugin_dir_url() . 'ui/assets/admin-style.css'
 				);
-				$this->get_logger()->debug( 'CSS-Datei "f12-ui-admin-styles" registriert.' );
+				$this->get_logger()->debug( 'CSS file "f12-ui-admin-styles" registered.' );
 
-				// Registriere die Standard-Skripte.
+				// Register the default scripts.
 				$this->register_script(
 					'f12-ui-admin-toggle',
 					$UI_Manager->get_plugin_dir_url() . 'ui/assets/toggle.js',
 					array( 'jquery' ),
 					'1.0'
 				);
-				$this->get_logger()->debug( 'JavaScript-Datei "f12-ui-admin-toggle" registriert.' );
+				$this->get_logger()->debug( 'JavaScript file "f12-ui-admin-toggle" registered.' );
 
 				$this->register_script(
 					'f12-ui-admin-clipboard',
@@ -68,16 +68,16 @@ namespace f12_cf7_captcha\ui {
 					array( 'jquery' ),
 					'1.0'
 				);
-				$this->get_logger()->debug( 'JavaScript-Datei "f12-ui-admin-clipboard" registriert.' );
+				$this->get_logger()->debug( 'JavaScript file "f12-ui-admin-clipboard" registered.' );
 
 				$this->register_script(
 					'f12-ui-admin',
 					$UI_Manager->get_plugin_dir_url() . 'ui/assets/admin-captcha.js',
 					[ 'jquery' ]
 				);
-				$this->get_logger()->debug( 'JavaScript-Datei "f12-ui-admin" registriert.' );
+				$this->get_logger()->debug( 'JavaScript file "f12-ui-admin" registered.' );
 
-				$this->get_logger()->info( 'Konstruktor der UI-Seite abgeschlossen. Stile und Skripte sind für die Registrierung bereit.' );
+				$this->get_logger()->info( 'UI Asset Handler constructor completed. Styles and scripts are ready for registration.' );
 			}
 
 			public function get_logger(): LoggerInterface {
@@ -97,14 +97,14 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function register_script(string $handle, string $src = '', array $deps = [], $ver = false, bool $in_footer = false): void
 			{
-				$this->get_logger()->info('Registriere ein neues Skript für das Enqueue.', [
+				$this->get_logger()->info('Registering a new script for enqueue.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 					'handle' => $handle,
 					'src' => $src,
 				]);
 
-				// Definiere die Skript-Daten in einem assoziativen Array.
+				// Define the script data in an associative array.
 				$script_data = [
 					'handle' => $handle,
 					'src' => $src,
@@ -113,11 +113,11 @@ namespace f12_cf7_captcha\ui {
 					'in_footer' => $in_footer
 				];
 
-				// Füge die Skript-Daten dem internen Speicher hinzu.
+				// Add the script data to the internal storage.
 				$this->Script_Storage[] = $script_data;
 
-				$this->get_logger()->info('Skript-Daten erfolgreich im Speicher abgelegt.');
-				$this->get_logger()->debug('Gespeicherte Skript-Daten:', $script_data);
+				$this->get_logger()->info('Script data successfully stored.');
+				$this->get_logger()->debug('Stored script data:', $script_data);
 			}
 
 			/**
@@ -133,14 +133,14 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function register_style(string $handle, string $src = '', array $deps = [], $ver = false, string $media = 'all'): void
 			{
-				$this->get_logger()->info('Registriere einen neuen Stil für das Enqueue.', [
+				$this->get_logger()->info('Registering a new style for enqueue.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 					'handle' => $handle,
 					'src' => $src,
 				]);
 
-				// Definiere die Stil-Daten in einem assoziativen Array.
+				// Define the style data in an associative array.
 				$style_data = [
 					'handle' => $handle,
 					'src' => $src,
@@ -149,11 +149,11 @@ namespace f12_cf7_captcha\ui {
 					'media' => $media,
 				];
 
-				// Füge die Stil-Daten dem internen Speicher hinzu.
+				// Add the style data to the internal storage.
 				$this->Style_Storage[] = $style_data;
 
-				$this->get_logger()->info('Stil-Daten erfolgreich im Speicher abgelegt.');
-				$this->get_logger()->debug('Gespeicherte Stil-Daten:', $style_data);
+				$this->get_logger()->info('Style data successfully stored.');
+				$this->get_logger()->debug('Stored style data:', $style_data);
 			}
 
 			/**
@@ -163,20 +163,20 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function load_scripts()
 			{
-				$this->get_logger()->info('Starte den Enqueue-Prozess für alle gespeicherten Skripte.', [
+				$this->get_logger()->info('Starting the enqueue process for all stored scripts.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Durchlaufe alle im `Script_Storage`-Array gespeicherten Skripte.
+				// Iterate through all scripts stored in the `Script_Storage` array.
 				foreach ($this->Script_Storage as $script) {
-					$this->get_logger()->debug('Füge Skript zur Ladeliste hinzu.', [
+					$this->get_logger()->debug('Adding script to load list.', [
 						'handle' => $script['handle'],
 						'src'    => $script['src'],
 					]);
 
-					// Rufe die WordPress-Funktion `wp_enqueue_script()` auf, um das Skript zu laden.
-					// Die Parameter werden direkt aus dem `script`-Array übernommen.
+					// Call the WordPress function `wp_enqueue_script()` to load the script.
+					// The parameters are taken directly from the `script` array.
 					wp_enqueue_script(
 						$script['handle'],
 						$script['src'],
@@ -186,7 +186,7 @@ namespace f12_cf7_captcha\ui {
 					);
 				}
 
-				$this->get_logger()->info('Alle Skripte wurden für das Laden in WordPress in die Warteschlange gestellt.');
+				$this->get_logger()->info('All scripts have been enqueued for loading in WordPress.');
 			}
 
 			/**
@@ -196,20 +196,20 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function load_styles()
 			{
-				$this->get_logger()->info('Starte den Enqueue-Prozess für alle gespeicherten Stile.', [
+				$this->get_logger()->info('Starting the enqueue process for all stored styles.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Durchlaufe alle im `Style_Storage`-Array gespeicherten Stil-Definitionen.
+				// Iterate through all style definitions stored in the `Style_Storage` array.
 				foreach ($this->Style_Storage as $style) {
-					$this->get_logger()->debug('Füge Stil zur Ladeliste hinzu.', [
+					$this->get_logger()->debug('Adding style to load list.', [
 						'handle' => $style['handle'],
 						'src'    => $style['src'],
 					]);
 
-					// Rufe die WordPress-Funktion `wp_enqueue_style()` auf, um das Stylesheet zu laden.
-					// Die Parameter werden direkt aus dem `style`-Array übernommen.
+					// Call the WordPress function `wp_enqueue_style()` to load the stylesheet.
+					// The parameters are taken directly from the `style` array.
 					wp_enqueue_style(
 						$style['handle'],
 						$style['src'],
@@ -219,7 +219,7 @@ namespace f12_cf7_captcha\ui {
 					);
 				}
 
-				$this->get_logger()->info('Alle Stile wurden für das Laden in WordPress in die Warteschlange gestellt.');
+				$this->get_logger()->info('All styles have been enqueued for loading in WordPress.');
 			}
 
 		}

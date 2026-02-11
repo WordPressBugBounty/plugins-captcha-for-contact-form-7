@@ -25,7 +25,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		parent::__construct($Controller, 0);
 
 		$this->get_logger()->debug(
-			"__construct(): Initialisierung gestartet",
+			"__construct(): Initialization started",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -35,7 +35,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		$this->init();
 
 		$this->get_logger()->info(
-			"__construct(): Initialisierung abgeschlossen",
+			"__construct(): Initialization completed",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -52,7 +52,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		$this->_captcha = '';
 
 		$this->get_logger()->debug(
-			"init(): Captcha zurückgesetzt",
+			"init(): Captcha reset",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -70,7 +70,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	{
 		if (empty($this->_captcha)) {
 			$this->get_logger()->warning(
-				"get(): Kein Captcha gesetzt",
+				"get(): No captcha set",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__
@@ -79,14 +79,14 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 			return '';
 		}
 
-		// Maskieren: nur erste und letzte Stelle sichtbar
+		// Masking: only first and last position visible
 		$length = strlen($this->_captcha);
 		$masked = substr($this->_captcha, 0, 1)
 		          . str_repeat('*', max(0, $length - 2))
 		          . substr($this->_captcha, -1);
 
 		$this->get_logger()->debug(
-			"get(): Captcha zurückgegeben",
+			"get(): Captcha returned",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
@@ -109,11 +109,11 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	{
 		$result = empty($captcha_code);
 
-		// Maskieren: nur 1. und letzte Stelle sichtbar
+		// Masking: only 1st and last position visible
 		$length = strlen($captcha_code);
 
 		$this->get_logger()->debug(
-			"is_valid(): Captcha validiert",
+			"is_valid(): Captcha validated",
 			[
 				'plugin'       => 'f12-cf7-captcha',
 				'code'  => $captcha_code,
@@ -137,7 +137,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		$captcha = sprintf( '<input id="%s" type="text" style="visibility:hidden!important; opacity:1!important; height:0!important; width:0!important; margin:0!important; padding:0!important;" name="%s" value=""/>', esc_attr( $field_name ), esc_attr( $field_name ) );
 
 		$this->get_logger()->debug(
-			"get_field(): Honeypot-Feld generiert",
+			"get_field(): Honeypot field generated",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'field_name' => $field_name
@@ -158,7 +158,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 
 		if ($filtered !== $captcha) {
 			$this->get_logger()->info(
-				"get_field(): Honeypot-Feld durch Filter angepasst",
+				"get_field(): Honeypot field modified by filter",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'field_name' => $field_name
@@ -179,11 +179,11 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		$response = '';
 
 		$this->get_logger()->debug(
-			"get_ajax_response(): Ajax-Response erzeugt",
+			"get_ajax_response(): Ajax response generated",
 			[
 				'plugin'   => 'f12-cf7-captcha',
 				'class'    => __CLASS__,
-				'response' => empty($response) ? '(leer)' : '(gesetzt)'
+				'response' => empty($response) ? '(empty)' : '(set)'
 			]
 		);
 

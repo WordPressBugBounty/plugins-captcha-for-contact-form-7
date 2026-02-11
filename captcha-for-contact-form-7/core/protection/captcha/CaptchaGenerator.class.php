@@ -42,14 +42,27 @@ abstract class CaptchaGenerator extends BaseModul
     /**
      * constructor.
      *
-     * @TODO adjust after updating all captchas
+     * @param CF7Captcha $Controller The main controller.
+     * @param int        $length     Length of captcha code. Pass 0 to skip generation (for pooled captchas).
      */
 	public function __construct(CF7Captcha $Controller, int $length)
 	{
 		parent::__construct($Controller);
 
+		// Skip generation if length is 0 (used for pooled captchas)
+		if ($length === 0) {
+			$this->get_logger()->debug(
+				"__construct(): Skipping captcha generation (length=0, likely pooled)",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__,
+				]
+			);
+			return;
+		}
+
 		$this->get_logger()->debug(
-			"__construct(): Starte Generierung eines neuen Captchas",
+			"__construct(): Starting generation of a new captcha",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
@@ -60,7 +73,7 @@ abstract class CaptchaGenerator extends BaseModul
 		$this->generate_captcha($length);
 
 		$this->get_logger()->info(
-			"__construct(): Captcha erfolgreich generiert",
+			"__construct(): Captcha successfully generated",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'length' => $length
@@ -79,10 +92,10 @@ abstract class CaptchaGenerator extends BaseModul
 		$uniqueId = $this->get_unique_id();
 		$captchaId = 'c_' . $uniqueId;
 
-		// Maske für Log (erste 3 und letzte 3 Zeichen behalten)
+		// Mask for log (keep first 3 and last 3 characters)
 
 		$this->get_logger()->debug(
-			"get_last_unique_id_captcha(): Unique Captcha-ID ermittelt",
+			"get_last_unique_id_captcha(): Unique captcha ID determined",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'captcha_id' => $captchaId
@@ -104,7 +117,7 @@ abstract class CaptchaGenerator extends BaseModul
 		$hashId   = 'hash_c_' . $uniqueId;
 
 		$this->get_logger()->debug(
-			"get_last_unique_id_hash(): Unique Hash-ID ermittelt",
+			"get_last_unique_id_hash(): Unique hash ID determined",
 			[
 				'plugin'  => 'f12-cf7-captcha',
 				'hash_id' => $hashId
@@ -126,7 +139,7 @@ abstract class CaptchaGenerator extends BaseModul
 
 
 		$this->get_logger()->info(
-			"generate_and_get_unique_id(): Neue Unique-ID generiert",
+			"generate_and_get_unique_id(): New unique ID generated",
 			[
 				'plugin'    => 'f12-cf7-captcha',
 				'unique_id' => $this->unique_id
@@ -146,7 +159,7 @@ abstract class CaptchaGenerator extends BaseModul
 	{
 		if (empty($this->unique_id)) {
 			$this->get_logger()->debug(
-				"get_unique_id(): Unique-ID leer, generiere neue",
+				"get_unique_id(): Unique ID empty, generating new one",
 				['plugin' => 'f12-cf7-captcha']
 			);
 
@@ -154,7 +167,7 @@ abstract class CaptchaGenerator extends BaseModul
 		}
 
 		$this->get_logger()->debug(
-			"get_unique_id(): Vorhandene Unique-ID zurückgegeben",
+			"get_unique_id(): Existing unique ID returned",
 			[
 				'plugin'    => 'f12-cf7-captcha',
 				'unique_id' => $this->unique_id
@@ -185,7 +198,7 @@ abstract class CaptchaGenerator extends BaseModul
 	public function generate_and_get_captcha(): ?Captcha
 	{
 		$this->get_logger()->debug(
-			"generate_and_get_captcha(): Starte Erstellung einer neuen Captcha-Session",
+			"generate_and_get_captcha(): Starting creation of a new captcha session",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -197,7 +210,7 @@ abstract class CaptchaGenerator extends BaseModul
 
 		if ($result) {
 			$this->get_logger()->info(
-				"generate_and_get_captcha(): Neue Captcha-Session erfolgreich gespeichert",
+				"generate_and_get_captcha(): New captcha session saved successfully",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $this->Captcha_Session->get_id()
@@ -205,7 +218,7 @@ abstract class CaptchaGenerator extends BaseModul
 			);
 		} else {
 			$this->get_logger()->error(
-				"generate_and_get_captcha(): Fehler beim Speichern der Captcha-Session",
+				"generate_and_get_captcha(): Error saving captcha session",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		}
@@ -233,7 +246,7 @@ abstract class CaptchaGenerator extends BaseModul
 		$image_url .= $reload_icon;
 
 		$this->get_logger()->debug(
-			"get_reload_button(): Reload-Icon ermittelt",
+			"get_reload_button(): Reload icon determined",
 			[
 				'plugin'       => 'f12-cf7-captcha',
 				'setting_icon' => $setting_icon,
@@ -243,12 +256,12 @@ abstract class CaptchaGenerator extends BaseModul
 		);
 
 		/**
-		 * Filter erlaubt es, das Icon zu überschreiben
+		 * Filter allows overriding the icon
 		 */
 		$image_url = apply_filters('f12-cf7-captcha-reload-icon', $image_url);
 
 		$this->get_logger()->info(
-			"get_reload_button(): Reload-Button HTML generiert",
+			"get_reload_button(): Reload button HTML generated",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'url'    => $image_url
@@ -274,7 +287,7 @@ abstract class CaptchaGenerator extends BaseModul
 	private function generate_captcha(int $length): void
 	{
 		$this->get_logger()->debug(
-			"generate_captcha(): Starte Generierung",
+			"generate_captcha(): Starting generation",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'length' => $length
@@ -291,7 +304,7 @@ abstract class CaptchaGenerator extends BaseModul
 		$this->_captcha = $result;
 
 		$this->get_logger()->info(
-			"generate_captcha(): Captcha-Code generiert",
+			"generate_captcha(): Captcha code generated",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'masked' => $result,
@@ -310,17 +323,17 @@ abstract class CaptchaGenerator extends BaseModul
 	{
 		if (empty($this->_captcha)) {
 			$this->get_logger()->warning(
-				"get(): Kein Captcha gesetzt",
+				"get(): No captcha set",
 				['plugin' => 'f12-cf7-captcha']
 			);
 			return '';
 		}
 
-		// Maskieren: nur 1. und letzte Stelle sichtbar
+		// Masking: only 1st and last position visible
 		$length = strlen($this->_captcha);
 
 		$this->get_logger()->debug(
-			"get(): Captcha zurückgegeben",
+			"get(): Captcha returned",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'masked' => $this->_captcha,

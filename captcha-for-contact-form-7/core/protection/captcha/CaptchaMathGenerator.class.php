@@ -46,7 +46,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		parent::__construct($Controller, 0);
 
 		$this->get_logger()->debug(
-			"__construct(): Initialisierung gestartet",
+			"__construct(): Initialization started",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -56,7 +56,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		$this->init();
 
 		$this->get_logger()->info(
-			"__construct(): Initialisierung abgeschlossen",
+			"__construct(): Initialization completed",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
@@ -77,7 +77,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	{
 		if (empty($this->_method)) {
 			$this->get_logger()->warning(
-				"get_method(): Keine Methode gesetzt",
+				"get_method(): No method set",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__
@@ -87,7 +87,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->debug(
-			"get_method(): Methode zurückgegeben",
+			"get_method(): Method returned",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
@@ -114,7 +114,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		$number = rand($min, $max);
 
 		$this->get_logger()->debug(
-			"generate_number(): Zufallszahl generiert",
+			"generate_number(): Random number generated",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
@@ -152,7 +152,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->debug(
-			"init(): Mathe-Captcha initialisiert",
+			"init(): Math captcha initialized",
 			[
 				'plugin'   => 'f12-cf7-captcha',
 				'class'    => __CLASS__,
@@ -174,7 +174,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	{
 		if (empty($this->_captcha)) {
 			$this->get_logger()->warning(
-				"get(): Kein Captcha gesetzt",
+				"get(): No captcha set",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__
@@ -183,11 +183,11 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 			return '';
 		}
 
-		// Maskierung: z. B. nur Länge anzeigen
+		// Masking: e.g. only show length
 		$length = strlen((string) $this->_captcha);
 
 		$this->get_logger()->debug(
-			"get(): Captcha-Wert zurückgegeben",
+			"get(): Captcha value returned",
 			[
 				'plugin'  => 'f12-cf7-captcha',
 				'class'   => __CLASS__,
@@ -219,7 +219,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		);
 
 		$this->get_logger()->debug(
-			"get_calculation(): Mathe-Captcha erstellt",
+			"get_calculation(): Math captcha created",
 			[
 				'plugin'   => 'f12-cf7-captcha',
 				'class'    => __CLASS__,
@@ -248,11 +248,11 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	public function is_valid(string $captcha_code, string $captcha_hash): bool
 	{
 		/** @var UserData $User_Data */
-		$User_Data  = $this->Controller->get_modul('user-data');
+		$User_Data  = $this->Controller->get_module('user-data');
 		$ip_address = $User_Data->get_ip_address();
 
 		$this->get_logger()->debug(
-			"is_valid(): Starte Validierung",
+			"is_valid(): Starting validation",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
@@ -266,7 +266,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 
 		if (!$Captcha) {
 			$this->get_logger()->warning(
-				"is_valid(): Kein Captcha für Hash gefunden",
+				"is_valid(): No captcha found for hash",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__,
@@ -278,7 +278,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 
 		if ($Captcha->get_validated() == 1) {
 			$this->get_logger()->info(
-				"is_valid(): Captcha bereits validiert → ungültig",
+				"is_valid(): Captcha already validated - invalid",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__,
@@ -293,7 +293,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 
 		if ((int)$captcha_code !== (int)$Captcha->get_code()) {
 			$this->get_logger()->warning(
-				"is_valid(): Code stimmt nicht überein → ungültig",
+				"is_valid(): Code does not match - invalid",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'class'     => __CLASS__,
@@ -306,7 +306,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->info(
-			"is_valid(): Captcha erfolgreich validiert",
+			"is_valid(): Captcha successfully validated",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
@@ -362,7 +362,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		/**
 		 * @var UserData $User_Data
 		 */
-		$User_Data  = $this->Controller->get_modul( 'user-data' );
+		$User_Data  = $this->Controller->get_module( 'user-data' );
 		$ip_address = $User_Data->get_ip_address();
 
 		/*
@@ -371,7 +371,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		if ( $this->Captcha_Session != null ) {
 			$Captcha_Session = $this->Captcha_Session;
 			$this->get_logger()->debug(
-				"get_field(math): Vorhandene Captcha-Session wiederverwendet",
+				"get_field(math): Existing captcha session reused",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'ip'     => $ip_address,
@@ -380,7 +380,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		} else {
 			$Captcha_Session = new Captcha( $this->Controller->get_logger(), $ip_address );
 			$this->get_logger()->debug(
-				"get_field(math): Neue Captcha-Session erstellt",
+				"get_field(math): New captcha session created",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'ip'     => $ip_address,
@@ -445,7 +445,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		 *
 		 * @var TemplateController $TemplateController
 		 */
-		$TemplateController = $this->Controller->get_modul( 'template' );
+		$TemplateController = $this->Controller->get_module( 'template' );
 
 
 		/*
@@ -458,7 +458,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->info(
-			"get_field(math): Captcha-Feld wird generiert",
+			"get_field(math): Captcha field is being generated",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'field_name' => $field_name,
@@ -510,7 +510,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 
 		if ($filtered !== $captcha) {
 			$this->get_logger()->debug(
-				"get_field(math): Captcha-Feld durch Filter modifiziert",
+				"get_field(math): Captcha field modified by filter",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'field_name' => $field_name
@@ -533,7 +533,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		$calculation = $this->get_calculation();
 
 		$this->get_logger()->debug(
-			"get_ajax_response(math): Captcha-Formel an Ajax zurückgegeben",
+			"get_ajax_response(math): Captcha formula returned to Ajax",
 			[
 				'plugin'  => 'f12-cf7-captcha',
 				'class'   => __CLASS__,

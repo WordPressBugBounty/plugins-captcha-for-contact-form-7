@@ -21,12 +21,12 @@ namespace f12_cf7_captcha\ui {
 
 		public function __construct(UI_Manager $UI_Manager)
 		{
-			// Setze die UI_Manager-Instanz über eine private/protected Methode.
-			// Dies stellt sicher, dass die Logik für das Setzen der Eigenschaft gekapselt ist.
+			// Set the UI Manager instance via a private/protected method.
+			// This ensures that the logic for setting the property is encapsulated.
 			$this->set_ui_manager($UI_Manager);
-			$this->get_logger()->debug('UI_Manager-Instanz wurde gesetzt.');
+			$this->get_logger()->debug('UI_Manager instance has been set.');
 
-			$this->get_logger()->info('Konstruktor abgeschlossen.');
+			$this->get_logger()->info('Constructor completed.');
 		}
 
 		public function get_logger(): LoggerInterface {
@@ -39,22 +39,22 @@ namespace f12_cf7_captcha\ui {
 
 		public function get_ui_manager(): UI_Manager
 		{
-			$this->get_logger()->info('Rufe die UI_Manager-Instanz ab.', [
+			$this->get_logger()->info('Retrieving the UI_Manager instance.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
 
-			// Gib die privat gespeicherte UI_Manager-Instanz zurück.
+			// Return the privately stored UI Manager instance.
 			$ui_manager = $this->UI_Manager;
 
 			if (!$ui_manager instanceof UI_Manager) {
-				$this->get_logger()->critical('Die UI_Manager-Instanz ist nicht verfügbar oder vom falschen Typ.', [
+				$this->get_logger()->critical('The UI_Manager instance is not available or is of the wrong type.', [
 					'type' => gettype($this->UI_Manager)
 				]);
-				// Optional: Hier könnte eine Ausnahme ausgelöst werden, wenn die Instanz unbedingt benötigt wird.
+				// Optional: An exception could be thrown here if the instance is absolutely required.
 			}
 
-			$this->get_logger()->debug('UI_Manager-Instanz erfolgreich abgerufen.');
+			$this->get_logger()->debug('UI_Manager instance successfully retrieved.');
 
 			return $ui_manager;
 		}
@@ -67,19 +67,19 @@ namespace f12_cf7_captcha\ui {
 		 */
 		public function render(): void
 		{
-			$this->get_logger()->info('Starte das Rendering aller gespeicherten Nachrichten.', [
+			$this->get_logger()->info('Starting the rendering of all stored messages.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			]);
 
-			// Durchlaufe alle im `messages`-Array gespeicherten HTML-Nachrichten.
+			// Iterate through all HTML messages stored in the `messages` array.
 			foreach ($this->messages as $key => $value) {
-				$this->get_logger()->debug('Rendere Nachricht.', ['key' => $key, 'message_length' => strlen($value)]);
+				$this->get_logger()->debug('Rendering message.', ['key' => $key, 'message_length' => strlen($value)]);
 
-				// Verwende wp_kses(), um die Nachricht vor Cross-Site-Scripting (XSS) zu schützen.
-				// Die erlaubten HTML-Tags sind 'div' mit den Attributen 'class' und 'role'.
-				// PHP_EOL stellt sicher, dass jede Nachricht in einer neuen Zeile ausgegeben wird,
-				// was die Lesbarkeit des generierten HTML-Quellcodes verbessert.
+				// Use wp_kses() to protect the message from Cross-Site-Scripting (XSS).
+				// The allowed HTML tags are 'div' with the attributes 'class' and 'role'.
+				// PHP_EOL ensures that each message is output on a new line,
+				// which improves the readability of the generated HTML source code.
 				echo wp_kses($value, [
 						'div' => [
 							'class' => [],
@@ -88,7 +88,7 @@ namespace f12_cf7_captcha\ui {
 					]) . PHP_EOL;
 			}
 
-			$this->get_logger()->info('Rendering aller Nachrichten abgeschlossen.');
+			$this->get_logger()->info('Rendering of all messages completed.');
 		}
 
 		/**
@@ -103,14 +103,14 @@ namespace f12_cf7_captcha\ui {
 		 */
 		public function add(string $message, string $type): void
 		{
-			$this->get_logger()->info('Füge eine neue UI-Nachricht hinzu.', [
+			$this->get_logger()->info('Adding a new UI message.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 				'type' => $type,
 			]);
 
-			// Definiere die Zuordnung von Nachrichtentypen zu CSS-Klassen in einem Array.
-			// Dies ist effizienter und leichter zu pflegen als eine lange elseif-Kette.
+			// Define the mapping of message types to CSS classes in an array.
+			// This is more efficient and easier to maintain than a long elseif chain.
 			$type_map = [
 				'error'    => 'alert-danger',
 				'success'  => 'alert-success',
@@ -120,28 +120,28 @@ namespace f12_cf7_captcha\ui {
 				'critical' => 'alert-critical',
 			];
 
-			// Verwende den Null Coalescing Operator, um den Typ zuzuordnen.
-			// Wenn der übergebene $type in der Map nicht existiert, wird der ursprüngliche Wert verwendet.
+			// Use the Null Coalescing Operator to assign the type.
+			// If the passed $type does not exist in the map, the original value is used.
 			$css_class = $type_map[$type] ?? $type;
 
-			$this->get_logger()->debug('CSS-Klasse für Nachrichtentyp ermittelt.', [
+			$this->get_logger()->debug('CSS class determined for message type.', [
 				'original_type' => $type,
 				'css_class'     => $css_class,
 			]);
 
-			// Erstelle den HTML-String.
-			// Die WordPress-Funktionen esc_attr() und esc_html() sind wichtig,
-			// um Cross-Site-Scripting (XSS) zu verhindern.
+			// Create the HTML string.
+			// The WordPress functions esc_attr() and esc_html() are important
+			// to prevent Cross-Site-Scripting (XSS).
 			$html_message = sprintf(
 				'<div class="box %s" role="alert">%s</div>',
 				esc_attr($css_class),
 				esc_html($message)
 			);
 
-			// Füge die generierte HTML-Nachricht dem Nachrichten-Array hinzu.
+			// Add the generated HTML message to the messages array.
 			$this->messages[] = $html_message;
 
-			$this->get_logger()->info('Nachricht erfolgreich dem Nachrichten-Array hinzugefügt.');
+			$this->get_logger()->info('Message successfully added to the messages array.');
 		}
 	}
 }

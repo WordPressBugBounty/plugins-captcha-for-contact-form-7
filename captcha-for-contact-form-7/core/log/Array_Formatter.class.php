@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 class Array_Formatter
 {
 	/**
-	 * Prüfen, ob ein Array-Key wahrscheinlich ein Passwort-Feld ist
+	 * Check if an array key is likely a password field
 	 */
 	private static function is_password_field(string $key): bool {
 		$key = strtolower($key);
@@ -20,14 +20,14 @@ class Array_Formatter
 	}
 
 	/**
-	 * Passwort maskieren (komplett durch Sternchen ersetzen)
+	 * Mask password (replace completely with asterisks)
 	 */
 	private static function mask_password(string $password): string {
 		$len = strlen($password);
 		if ($len === 0) {
 			return '';
 		}
-		// Optional: ersten und letzten Buchstaben sichtbar lassen
+		// Optional: keep first and last letter visible
 		if ($len > 2) {
 			return substr($password, 0, 1) . str_repeat('*', $len - 2) . substr($password, -1);
 		}
@@ -47,7 +47,7 @@ class Array_Formatter
 				$value = self::to_string($value, $delimiter, $use_key_as_label);
 			}
 
-			// Maskierung einbauen
+			// Apply masking
 			if (is_string($value)) {
 				if (self::is_password_field($key)) {
 					$value = self::mask_password($value);
@@ -63,7 +63,7 @@ class Array_Formatter
 			$response .= $value . $delimiter;
 		}
 
-		\Forge12\Shared\Logger::getInstance()->debug("Array_Formatter genutzt", [
+		\Forge12\Shared\Logger::getInstance()->debug("Array_Formatter used", [
 			'plugin'  => 'f12-cf7-captcha',
 			'preview' => mb_substr($response, 0, 120) . (strlen($response) > 120 ? '...' : '')
 		]);
@@ -72,7 +72,7 @@ class Array_Formatter
 	}
 
 	/**
-	 * E-Mail maskieren (wie im Logger)
+	 * Mask email (as in Logger)
 	 */
 	private static function mask_email(string $email): string {
 		[$user, $domain] = explode('@', $email, 2);
@@ -86,7 +86,7 @@ class Array_Formatter
 	}
 
 	/**
-	 * IP maskieren (wie im Logger)
+	 * Mask IP (as in Logger)
 	 */
 	private static function mask_ip(string $ip): string {
 		if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {

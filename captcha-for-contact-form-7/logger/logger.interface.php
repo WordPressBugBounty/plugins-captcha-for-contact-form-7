@@ -14,6 +14,6 @@ if ( ! interface_exists( 'Forge12\Shared\LoggerInterface' ) ) {
 
 		public function warning( string $message, array $context = [] ): void;
 
-		public function notice( string $message, array $context = [] ): void; // Füge diese Zeile hinzu
+		public function notice( string $message, array $context = [] ): void; // Add this line
 	}
 }

@@ -20,21 +20,21 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function __construct(UI_Manager $UI_Manager)
 			{
-				// Setze die Instanz des UI-Managers.
+				// Set the UI Manager instance.
 				$this->set_ui_manager($UI_Manager);
-				$this->get_logger()->debug('UI_Manager-Instanz wurde gesetzt.');
+				$this->get_logger()->debug('UI_Manager instance has been set.');
 
-				// Füge einen WordPress-Hook hinzu, um die Untermenüseiten zu erstellen.
-				// 'admin_menu' ist der Standard-Hook, um Menüelemente im Admin-Dashboard zu registrieren.
+				// Add a WordPress hook to create the submenu pages.
+				// 'admin_menu' is the standard hook to register menu items in the admin dashboard.
 				add_action('admin_menu', [$this, 'add_submenu_pages']);
-				$this->get_logger()->debug('Hook "admin_menu" für das Hinzufügen von Untermenüseiten registriert.');
+				$this->get_logger()->debug('Hook "admin_menu" registered for adding submenu pages.');
 
-				// Füge einen weiteren Hook hinzu, um bestimmte Untermenüseiten im Admin-Menü auszublenden,
-				// während sie weiterhin über ihre URL erreichbar bleiben.
+				// Add another hook to hide certain submenu pages in the admin menu,
+				// while they remain accessible via their URL.
 				add_action('admin_head', [$this, 'hide_submenu_pages']);
-				$this->get_logger()->debug('Hook "admin_head" für das Ausblenden von Untermenüseiten registriert.');
+				$this->get_logger()->debug('Hook "admin_head" registered for hiding submenu pages.');
 
-				$this->get_logger()->info('Konstruktor abgeschlossen.');
+				$this->get_logger()->info('Constructor completed.');
 			}
 
 			public function get_logger(): LoggerInterface {
@@ -62,20 +62,20 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private function get_title(): string
 			{
-				$this->get_logger()->info('Rufe den Titel der UI-Seite ab, indem ich den Namen vom UI-Manager beziehe.', [
+				$this->get_logger()->info('Retrieving the UI page title by getting the name from the UI manager.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Rufe die get_ui_manager-Methode auf, um die Instanz des UI-Managers zu erhalten.
+				// Call the get_ui_manager method to get the UI Manager instance.
 				$ui_manager = $this->get_ui_manager();
 
-				// Rufe dann die get_name-Methode auf dieser Instanz auf, um den Namen zu erhalten.
+				// Then call the get_name method on this instance to get the name.
 				$title = $ui_manager->get_name();
 
-				$this->get_logger()->debug('Titel erfolgreich vom UI-Manager abgerufen.', ['title' => $title]);
+				$this->get_logger()->debug('Title successfully retrieved from UI manager.', ['title' => $title]);
 
-				// Gib den Titel als String zurück.
+				// Return the title as a string.
 				return $title;
 			}
 
@@ -84,18 +84,18 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private function get_capability(): string
 			{
-				$this->get_logger()->info('Rufe die erforderliche Benutzerberechtigung vom UI-Manager ab.', [
+				$this->get_logger()->info('Retrieving the required user capability from the UI manager.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Rufe die get_ui_manager-Methode auf, um die Instanz des UI-Managers zu erhalten.
+				// Call the get_ui_manager method to get the UI Manager instance.
 				$ui_manager = $this->get_ui_manager();
 
-				// Rufe die get_capability-Methode auf dieser Instanz auf.
+				// Call the get_capability method on this instance.
 				$capability = $ui_manager->get_capability();
 
-				$this->get_logger()->debug('Benutzerberechtigung erfolgreich vom UI-Manager abgerufen.', ['capability' => $capability]);
+				$this->get_logger()->debug('User capability successfully retrieved from UI manager.', ['capability' => $capability]);
 
 				return $capability;
 			}
@@ -105,19 +105,19 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private function get_slug(): string
 			{
-				$this->get_logger()->info('Rufe den Slug der Seite ab, indem die Domain des UI-Managers verwendet wird.', [
+				$this->get_logger()->info('Retrieving the page slug using the UI manager domain.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Rufe die Instanz des UI-Managers ab.
+				// Retrieve the UI Manager instance.
 				$UI_Manager = $this->get_ui_manager();
 
-				// Die get_domain()-Methode des UI_Managers liefert den eindeutigen Bezeichner des Plugins.
-				// Dieser wird hier als Slug der Menüseite verwendet.
+				// The get_domain() method of UI_Manager returns the unique identifier of the plugin.
+				// This is used here as the menu page slug.
 				$slug = $UI_Manager->get_domain();
 
-				$this->get_logger()->debug('Slug erfolgreich vom UI-Manager erhalten.', ['slug' => $slug]);
+				$this->get_logger()->debug('Slug successfully retrieved from UI manager.', ['slug' => $slug]);
 
 				return $slug;
 			}
@@ -129,18 +129,18 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private function get_icon(): string
 			{
-				$this->get_logger()->info('Rufe das Admin-Menü-Icon vom UI-Manager ab.', [
+				$this->get_logger()->info('Retrieving the admin menu icon from the UI manager.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Rufe die Instanz des UI-Managers ab.
+				// Retrieve the UI Manager instance.
 				$UI_Manager = $this->get_ui_manager();
 
-				// Die `get_icon()`-Methode des UI_Managers liefert den CSS-Klassen-Namen oder die URL des Icons.
+				// The `get_icon()` method of UI_Manager returns the CSS class name or the icon URL.
 				$icon = $UI_Manager->get_icon();
 
-				$this->get_logger()->debug('Icon erfolgreich vom UI-Manager erhalten.', ['icon' => $icon]);
+				$this->get_logger()->debug('Icon successfully retrieved from UI manager.', ['icon' => $icon]);
 
 				return $icon;
 			}
@@ -161,50 +161,50 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function add_submenu_pages(): void
 			{
-				$this->get_logger()->info('Starte den Prozess zum Hinzufügen der Admin-Menü- und Untermenüseiten.', [
+				$this->get_logger()->info('Starting the process to add admin menu and submenu pages.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Registriere die Hauptseite des Plugins als Menü-Seite der obersten Ebene.
-				// WordPress empfiehlt diese Vorgehensweise, wenn die Hauptseite als Dashboard dienen soll.
+				// Register the main plugin page as a top-level menu page.
+				// WordPress recommends this approach when the main page should serve as a dashboard.
 				add_menu_page(
-					$this->get_title(),          // Seite-Titel
-					$this->get_title(),          // Menü-Titel
-					$this->get_capability(),     // Erforderliche Benutzerberechtigung
-					$this->get_slug(),           // Eindeutiger Slug
-					'',                          // Callback-Funktion (wird später in der Unterseite gehandhabt)
-					$this->get_icon()            // Icon-URL oder Dashicon-Klasse
+					$this->get_title(),          // Page title
+					$this->get_title(),          // Menu title
+					$this->get_capability(),     // Required user capability
+					$this->get_slug(),           // Unique slug
+					'',                          // Callback function (handled later in the submenu page)
+					$this->get_icon()            // Icon URL or Dashicon class
 				);
-				$this->get_logger()->info('Haupt-Menüseite erfolgreich registriert.', ['slug' => $this->get_slug()]);
+				$this->get_logger()->info('Main menu page successfully registered.', ['slug' => $this->get_slug()]);
 
-				// Durchlaufe alle im Speicher registrierten UI-Seiten, um sie als Untermenüs hinzuzufügen.
+				// Iterate through all registered UI pages in storage to add them as submenus.
 				foreach ($this->get_page_storage() as /** @var UI_Page $Page */ $Page) {
-					$this->get_logger()->debug('Verarbeite Untermenüseite.', ['page_slug' => $Page->get_slug()]);
+					$this->get_logger()->debug('Processing submenu page.', ['page_slug' => $Page->get_slug()]);
 
-					// Bestimme den Slug für die Unterseite. Der Dashboard-Slug ist derselbe wie der Haupt-Slug.
+					// Determine the slug for the subpage. The dashboard slug is the same as the main slug.
 					if ($Page->is_dashboard()) {
 						$slug = $this->get_slug();
 					} else {
 						$slug = $this->get_slug() . '_' . $Page->get_slug();
 					}
 
-					// Registriere die Untermenüseite.
+					// Register the submenu page.
 					add_submenu_page(
-						$this->get_slug(),       // Slug der übergeordneten Seite
-						$Page->get_title(),      // Seite-Titel
-						$Page->get_title(),      // Menü-Titel
-						$this->get_capability(), // Erforderliche Berechtigung
-						$slug,                   // Eindeutiger Slug der Unterseite
-						function () {            // Anonyme Funktion als Callback, um die Seite zu rendern
+						$this->get_slug(),       // Parent page slug
+						$Page->get_title(),      // Page title
+						$Page->get_title(),      // Menu title
+						$this->get_capability(), // Required capability
+						$slug,                   // Unique subpage slug
+						function () {            // Anonymous callback function to render the page
 							$this->render_page();
 						},
-						$Page->get_position()    // Position im Untermenü
+						$Page->get_position()    // Position in submenu
 					);
-					$this->get_logger()->info('Untermenüseite erfolgreich registriert.', ['slug' => $slug, 'title' => $Page->get_title()]);
+					$this->get_logger()->info('Submenu page successfully registered.', ['slug' => $slug, 'title' => $Page->get_title()]);
 				}
 
-				$this->get_logger()->info('Alle Menü- und Untermenüseiten wurden registriert.');
+				$this->get_logger()->info('All menu and submenu pages have been registered.');
 			}
 
 			/**
@@ -215,42 +215,42 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function hide_submenu_pages(): void
 			{
-				$this->get_logger()->info('Starte den Prozess zum Ausblenden von Untermenüseiten.', [
+				$this->get_logger()->info('Starting the process to hide submenu pages.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Durchlaufe alle im `Page_Storage` gespeicherten UI-Seiten.
+				// Iterate through all UI pages stored in `Page_Storage`.
 				foreach ($this->get_page_storage() as /** @var UI_Page $Page */ $Page) {
-					$this->get_logger()->debug('Überprüfe Seite auf Sichtbarkeit im Menü.', ['page_slug' => $Page->get_slug()]);
+					$this->get_logger()->debug('Checking page visibility in menu.', ['page_slug' => $Page->get_slug()]);
 
-					// Überprüfe, ob die Seite im Menü versteckt werden soll.
+					// Check if the page should be hidden in the menu.
 					if (!$Page->hide_in_menu()) {
-						$this->get_logger()->debug('Seite muss nicht versteckt werden. Überspringe.', ['page_slug' => $Page->get_slug()]);
+						$this->get_logger()->debug('Page does not need to be hidden. Skipping.', ['page_slug' => $Page->get_slug()]);
 						continue;
 					}
 
-					// Bestimme den Slug der Unterseite, die versteckt werden soll.
+					// Determine the slug of the subpage to be hidden.
 					if ($Page->is_dashboard()) {
-						// Dashboard-Seite hat denselben Slug wie die Hauptseite.
+						// Dashboard page has the same slug as the main page.
 						$slug = $this->get_slug();
 					} else {
-						// Normale Unterseite.
+						// Normal subpage.
 						$slug = $this->get_slug() . '_' . $Page->get_slug();
 					}
 
-					// Verwende die WordPress-Funktion `remove_submenu_page()`,
-					// um die Seite aus dem Admin-Menü zu entfernen.
-					// Die Seite bleibt über ihre direkte URL zugänglich.
+					// Use the WordPress function `remove_submenu_page()`
+					// to remove the page from the admin menu.
+					// The page remains accessible via its direct URL.
 					remove_submenu_page($this->get_slug(), $slug);
 
-					$this->get_logger()->info('Untermenüseite erfolgreich aus dem Menü entfernt.', [
+					$this->get_logger()->info('Submenu page successfully removed from menu.', [
 						'parent_slug' => $this->get_slug(),
 						'removed_slug' => $slug,
 					]);
 				}
 
-				$this->get_logger()->info('Prozess zum Ausblenden von Untermenüseiten abgeschlossen.');
+				$this->get_logger()->info('Process to hide submenu pages completed.');
 			}
 
 			/**
@@ -260,46 +260,48 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function render_page(): void
 			{
-				$this->get_logger()->info('Starte den Rendering-Prozess für die Admin-Seite.', [
+				$this->get_logger()->info('Starting the rendering process for the admin page.', [
 					'class'  => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Ermittle den aktuellen Seiten-Slug aus der URL.
+				// Determine the current page slug from the URL.
 				$page = '';
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 				if (isset($_GET['page'])) {
-					$page_full_slug = sanitize_text_field($_GET['page']);
+					// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+				$page_full_slug = sanitize_text_field( wp_unslash( $_GET['page'] ) );
 					$plugin_slug = $this->get_slug();
 
-					// Entferne den Plugin-Slug und den folgenden Trennstrich.
-					// Die substr() und explode() Methode kann bei unterschiedlichen Slugs fehlschlagen.
-					// Ein besserer Weg wäre, den Plugin-Slug direkt am Anfang der Zeichenkette zu entfernen.
+					// Remove the plugin slug and the following separator.
+					// The substr() and explode() method can fail with different slugs.
+					// A better approach would be to remove the plugin slug directly from the beginning of the string.
 					if (strpos($page_full_slug, $plugin_slug) === 0) {
 						$page = substr($page_full_slug, strlen($plugin_slug));
-						// Entferne den führenden Trennstrich, falls vorhanden.
+						// Remove the leading separator if present.
 						$page = ltrim($page, '_');
 					}
 				}
 
-				// Wenn kein oder nur der Haupt-Slug vorhanden ist, setze den Standard-Slug.
+				// If no slug or only the main slug is present, set the default slug.
 				if (empty($page)) {
 					$page = $this->get_slug();
 				}
-				$this->get_logger()->debug('Aktueller Seiten-Slug ermittelt.', ['page_slug' => $page]);
+				$this->get_logger()->debug('Current page slug determined.', ['page_slug' => $page]);
 
-				// Rufe alle registrierten UI-Seiten ab.
+				// Retrieve all registered UI pages.
 				$Page_Storage = $this->get_page_storage();
 				$Menu_Page_Storage = [];
 
-				// Erstelle ein separates Array mit Seiten, die im Menü angezeigt werden sollen.
+				// Create a separate array with pages that should be displayed in the menu.
 				foreach ($Page_Storage as $UI_Page) {
 					if (!$UI_Page->hide_in_menu()) {
 						$Menu_Page_Storage[] = $UI_Page;
 					}
 				}
-				$this->get_logger()->debug('Anzahl der Seiten im Menü: ' . count($Menu_Page_Storage));
+				$this->get_logger()->debug('Number of pages in menu: ' . count($Menu_Page_Storage));
 
-				// Beginne mit dem Rendern des HTML-Gerüsts der Admin-Seite.
+				// Begin rendering the HTML structure of the admin page.
 				?>
                 <div class="forge12-plugin <?php echo esc_attr('captcha-for-contact-form-7'); ?>">
                     <div class="forge12-plugin-header">
@@ -308,25 +310,25 @@ namespace f12_cf7_captcha\ui {
                                  alt="Forge12 Interactive GmbH" title="Forge12 Interactive GmbH"/>
                             <div class="title">
                                 <h1>
-									<?php _e('SilentShield – Captcha & Anti-Spam for WordPress', 'captcha-for-contact-form-7'); ?>
+									<?php esc_html_e('SilentShield – Captcha & Anti-Spam for WordPress', 'captcha-for-contact-form-7'); ?>
                                 </h1>
-                                <p><?php _e(' by Forge12 Interactive GmbH', 'captcha-for-contact-form-7'); ?></p>
+                                <p><?php esc_html_e(' by Forge12 Interactive GmbH', 'captcha-for-contact-form-7'); ?></p>
                             </div>
                         </div>
                     </div>
                     <div class="forge12-plugin-menu">
 						<?php
-						// Löse den Hook aus, um das Menü zu rendern.
+						// Trigger the hook to render the menu.
 						do_action($this->get_slug() . '_admin_menu', $Menu_Page_Storage, $page, $this->get_slug());
-						$this->get_logger()->debug('Admin-Menü-Hook ausgelöst.');
+						$this->get_logger()->debug('Admin menu hook triggered.');
 						?>
                     </div>
                     <div class="forge12-plugin-content">
                         <div class="forge12-plugin-content-main">
 							<?php
-							// Löse den Hook aus, um den Inhalt der aktuellen Seite zu rendern.
+							// Trigger the hook to render the content of the current page.
 							do_action('forge12-plugin-content-' . $this->get_slug(), $this->get_slug(), $page);
-							$this->get_logger()->debug('Seiten-Inhalt-Hook ausgelöst.');
+							$this->get_logger()->debug('Page content hook triggered.');
 							?>
                         </div>
                     </div>
@@ -338,7 +340,7 @@ namespace f12_cf7_captcha\ui {
                     </div>
                 </div>
 				<?php
-				$this->get_logger()->info('Rendering der Admin-Seite abgeschlossen.');
+				$this->get_logger()->info('Admin page rendering completed.');
 			}
 		}
 	}

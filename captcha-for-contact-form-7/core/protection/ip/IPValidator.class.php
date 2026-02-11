@@ -11,11 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once( 'IPBan.class.php' );
-require_once( 'IPLog.class.php' );
-require_once( 'Salt.class.php' );
-require_once( 'IPBanCleaner.class.php' );
-require_once( 'IPLogCleaner.class.php' );
 
 /**
  * Class IPValidator
@@ -40,7 +35,7 @@ class IPValidator extends BaseProtection {
 
 		$this->Controller = $Controller;
 
-		$this->get_logger()->info('Instanz erstellt und Cleaner initialisiert', [
+		$this->get_logger()->info('Instance created and cleaners initialized', [
 			'cleaner_classes' => [
 				IPBanCleaner::class,
 				IPLogCleaner::class,
@@ -58,7 +53,7 @@ class IPValidator extends BaseProtection {
 	 */
 	public function get_log_cleaner(): IPLogCleaner
 	{
-		$this->get_logger()->debug('Log-Cleaner abgefragt', [
+		$this->get_logger()->debug('Log cleaner retrieved', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -73,11 +68,42 @@ class IPValidator extends BaseProtection {
 	 * @return IPBanCleaner The IPBanCleaner object.
 	 */
 	public function get_ban_cleaner(): IPBanCleaner {
-		$this->get_logger()->debug('IP-Ban-Cleaner abgefragt', [
+		$this->get_logger()->debug('IP ban cleaner retrieved', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 		return $this->_IP_Ban_Cleaner;
+	}
+
+	/**
+	 * Create a new Salt instance.
+	 *
+	 * @return Salt
+	 */
+	protected function create_salt(): Salt {
+		return new Salt($this->get_logger());
+	}
+
+	/**
+	 * Create a new IPLog instance.
+	 *
+	 * @param array $params Optional parameters.
+	 *
+	 * @return IPLog
+	 */
+	protected function create_ip_log(array $params = []): IPLog {
+		return new IPLog($this->get_logger(), $params);
+	}
+
+	/**
+	 * Create a new IPBan instance.
+	 *
+	 * @param array $params Optional parameters.
+	 *
+	 * @return IPBan
+	 */
+	protected function create_ip_ban(array $params = []): IPBan {
+		return new IPBan($this->get_logger(), $params);
 	}
 
 	/**
@@ -89,7 +115,7 @@ class IPValidator extends BaseProtection {
 	{
 		$is_enabled = (int) $this->Controller->get_settings('protection_ip_enable', 'global') === 1;
 
-		$this->get_logger()->debug('Prüfe, ob IP-Schutz aktiviert ist', [
+		$this->get_logger()->debug('Checking if IP protection is enabled', [
 			'is_enabled_raw' => $is_enabled,
 			'class'          => __CLASS__,
 			'method'         => __METHOD__,
@@ -97,7 +123,7 @@ class IPValidator extends BaseProtection {
 
 		$filtered = apply_filters('f12-cf7-captcha-skip-validation-ip', $is_enabled);
 
-		$this->get_logger()->debug('Filterergebnis für IP-Schutz', [
+		$this->get_logger()->debug('Filter result for IP protection', [
 			'is_enabled_filtered' => $filtered,
 			'class'               => __CLASS__,
 			'method'              => __METHOD__,
@@ -115,7 +141,7 @@ class IPValidator extends BaseProtection {
 	 */
 	public function get_captcha(...$args): string
 	{
-		$this->get_logger()->debug('Captcha abgefragt', [
+		$this->get_logger()->debug('Captcha retrieved', [
 			'args'   => $args,
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
@@ -133,7 +159,7 @@ class IPValidator extends BaseProtection {
 	public function do_handle_submit()
 	{
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Handle Submit übersprungen: IP-Schutz deaktiviert', [
+			$this->get_logger()->debug('Handle submit skipped: IP protection disabled', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			]);
@@ -141,17 +167,17 @@ class IPValidator extends BaseProtection {
 		}
 
 		/** @var UserData $User_Data */
-		$User_Data = $this->Controller->get_modul('user-data');
+		$User_Data = $this->Controller->get_module('user-data');
 		$ip        = $User_Data->get_ip_address();
 
-		$this->get_logger()->debug('Verarbeite Submit', [
+		$this->get_logger()->debug('Processing submit', [
 			'ip'     => $ip,
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		// Load the Salts
-		$Salt          = new Salt($this->get_logger());
+		$Salt          = $this->create_salt();
 		$hash_current  = $Salt->get_salted($ip);
 		$hash_previous = '';
 
@@ -165,7 +191,7 @@ class IPValidator extends BaseProtection {
 			$hash_previous = $Salt_Previous->get_salted($ip);
 		}
 
-		$this->get_logger()->debug('Salts berechnet', [
+		$this->get_logger()->debug('Salts calculated', [
 			'hash_current'  => $hash_current,
 			'hash_previous' => $hash_previous,
 			'class'         => __CLASS__,
@@ -173,13 +199,13 @@ class IPValidator extends BaseProtection {
 		]);
 
 		// Create a new IP Log Entry
-		$IP_Log = new IPLog($this->get_logger(), [
+		$IP_Log = $this->create_ip_log([
 			'hash'      => $hash_current,
 			'submitted' => 1,
 		]);
 		$IP_Log->save();
 
-		$this->get_logger()->info('Neuer IPLog-Eintrag erstellt', [
+		$this->get_logger()->info('New IP log entry created', [
 			'hash'     => $hash_current,
 			'ip'       => $ip,
 			'class'    => __CLASS__,
@@ -189,7 +215,7 @@ class IPValidator extends BaseProtection {
 		// Remove failed submits
 		$deleted = $IP_Log->delete($hash_current, $hash_previous, 0);
 
-		$this->get_logger()->info('Fehlgeschlagene Submits gelöscht', [
+		$this->get_logger()->info('Failed submits deleted', [
 			'hash_current'  => $hash_current,
 			'hash_previous' => $hash_previous,
 			'deleted_rows'  => $deleted,
@@ -201,21 +227,21 @@ class IPValidator extends BaseProtection {
 	public function success(): void
 	{
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Success-Handler übersprungen: IP-Schutz deaktiviert', [
+			$this->get_logger()->debug('Success handler skipped: IP protection disabled', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			]);
 			return;
 		}
 
-		$this->get_logger()->info('Success-Handler gestartet', [
+		$this->get_logger()->info('Success handler started', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$this->do_handle_submit();
 
-		$this->get_logger()->info('Success-Handler abgeschlossen', [
+		$this->get_logger()->info('Success handler completed', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -249,10 +275,10 @@ class IPValidator extends BaseProtection {
 
 		// Get User IP
 		/** @var UserData $User_Data */
-		$User_Data = $this->Controller->get_modul('user-data');
+		$User_Data = $this->Controller->get_module('user-data');
 		$ip        = $User_Data->get_ip_address();
 
-		$this->get_logger()->debug('Starte IP-Validierung', [
+		$this->get_logger()->debug('Starting IP validation', [
 			'allowed_time_between' => $allowed_time_between,
 			'max_retry_period'     => $max_retry_period,
 			'max_retries'          => $max_retries,
@@ -263,8 +289,8 @@ class IPValidator extends BaseProtection {
 		]);
 
 		// Generate Salt
-		$Salt_Current  = (new Salt($this->get_logger()))->get_last();
-		$Salt_Previous = (new Salt($this->get_logger()))->get_one_salt_by_offset(1);
+		$Salt_Current  = $this->create_salt()->get_last();
+		$Salt_Previous = $this->create_salt()->get_one_salt_by_offset(1);
 
 		// Generate hash
 		$hash_current  = $Salt_Current->get_salted($ip);
@@ -274,7 +300,7 @@ class IPValidator extends BaseProtection {
 			$hash_previous = $Salt_Previous->get_salted($ip);
 		}
 
-		$this->get_logger()->debug('Hashes erzeugt', [
+		$this->get_logger()->debug('Hashes generated', [
 			'hash_current'  => $hash_current,
 			'hash_previous' => $hash_previous,
 			'class'         => __CLASS__,
@@ -282,8 +308,8 @@ class IPValidator extends BaseProtection {
 		]);
 
 		// Check if the IP has been blocked
-		if ((new IPBan($this->get_logger()))->get_count($hash_current, $hash_previous) > 0) {
-			$this->get_logger()->info('IP ist gesperrt', [
+		if ($this->create_ip_ban()->get_count($hash_current, $hash_previous) > 0) {
+			$this->get_logger()->info('IP is blocked', [
 				'hash_current'  => $hash_current,
 				'hash_previous' => $hash_previous,
 				'class'         => __CLASS__,
@@ -293,36 +319,36 @@ class IPValidator extends BaseProtection {
 		}
 
 		// Check for log entries to automatically ban the user if the limit is reached.
-		$IP_Log_Last = (new IPLog($this->get_logger()))->get_last_entry_by_hash($hash_current, $hash_previous);
+		$IP_Log_Last = $this->create_ip_log()->get_last_entry_by_hash($hash_current, $hash_previous);
 
 		// skip if no entries has been found yet
 		if (null === $IP_Log_Last) {
-			$this->get_logger()->debug('Kein letzter Log-Eintrag gefunden – lege ersten an', [
+			$this->get_logger()->debug('No last log entry found - creating first one', [
 				'hash_current'  => $hash_current,
 				'class'         => __CLASS__,
 				'method'        => __METHOD__,
 			]);
 
 			// create a new log entry
-			$IPLog = new IPLog($this->get_logger(), ['hash' => $hash_current, 'submitted' => 0]);
+			$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
 			$IPLog->save();
 
 			return true;
 		}
 
 		// Get the second last entry
-		$IP_Log_Second_Last = (new IPLog($this->get_logger()))->get_last_entry_by_hash($hash_current, $hash_previous, 1);
+		$IP_Log_Second_Last = $this->create_ip_log()->get_last_entry_by_hash($hash_current, $hash_previous, 1);
 
 		// skip if no entry has been found
 		if (null === $IP_Log_Second_Last) {
-			$this->get_logger()->debug('Kein zweitletzter Log-Eintrag gefunden – lege neuen an', [
+			$this->get_logger()->debug('No second-to-last log entry found - creating new one', [
 				'hash_current'  => $hash_current,
 				'class'         => __CLASS__,
 				'method'        => __METHOD__,
 			]);
 
 			// create a new log entry
-			$IPLog = new IPLog($this->get_logger(), ['hash' => $hash_current, 'submitted' => 0]);
+			$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
 			$IPLog->save();
 
 			return true;
@@ -330,7 +356,7 @@ class IPValidator extends BaseProtection {
 
 		$diff = $IP_Log_Last->get_submission_timestamp() - $IP_Log_Second_Last->get_submission_timestamp();
 
-		$this->get_logger()->debug('Zeitdifferenz zwischen letzten Submits', [
+		$this->get_logger()->debug('Time difference between last submits', [
 			'last_ts'         => $IP_Log_Last->get_submission_timestamp(),
 			'second_last_ts'  => $IP_Log_Second_Last->get_submission_timestamp(),
 			'diff'            => $diff,
@@ -341,7 +367,7 @@ class IPValidator extends BaseProtection {
 
 		// skip if the time between two submissions was bigger then the minimum time required
 		if ($diff > $allowed_time_between) {
-			$this->get_logger()->debug('Zeitdifferenz OK – Validierung bestanden', [
+			$this->get_logger()->debug('Time difference OK - validation passed', [
 				'diff'    => $diff,
 				'allowed' => $allowed_time_between,
 				'class'   => __CLASS__,
@@ -351,13 +377,13 @@ class IPValidator extends BaseProtection {
 		}
 
 		// create a new log entry
-		$IPLog = new IPLog($this->get_logger(), ['hash' => $hash_current, 'submitted' => 0]);
+		$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
 		$IPLog->save();
 
 		// Check if there are >= max_retries entries for the given IP within retry period, if yes - block it
 		$count_in_period = $IPLog->get_count($hash_current, $hash_previous, 0, $max_retry_period);
 
-		$this->get_logger()->debug('Anzahl fehlgeschlagener Versuche im Zeitraum', [
+		$this->get_logger()->debug('Number of failed attempts in period', [
 			'count'          => $count_in_period,
 			'max_retries'    => $max_retries,
 			'retry_period_s' => $max_retry_period,
@@ -366,7 +392,7 @@ class IPValidator extends BaseProtection {
 		]);
 
 		if ($count_in_period >= $max_retries) {
-			$this->get_logger()->warning('Maximale Fehlversuche erreicht – IP wird geblockt', [
+			$this->get_logger()->warning('Maximum failed attempts reached - IP will be blocked', [
 				'count'          => $count_in_period,
 				'max_retries'    => $max_retries,
 				'block_time_s'   => $block_time,
@@ -376,13 +402,13 @@ class IPValidator extends BaseProtection {
 			]);
 
 			// ban the ip address
-			$IPBan = new IPBan($this->get_logger(), ['hash' => $hash_current, 'blockedtime' => $block_time]);
+			$IPBan = $this->create_ip_ban(['hash' => $hash_current, 'blockedtime' => $block_time]);
 			$IPBan->save();
 		}
 
 		$this->set_message(__('ip-protection', 'captcha-for-contact-form-7'));
 
-		$this->get_logger()->info('Validierung fehlgeschlagen – Nachricht gesetzt', [
+		$this->get_logger()->info('Validation failed - message set', [
 			'message' => 'ip-protection',
 			'class'   => __CLASS__,
 			'method'  => __METHOD__,
@@ -401,7 +427,7 @@ class IPValidator extends BaseProtection {
 	public function is_spam(): bool
 	{
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Spam-Check übersprungen: IP-Schutz deaktiviert', [
+			$this->get_logger()->debug('Spam check skipped: IP protection disabled', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			]);
@@ -410,7 +436,7 @@ class IPValidator extends BaseProtection {
 
 		$result = !$this->validate();
 
-		$this->get_logger()->info('Spam-Check durchgeführt', [
+		$this->get_logger()->info('Spam check performed', [
 			'is_spam' => $result,
 			'class'   => __CLASS__,
 			'method'  => __METHOD__,

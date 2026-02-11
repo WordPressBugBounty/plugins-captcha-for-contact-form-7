@@ -3,7 +3,12 @@
 namespace f12_cf7_captcha\core;
 
 use f12_cf7_captcha\CF7Captcha;
+use f12_cf7_captcha\core\protection\Protection;
 use Forge12\Shared\LoggerInterface;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 abstract class BaseController {
 	/**
@@ -25,40 +30,43 @@ abstract class BaseController {
 	protected string $description = '';
 
 	/**
+	 * @var string $settings_key The settings key used to check if this module is enabled.
+	 */
+	protected string $settings_key = '';
+
+	/**
+	 * @var array $hooks Declarative hook registration.
+	 *
+	 * Format:
+	 * [
+	 *     ['type' => 'action', 'hook' => 'hook_name', 'method' => 'method_name', 'priority' => 10, 'args' => 1],
+	 *     ['type' => 'filter', 'hook' => 'hook_name', 'method' => 'method_name', 'priority' => 10, 'args' => 1],
+	 * ]
+	 */
+	protected array $hooks = [];
+
+	/**
 	 * @var CF7Captcha|null The instance of the CF7 Controller
 	 */
 	protected ?CF7Captcha $Controller;
 	/**
-	 * @var Log_WordPress|null The instance of the logger used for logging messages.
+	 * @var Log_WordPress_Interface|null The instance of the logger used for logging messages.
 	 */
-	protected ?Log_WordPress $Logger;
+	protected ?Log_WordPress_Interface $Logger;
 
 	/**
 	 * Constructor for the class.
 	 *
 	 * @param CF7Captcha    $Controller The CF7Captcha object that will be assigned to $this->Controller.
-	 * @param Log_WordPress $Logger     The Log_WordPress object that will be assigned to $this->Logger.
+	 * @param Log_WordPress_Interface $Logger     The Log_WordPress object that will be assigned to $this->Logger.
 	 *
 	 * @return void
 	 */
-	public function __construct(CF7Captcha $Controller, Log_WordPress $Logger)
+	public function __construct(CF7Captcha $Controller, Log_WordPress_Interface $Logger)
 	{
-		// Die Basisklasse des Controllers hat wahrscheinlich bereits eine Methode zum Abrufen des Loggers.
-		// Daher ist es besser, diese zu verwenden, anstatt einen neuen Logger als Parameter zu übergeben.
-		// Aber basierend auf dem bereitgestellten Code, passen wir die Implementierung an.
-
 		$this->Controller = $Controller;
 		$this->Logger = $Logger;
-
-		$this->get_logger()->info('Konstruktor gestartet.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-		]);
-
 		add_action('f12_cf7_captcha_compatibilities_loaded', array($this, 'wp_init'));
-		$this->get_logger()->debug('Hook "f12_cf7_captcha_compatibilities_loaded" für die Methode "wp_init" hinzugefügt.');
-
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
 	}
 
 	/**
@@ -75,12 +83,6 @@ abstract class BaseController {
 	 */
 	public function get_name(): string
 	{
-		$this->get_logger()->debug('Rufe den Namen der Modul-Instanz ab.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-			'name' => $this->name,
-		]);
-
 		return $this->name;
 	}
 
@@ -91,12 +93,6 @@ abstract class BaseController {
 	 */
 	public function get_description(): string
 	{
-		$this->get_logger()->debug('Rufe die Beschreibung des Moduls ab.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-			'description' => $this->description,
-		]);
-
 		return $this->description;
 	}
 
@@ -107,12 +103,6 @@ abstract class BaseController {
 	 */
 	public function get_id(): string
 	{
-		$this->get_logger()->debug('Rufe die ID des Objekts ab.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-			'id' => $this->id,
-		]);
-
 		return $this->id;
 	}
 
@@ -125,24 +115,136 @@ abstract class BaseController {
 	 */
 	public function wp_init(): void
 	{
-		$this->get_logger()->info('Führe die WordPress-Initialisierungsmethode aus.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-		]);
-
-		// Überprüfe, ob die Funktionalität über die Einstellungen aktiviert ist.
 		if ($this->is_enabled()) {
-			$this->get_logger()->debug('Funktionalität ist aktiviert. Starte die Initialisierung.');
-			// Rufe die on_init-Methode auf, die die Hauptinitialisierungslogik enthält.
 			$this->on_init();
-		} else {
-			$this->get_logger()->info('Funktionalität ist deaktiviert. Initialisierung wird übersprungen.');
 		}
-
-		$this->get_logger()->info('WordPress-Initialisierungsmethode abgeschlossen.');
 	}
 
-	protected abstract function on_init(): void;
+	/**
+	 * Check if this module is enabled.
+	 *
+	 * Uses $this->settings_key and $this->id for the filter name.
+	 * Formula: $this->is_installed() && setting === 1, with filter f12_cf7_captcha_is_installed_{$this->id}
+	 *
+	 * @return bool
+	 */
+	public function is_enabled(): bool
+	{
+		$is_installed = $this->is_installed();
 
-	public abstract function is_enabled(): bool;
+		$setting_value = $this->Controller->get_settings($this->settings_key, 'global');
+
+		if ($setting_value === '' || $setting_value === null) {
+			$setting_value = 1;
+		}
+
+		$is_active = $is_installed && (int) $setting_value === 1;
+
+		return apply_filters('f12_cf7_captcha_is_installed_' . $this->id, $is_active);
+	}
+
+	/**
+	 * Check if the underlying plugin/software is installed.
+	 *
+	 * @return bool
+	 */
+	abstract public function is_installed(): bool;
+
+	/**
+	 * Initialize the module by translating the name and registering hooks from $this->hooks.
+	 *
+	 * Controllers with extra logic should override on_init() and call parent::on_init().
+	 *
+	 * @return void
+	 */
+	protected function on_init(): void
+	{
+		$this->name = __($this->name, 'captcha-for-contact-form-7');
+
+		foreach ($this->hooks as $hook) {
+			$type     = $hook['type'] ?? 'action';
+			$name     = $hook['hook'];
+			$method   = $hook['method'];
+			$priority = $hook['priority'] ?? 10;
+			$args     = $hook['args'] ?? 1;
+
+			if ($type === 'filter') {
+				add_filter($name, [$this, $method], $priority, $args);
+			} else {
+				add_action($name, [$this, $method], $priority, $args);
+			}
+		}
+	}
+
+	/**
+	 * Default implementation for adding spam protection.
+	 *
+	 * Simply echoes the captcha HTML. Controllers with custom rendering should override this.
+	 *
+	 * @param mixed ...$args Any number of arguments.
+	 * @return void
+	 */
+	public function wp_add_spam_protection(...$args)
+	{
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captcha HTML is generated internally
+		echo $this->get_captcha_html();
+	}
+
+	/**
+	 * Get the Protection module instance.
+	 *
+	 * @return Protection
+	 */
+	protected function get_protection(): Protection
+	{
+		return $this->Controller->get_module('protection');
+	}
+
+	/**
+	 * Get the captcha HTML from the Protection module.
+	 *
+	 * @return string
+	 */
+	protected function get_captcha_html(): string
+	{
+		return $this->get_protection()->get_captcha();
+	}
+
+	/**
+	 * Check if the submitted POST data is spam.
+	 *
+	 * @param array|null $post_data POST data to check. Defaults to $_POST.
+	 *
+	 * @return string|null Error message if spam detected, null otherwise.
+	 */
+	protected function check_spam( ?array $post_data = null ): ?string
+	{
+		if ( $post_data === null ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling compatibility controller
+			$post_data = $_POST;
+		}
+
+		$protection = $this->get_protection();
+
+		if ( $protection->is_spam( $post_data ) ) {
+			return $protection->get_message();
+		}
+
+		return null;
+	}
+
+	/**
+	 * Format a spam error message for display.
+	 *
+	 * @param string $message The raw spam message.
+	 *
+	 * @return string
+	 */
+	protected function format_spam_message( string $message ): string
+	{
+		return sprintf(
+			esc_html__( 'Captcha not correct: %s', 'captcha-for-contact-form-7' ),
+			esc_html( $message )
+		);
+	}
 }

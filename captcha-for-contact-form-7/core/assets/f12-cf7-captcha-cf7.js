@@ -100,9 +100,13 @@ class EventBus {
 const eventBus = new EventBus();
 class Captcha {
   constructor() {
-    eventBus.on("captcha:reloadRequested", ({ formId }) => {
-      logger.debug("[EventBus] captcha:reloaded empfangen", formId);
-      this.reloadCaptcha(formId);
+    eventBus.on("captcha:reloadRequested", ({ formId, captchaInputId }) => {
+      logger.debug("[EventBus] captcha:reloadRequested empfangen", { formId, captchaInputId });
+      if (captchaInputId) {
+        this.reloadSingleCaptchaById(captchaInputId, formId);
+      } else {
+        this.reloadCaptcha(formId);
+      }
     });
     eventBus.on("captcha:reloadAllRequested", () => {
       logger.debug("[EventBus] captcha:reloadAllRequested empfangen");
@@ -111,11 +115,14 @@ class Captcha {
   }
   reloadAllCaptchas() {
     logger.debug("Reload all Captchas");
-    document.querySelectorAll(".f12c").forEach((el) => {
-      var form = el.closest("form");
-      var formId = ensureFormId(form);
-      logger.debug("Reload Captcha gestartet", formId);
-      this.reloadCaptcha(formId);
+    document.querySelectorAll(".f12-captcha").forEach((container) => {
+      const input = container.querySelector(".f12c");
+      if (input && input.id) {
+        var form = container.closest("form");
+        var formId = ensureFormId(form);
+        logger.debug("Reload Captcha gestartet", formId);
+        this.reloadSingleCaptchaById(input.id, formId);
+      }
     });
   }
   reloadCaptcha(formId) {
@@ -124,50 +131,71 @@ class Captcha {
       logger.error("Form not found", formId);
       return;
     }
-    logger.debug("Reload Captcha gestartet", formId);
-    const container = form.querySelector(".f12-captcha");
-    if (!container) {
+    logger.debug("Reload Captcha für Formular gestartet", formId);
+    const containers = form.querySelectorAll(".f12-captcha");
+    if (!containers.length) {
       logger.error("Captcha container not found in form:", formId);
+      return;
+    }
+    containers.forEach((container) => {
+      const input = container.querySelector(".f12c");
+      if (input && input.id) {
+        this.reloadSingleCaptchaById(input.id, formId);
+      }
+    });
+  }
+  /**
+   * Lädt ein einzelnes Captcha anhand der Input-ID neu
+   */
+  async reloadSingleCaptchaById(captchaInputId, formId) {
+    logger.debug("Reload einzelnes Captcha gestartet", { captchaInputId, formId });
+    const input = document.getElementById(captchaInputId);
+    if (!input) {
+      logger.error("Captcha-Input nicht gefunden", captchaInputId);
+      return;
+    }
+    const container = input.closest(".f12-captcha");
+    if (!container) {
+      logger.error("Captcha-Container nicht gefunden für Input", captchaInputId);
       return;
     }
     const skeletton = new LoadingSkeletton(container);
     skeletton.show();
-    const inputs = container.querySelectorAll(".f12c");
-    inputs.forEach(async (input) => {
-      const inputId = input.id;
-      const hashId = "hash_" + inputId;
-      const hash = document.getElementById(hashId);
-      const label = container.querySelector(".c-data");
-      const method = input.dataset.method;
-      logger.log("Captcha Reload AJAX", { method, inputId });
-      try {
-        const response = await fetch(f12_cf7_captcha.ajaxurl, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            action: "f12_cf7_captcha_reload",
-            captchamethod: method
-          })
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (method === "image") {
-          const imgLabel = label.querySelector(".captcha-image");
-          if (imgLabel) imgLabel.innerHTML = data.label;
+    const hashId = "hash_" + captchaInputId;
+    const hash = document.getElementById(hashId);
+    const label = container.querySelector(".c-data");
+    const method = input.dataset.method;
+    logger.log("Captcha Reload AJAX", { method, captchaInputId });
+    try {
+      const response = await fetch(f12_cf7_captcha.resturl + "captcha/reload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-WP-Nonce": f12_cf7_captcha.restnonce
+        },
+        body: JSON.stringify({ captchamethod: method })
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      if (method === "image") {
+        const imgLabel = label.querySelector(".captcha-image");
+        if (imgLabel) {
+          logger.debug("Ersetze Captcha-Bild", { captchaInputId, newLabel: data.label.substring(0, 100) });
+          imgLabel.outerHTML = data.label;
         }
-        if (method === "math") {
-          const mathLabel = label.querySelector(".captcha-calculation");
-          if (mathLabel) mathLabel.innerHTML = data.label;
-        }
-        if (hash) hash.value = data.hash;
-        logger.log("Captcha neu gesetzt", { method, hash: data.hash });
-      } catch (err) {
-        logger.error("Captcha reload Fehler", err);
-      } finally {
-        skeletton.hide();
-        eventBus.emit("captcha:reloaded", { formId });
       }
-    });
+      if (method === "math") {
+        const mathLabel = label.querySelector(".captcha-calculation");
+        if (mathLabel) mathLabel.outerHTML = data.label;
+      }
+      if (hash) hash.value = data.hash;
+      logger.log("Captcha neu gesetzt", { method, captchaInputId, hash: data.hash });
+    } catch (err) {
+      logger.error("Captcha reload Fehler", err);
+    } finally {
+      skeletton.hide();
+      eventBus.emit("captcha:reloaded", { formId, captchaInputId });
+    }
   }
 }
 new Captcha();
@@ -204,14 +232,13 @@ class MultipleSubmissionProtection {
         return;
       }
       try {
-        const response = await fetch(f12_cf7_captcha.ajaxurl, {
+        const response = await fetch(f12_cf7_captcha.resturl + "timer/reload", {
           method: "POST",
           headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
+            "Content-Type": "application/json",
+            "X-WP-Nonce": f12_cf7_captcha.restnonce
           },
-          body: new URLSearchParams({
-            action: "f12_cf7_captcha_timer_reload"
-          })
+          body: JSON.stringify({})
         });
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -640,10 +667,9 @@ class ElementorForms {
       logger.debug(`[ElementorForms] Formular gebunden`, formId);
       if (!form.dataset.ssCaptchaInitialized) {
         form.dataset.ssCaptchaInitialized = "1";
-        eventBus.emit("captcha:reloadRequested", { formId, form });
+        eventBus.emit("captcha:reloadRequested", { formId });
         logger.debug("[ElementorForms] Initial captcha load", formId);
       }
-      eventBus.emit("captcha:reloadRequested", { formId, form });
       form.addEventListener("submit", (event) => {
         if (form.dataset.ssSubmitting === "1") return;
         const formId2 = ensureFormId(form);
@@ -1528,6 +1554,44 @@ class WooCommerceCheckoutForm {
       });
     }
   }
+  /**
+   * Inject js_start_time / js_end_time into a request body (string or FormData).
+   * Called before the request is actually sent so the server-side JavaScript
+   * protection check receives valid timestamps even when #place_order was
+   * never clicked (e.g. PayPal Smart Buttons).
+   */
+  injectJsTimestampsIntoBody(body) {
+    const now = String(Date.now() / 1e3);
+    const form = document.querySelector("form.checkout");
+    const startField = form == null ? void 0 : form.querySelector('[name="js_start_time"]');
+    const startTime = (startField == null ? void 0 : startField.value) || now;
+    if (body instanceof FormData) {
+      if (!body.get("js_end_time")) body.set("js_end_time", now);
+      if (!body.get("js_start_time")) body.set("js_start_time", startTime);
+    } else if (typeof body === "string") {
+      if (/(?:^|&)js_end_time=(?=&|$)/.test(body)) {
+        body = body.replace(/((?:^|&)js_end_time)=(?=&|$)/, `$1=${encodeURIComponent(now)}`);
+      } else if (!body.includes("js_end_time=")) {
+        body += `&js_end_time=${encodeURIComponent(now)}`;
+      }
+      if (/(?:^|&)js_start_time=(?=&|$)/.test(body)) {
+        body = body.replace(/((?:^|&)js_start_time)=(?=&|$)/, `$1=${encodeURIComponent(startTime)}`);
+      } else if (!body.includes("js_start_time=")) {
+        body += `&js_start_time=${encodeURIComponent(startTime)}`;
+      }
+    }
+    return body;
+  }
+  /**
+   * Inject js timestamps into the fetch() init options (2nd argument).
+   */
+  injectJsTimestamps(args) {
+    const init = args[1];
+    if (init && init.body) {
+      init.body = this.injectJsTimestampsIntoBody(init.body);
+    }
+    return args;
+  }
   observeAjaxResponses(attempt = 0) {
     var _a;
     const isCheckoutPage = () => !!document.querySelector("form.checkout");
@@ -1535,6 +1599,7 @@ class WooCommerceCheckoutForm {
       logger.debug("[WooCommerceCheckoutForm] Kein <form.checkout> gefunden → skip observeAjaxResponses");
       return;
     }
+    const self = this;
     const isCheckoutUrl = (url) => {
       try {
         const u = new URL(url, location.href);
@@ -1584,6 +1649,9 @@ class WooCommerceCheckoutForm {
           try {
             const req = args[0];
             const url = typeof req === "string" ? req : (req == null ? void 0 : req.url) || "";
+            if (isCheckoutUrl(url)) {
+              args = self.injectJsTimestamps(args);
+            }
             const res = await originalFetch(...args);
             if (isCheckoutUrl(url)) {
               const clone = res.clone();
@@ -1629,6 +1697,7 @@ class WooCommerceCheckoutForm {
       };
       XHR.prototype.send = function(body) {
         if (isCheckoutUrl(this._f12url)) {
+          body = self.injectJsTimestampsIntoBody(body);
           this.addEventListener("readystatechange", () => {
             if (this.readyState === 4) {
               try {
@@ -1935,19 +2004,32 @@ window.f12cf7captcha_cf7 = {
       eventBus.emit("captcha:init");
     });
     document.addEventListener("click", (e) => {
-      const reloadBtn = e.target.closest(".cf7.captcha-reload");
+      const reloadBtn = e.target.closest(".cf7.captcha-reload") || e.target.closest(".c-reload");
       if (!reloadBtn) return;
+      logger.debug("Reload-Button geklickt", e.target);
       e.preventDefault();
       e.stopPropagation();
+      const container = e.target.closest(".f12-captcha");
+      if (!container) {
+        logger.error("Kein Captcha-Container gefunden");
+        return;
+      }
+      const input = container.querySelector(".f12c");
+      if (!input || !input.id) {
+        logger.error("Kein Captcha-Input mit ID gefunden");
+        return;
+      }
+      const captchaInputId = input.id;
+      logger.debug("Captcha-Input-ID gefunden", captchaInputId);
       const form = e.target.closest("form");
       if (!form) {
         logger.error("Kein Formular für Captcha gefunden");
         return;
       }
       const formId = ensureFormId(form);
-      eventBus.emit("captcha:reloadRequested", { formId });
+      logger.debug("Formular-ID", formId);
+      eventBus.emit("captcha:reloadRequested", { formId, captchaInputId });
     });
   }
 };
 window.f12cf7captcha_cf7.init();
-//# sourceMappingURL=f12-cf7-captcha-cf7.js.map

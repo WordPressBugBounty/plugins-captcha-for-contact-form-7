@@ -15,51 +15,68 @@ class UserData extends BaseModul {
 	/**
 	 * Retrieve the IP address of the client.
 	 *
-	 * This method checks multiple server variables to determine the client's IP address.
-	 * It first checks if the IP address is provided by the 'HTTP_CLIENT_IP' variable.
-	 * If not, it then checks if the IP address is provided by the 'HTTP_X_FORWARDED_FOR' variable,
-	 * which may indicate that the client is using a proxy server.
-	 * If both of the above options are not set, the method falls back to the 'REMOTE_ADDR' variable,
-	 * which contains the IP address of the client connecting to the server.
+	 * By default, only REMOTE_ADDR is used because forwarded headers (HTTP_CLIENT_IP,
+	 * HTTP_X_FORWARDED_FOR) are trivially spoofable by clients and would allow attackers
+	 * to bypass IP-based protections.
+	 *
+	 * If the site runs behind a trusted reverse proxy or load balancer, define one of
+	 * the following constants in wp-config.php to enable header-based IP detection:
+	 *
+	 *   define( 'F12_TRUSTED_PROXY_HEADER', 'HTTP_X_FORWARDED_FOR' );
+	 *   define( 'F12_TRUSTED_PROXY_HEADER', 'HTTP_CLIENT_IP' );
+	 *   define( 'F12_TRUSTED_PROXY_HEADER', 'HTTP_X_REAL_IP' );
 	 *
 	 * @return string The IP address of the client.
 	 */
 	public function get_ip_address(): string
 	{
-		$this->get_logger()->info('Versuche, die IP-Adresse des Benutzers zu ermitteln.', [
+		$this->get_logger()->info('Attempting to determine the user IP address.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		$ip_address = '0.0.0.0'; // Standard-Fallback-Wert
+		$ip_address = '0.0.0.0';
 
-		// Überprüfe, ob die IP-Adresse von einem Shared-Internet-Anbieter stammt.
-		if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
-			$ip_address = $_SERVER['HTTP_CLIENT_IP'];
-			$this->get_logger()->debug('IP-Adresse über HTTP_CLIENT_IP gefunden.');
-		}
-		// Überprüfe, ob die IP-Adresse von einem Proxy oder Load Balancer stammt.
-		elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-			// HTTP_X_FORWARDED_FOR kann eine kommaseparierte Liste von IPs enthalten.
-			// Die erste IP in der Liste ist in der Regel die des tatsächlichen Clients.
-			$ip_addresses = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-			$ip_address = trim(reset($ip_addresses));
-			$this->get_logger()->debug('IP-Adresse über HTTP_X_FORWARDED_FOR gefunden.');
-		}
-		// Finde die IP-Adresse des Benutzers über die Remote-Adresse.
-		elseif (!empty($_SERVER['REMOTE_ADDR'])) {
-			$ip_address = $_SERVER['REMOTE_ADDR'];
-			$this->get_logger()->debug('IP-Adresse über REMOTE_ADDR gefunden.');
+		$allowed_headers = [
+			'HTTP_X_FORWARDED_FOR',
+			'HTTP_CLIENT_IP',
+			'HTTP_X_REAL_IP',
+		];
+
+		// Only trust forwarded headers when explicitly configured via constant.
+		if ( defined( 'F12_TRUSTED_PROXY_HEADER' ) && in_array( F12_TRUSTED_PROXY_HEADER, $allowed_headers, true ) ) {
+			$header = F12_TRUSTED_PROXY_HEADER;
+
+			if ( ! empty( $_SERVER[ $header ] ) ) {
+				// X-Forwarded-For can contain a comma-separated list; the first entry is the client IP.
+				$ip_addresses = explode( ',', sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) );
+				$ip_address   = trim( reset( $ip_addresses ) );
+
+				$this->get_logger()->debug( 'IP address found via trusted proxy header.', [
+					'header' => $header,
+				] );
+			}
 		}
 
-		// Sanitize die IP-Adresse, um Injektionsrisiken zu vermeiden.
-		// Die WordPress-Funktion `sanitize_text_field` ist hier besser geeignet, da `addslashes`
-		// die Adresse nur für SQL-Kontext "sicher" macht, aber nicht für die allgemeine Verwendung.
-		$sanitized_ip = sanitize_text_field($ip_address);
+		// Fallback to REMOTE_ADDR (always trustworthy, set by the web server).
+		if ( $ip_address === '0.0.0.0' && ! empty( $_SERVER['REMOTE_ADDR'] ) ) {
+			$ip_address = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+			$this->get_logger()->debug( 'IP address found via REMOTE_ADDR.' );
+		}
 
-		$this->get_logger()->info('IP-Adresse erfolgreich ermittelt.', [
-			'ip' => $sanitized_ip, // Maskiere die IP-Adresse im Log
-		]);
+		// Validate that the result is actually an IP address.
+		$sanitized_ip = filter_var( $ip_address, FILTER_VALIDATE_IP );
+
+		if ( $sanitized_ip === false ) {
+			$this->get_logger()->warning( 'Determined IP address is invalid, falling back to 0.0.0.0.', [
+				'raw_ip' => sanitize_text_field( $ip_address ),
+			] );
+			$sanitized_ip = '0.0.0.0';
+		}
+
+		$this->get_logger()->info( 'IP address successfully determined.', [
+			'ip' => $sanitized_ip,
+		] );
 
 		return $sanitized_ip;
 	}

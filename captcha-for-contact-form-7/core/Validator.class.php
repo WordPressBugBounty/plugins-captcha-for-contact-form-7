@@ -2,42 +2,42 @@
 
 namespace f12_cf7_captcha\core;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 use f12_cf7_captcha\CF7Captcha;
 
-/**
- * Hotfix for compatibility issues if the same Class is loaded by another plugin.
- */
-require_once('BaseController.class.php');
 abstract class Validator extends \f12_cf7_captcha\core\BaseController
 {
-	public function __construct(CF7Captcha $Controller = null, Log_WordPress $Logger = null)
+	public function __construct(CF7Captcha $Controller = null, Log_WordPress_Interface $Logger = null)
 	{
-		// Die Logger-Eigenschaft wird von der Elternklasse initialisiert.
-		// Daher muss hier nur der Controller initialisiert werden.
+		// The Logger property is initialized by the parent class.
+		// Therefore, only the Controller needs to be initialized here.
 		$this->Controller = $Controller;
 
-		// Protokollierung des Konstruktorstarts.
-		$this->get_logger()->info('Konstruktor mit optionalen Abhängigkeiten gestartet.', [
+		// Log the start of the constructor.
+		$this->get_logger()->info('Constructor with optional dependencies started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Wenn kein Controller übergeben wurde, hole die Singleton-Instanz.
+		// If no controller was passed, get the singleton instance.
 		if (null === $Controller) {
 			$Controller = CF7Captcha::get_instance();
-			$this->get_logger()->debug('Keine Controller-Instanz übergeben. Singleton-Instanz abgerufen.');
+			$this->get_logger()->debug('No controller instance provided. Singleton instance retrieved.');
 		}
 
-		// Wenn kein Logger übergeben wurde, hole die Singleton-Instanz.
+		// If no logger was passed, get the singleton instance.
 		if (null === $Logger) {
 			$Logger = Log_WordPress::get_instance();
-			$this->get_logger()->debug('Keine Logger-Instanz übergeben. Singleton-Instanz abgerufen.');
+			$this->get_logger()->debug('No logger instance provided. Singleton instance retrieved.');
 		}
 
-		// Übergabe der abhängigen Objekte an den Konstruktor der Elternklasse.
+		// Pass the dependent objects to the parent class constructor.
 		parent::__construct($Controller, $Logger);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		$this->get_logger()->info('Constructor completed.');
 	}
 
     public abstract function is_spam(): bool;

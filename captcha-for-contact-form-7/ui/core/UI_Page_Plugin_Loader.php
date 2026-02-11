@@ -21,7 +21,7 @@ namespace f12_cf7_captcha\ui {
 			/**
 			 * Stores all found UI Pages
 			 *
-			 * @var array<<string, string>> e.g.: [0 => [ name => string, path => string] , ...]
+			 * @var array<int, array{name: string, path: string}>
 			 */
 			private $Plugin_UI_Pages = [];
 
@@ -29,31 +29,31 @@ namespace f12_cf7_captcha\ui {
 			 * Constructor
 			 */
 			public function __construct( UI_Manager $UI_Manager ) {
-				// Setze die UI_Manager-Instanz.
+				// Set the UI Manager instance.
 				$this->UI_Manager = $UI_Manager;
-				$this->get_logger()->debug( 'UI_Manager-Instanz wurde gesetzt.' );
+				$this->get_logger()->debug( 'UI_Manager instance has been set.' );
 
-				// Rufe die Methode auf, die das Plugin-UI-Verzeichnis nach Seiten durchsucht.
-				// Dies initialisiert die Seiten, bevor sie in WordPress registriert werden.
+				// Call the method that scans the plugin UI directory for pages.
+				// This initializes the pages before they are registered in WordPress.
 				$this->scan_for_plugin_ui_pages( $this->get_plugin_ui_path() );
-				$this->get_logger()->info( 'Plugin-UI-Verzeichnis nach Seiten gescannt.' );
+				$this->get_logger()->info( 'Plugin UI directory scanned for pages.' );
 
-				// Füge einen Hook hinzu, der die gefundenen Seiten in WordPress registriert.
-				// Die hohe Priorität (999999990) stellt sicher, dass dieser Hook sehr spät ausgelöst wird,
-				// nachdem alle Seiten geladen wurden (z.B. durch andere Komponenten), aber bevor
-				// die Seiten-Sortierung stattfindet (die eine noch höhere Priorität hat).
+				// Add a hook that registers the found pages in WordPress.
+				// The high priority (999999990) ensures that this hook is triggered very late,
+				// after all pages have been loaded (e.g., by other components), but before
+				// the page sorting takes place (which has an even higher priority).
 				add_action(
 					$this->get_domain() . '_ui_after_load_pages',
 					array( $this, 'register_plugin_ui_pages' ),
 					999999990,
 					1
 				);
-				$this->get_logger()->debug( 'Hook "register_plugin_ui_pages" hinzugefügt.', [
+				$this->get_logger()->debug( 'Hook "register_plugin_ui_pages" added.', [
 					'hook_name' => $this->get_domain() . '_ui_after_load_pages',
 					'priority'  => 999999990,
 				] );
 
-				$this->get_logger()->info( 'Konstruktor abgeschlossen.' );
+				$this->get_logger()->info( 'Constructor completed.' );
 			}
 
 			public function get_logger(): LoggerInterface {
@@ -67,46 +67,46 @@ namespace f12_cf7_captcha\ui {
 			 */
 			public function register_plugin_ui_pages(UI_Manager $UI_Manager): void
 			{
-				$this->get_logger()->info('Starte die Registrierung der Plugin-UI-Seiten.', [
+				$this->get_logger()->info('Starting the registration of plugin UI pages.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 				]);
 
-				// Durchlaufe alle im Plugin-UI-Speicher gefundenen Seiten.
+				// Iterate through all pages found in the plugin UI storage.
 				foreach ($this->Plugin_UI_Pages as $item) {
-					$this->get_logger()->debug('Verarbeite Seite für die Registrierung.', ['item' => $item]);
+					$this->get_logger()->debug('Processing page for registration.', ['item' => $item]);
 
-					// Überspringe ungültige Einträge, denen der Pfad oder Name fehlt.
+					// Skip invalid entries that are missing the path or name.
 					if (!isset($item['path']) || !isset($item['name'])) {
-						$this->get_logger()->warning('Ungültiger UI-Seiten-Eintrag übersprungen, da "path" oder "name" fehlt.');
+						$this->get_logger()->warning('Invalid UI page entry skipped because "path" or "name" is missing.');
 						continue;
 					}
 
 					try {
-						// Lade die Klassendatei der UI-Seite.
+						// Load the UI page class file.
 						require_once($item['path']);
 
-						// Instanziiere die UI-Seite-Klasse.
+						// Instantiate the UI page class.
 						$UI_Page = new $item['name']($this->UI_Manager);
 
-						// Füge die neu instanziierte Seite dem Seiten-Manager hinzu.
+						// Add the newly instantiated page to the page manager.
 						$this->get_page_manager()->add_page($UI_Page);
 
-						$this->get_logger()->info('UI-Seite erfolgreich registriert.', ['name' => $item['name']]);
+						$this->get_logger()->info('UI page successfully registered.', ['name' => $item['name']]);
 					} catch (\Throwable $e) {
-						$this->get_logger()->error('Fehler beim Laden oder Instanziieren einer UI-Seite.', [
+						$this->get_logger()->error('Error loading or instantiating a UI page.', [
 							'name' => $item['name'],
 							'path' => $item['path'],
 							'error' => $e->getMessage(),
 							'file' => $e->getFile(),
 							'line' => $e->getLine(),
 						]);
-						// Ein kritischer Fehler sollte hier die Ausführung nicht stoppen,
-						// um zu verhindern, dass das gesamte Admin-Menü ausfällt.
+						// A critical error should not stop execution here,
+						// to prevent the entire admin menu from failing.
 					}
 				}
 
-				$this->get_logger()->info('Registrierung aller Plugin-UI-Seiten abgeschlossen.');
+				$this->get_logger()->info('Registration of all plugin UI pages completed.');
 			}
 
 			private function get_page_manager(): UI_Page_Manager {
@@ -136,61 +136,61 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private function scan_for_plugin_ui_pages(string $directory): bool
 			{
-				$this->get_logger()->info('Starte den Scan nach UI-Seiten im Verzeichnis.', [
+				$this->get_logger()->info('Starting the scan for UI pages in the directory.', [
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 					'directory' => $directory,
 				]);
 
-				// Überprüfe, ob das Verzeichnis existiert.
+				// Check if the directory exists.
 				if (!is_dir($directory)) {
-					$this->get_logger()->warning('Das angegebene Verzeichnis existiert nicht.', ['directory' => $directory]);
+					$this->get_logger()->warning('The specified directory does not exist.', ['directory' => $directory]);
 					return false;
 				}
 
-				// Versuche, das Verzeichnis zu öffnen.
+				// Attempt to open the directory.
 				$handle = opendir($directory);
 				if (!$handle) {
-					$this->get_logger()->error('Das Verzeichnis konnte nicht geöffnet werden. Überprüfe die Lesezugriffsrechte.', ['directory' => $directory]);
+					$this->get_logger()->error('The directory could not be opened. Check read access permissions.', ['directory' => $directory]);
 					return false;
 				}
 
-				$this->get_logger()->debug('Verzeichnis erfolgreich geöffnet.');
+				$this->get_logger()->debug('Directory successfully opened.');
 
-				// Iteriere durch alle Einträge im Verzeichnis.
+				// Iterate through all entries in the directory.
 				while (false !== ($entry = readdir($handle))) {
-					// Überspringe die Standard-Verzeichniseinträge '.' und '..'.
+					// Skip the standard directory entries '.' and '..'.
 					if ($entry === '.' || $entry === '..') {
 						continue;
 					}
 
-					// Überprüfe, ob der Dateiname dem Muster `UI_[Name].php` entspricht.
+					// Check if the filename matches the pattern `UI_[Name].php`.
 					if (!preg_match('!UI_([a-zA-Z_0-9]+)\.php!', $entry, $matches)) {
-						$this->get_logger()->debug('Datei entspricht nicht dem Namensmuster.', ['file' => $entry]);
+						$this->get_logger()->debug('File does not match the naming pattern.', ['file' => $entry]);
 						continue;
 					}
 
-					// Stelle sicher, dass der zweite Match-Treffer (der Seitenname) existiert.
+					// Ensure that the second match (the page name) exists.
 					if (!isset($matches[1])) {
-						$this->get_logger()->warning('Dateiname entspricht zwar dem Muster, konnte aber den Seitennamen nicht extrahieren.', ['file' => $entry]);
+						$this->get_logger()->warning('File name matches the pattern but could not extract the page name.', ['file' => $entry]);
 						continue;
 					}
 
-					// Füge die gefundene UI-Seite zum internen Speicher hinzu.
+					// Add the found UI page to the internal storage.
 					$this->Plugin_UI_Pages[] = [
 						'name' => $this->get_namespace() . '\UI_' . $matches[1],
 						'path' => $directory . '/' . $entry,
 					];
 
-					$this->get_logger()->info('UI-Seite gefunden und zur Liste hinzugefügt.', [
+					$this->get_logger()->info('UI page found and added to the list.', [
 						'class_name' => $this->get_namespace() . '\UI_' . $matches[1],
 						'file_path' => $directory . '/' . $entry,
 					]);
 				}
 
-				// Schließe das Verzeichnis-Handle.
+				// Close the directory handle.
 				closedir($handle);
-				$this->get_logger()->info('Scan-Vorgang abgeschlossen.');
+				$this->get_logger()->info('Scan process completed.');
 
 				return true;
 			}

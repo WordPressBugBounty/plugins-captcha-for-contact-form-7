@@ -54,23 +54,25 @@ class Backend {
         if ( empty( $tag->name ) ) {
             $result->invalidate( $tag, wpcf7_get_message( 'invalid_required' ) );
         } else {
-            $value = sanitize_text_field( $_POST[ $tag->name ] );
+            // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Contact Form 7
+            $value = isset( $_POST[ $tag->name ] ) ? sanitize_text_field( wp_unslash( $_POST[ $tag->name ] ) ) : '';
             $hash  = '';
 
             $captchamethod = $tag->get_option( 'captcha', '', true );
 
             if ( $captchamethod !== 'honey' ) {
-                $hash = sanitize_text_field( $_POST[ $tag->name . '_hash' ] );
+                // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Contact Form 7
+                $hash = isset( $_POST[ $tag->name . '_hash' ] ) ? sanitize_text_field( wp_unslash( $_POST[ $tag->name . '_hash' ] ) ) : '';
             }
 
             /**
              * @var Protection $Protection
              */
-            $Protection = CF7Captcha::get_instance()->get_modul( 'protection' );
+            $Protection = CF7Captcha::get_instance()->get_module( 'protection' );
             /**
              * @var Captcha_Validator $Captcha_Validator
              */
-            $Captcha_Validator = $Protection->get_modul( 'captcha-validator' );
+            $Captcha_Validator = $Protection->get_module( 'captcha-validator' );
 
             $Generator = $Captcha_Validator->get_generator( $captchamethod );
 
@@ -166,11 +168,11 @@ class Backend {
         /**
          * @var Protection $Protection
          */
-        $Protection = CF7Captcha::get_instance()->get_modul( 'protection' );
+        $Protection = CF7Captcha::get_instance()->get_module( 'protection' );
         /**
          * @var Captcha_Validator $Captcha_Validator
          */
-        $Captcha_Validator = $Protection->get_modul( 'captcha-validator' );
+        $Captcha_Validator = $Protection->get_module( 'captcha-validator' );
 
         $Generator = $Captcha_Validator->get_generator( esc_attr( $atts['captchamethod'] ) );
 
@@ -211,7 +213,7 @@ class Backend {
                     </tr>
                     <tr>
                         <th scope="row">
-                            <?php _e( 'Captcha Method', 'captcha-for-contact-form-7' ); ?>
+                            <?php esc_html_e( 'Captcha Method', 'captcha-for-contact-form-7' ); ?>
                         </th>
                         <td>
                             <label><input type="radio" name="captcha" value="image"

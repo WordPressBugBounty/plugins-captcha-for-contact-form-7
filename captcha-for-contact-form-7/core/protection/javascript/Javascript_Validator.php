@@ -5,10 +5,14 @@ namespace f12_cf7_captcha\core\protection\javascript;
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Javascript_Validator extends BaseProtection
 {
     /**
-     * @var array<string => float>
+     * @var array<string, float>
      */
     private $start_time = [
         'php' => 0.0,
@@ -16,7 +20,7 @@ class Javascript_Validator extends BaseProtection
     ];
 
     /**
-     * @var array <string => float>
+     * @var array<string, float>
      */
     private $end_time = [
         'php' => 0.0,
@@ -33,7 +37,7 @@ class Javascript_Validator extends BaseProtection
 	{
 		parent::__construct($Controller);
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -43,7 +47,7 @@ class Javascript_Validator extends BaseProtection
 
 		add_filter('f12-cf7-captcha-log-data', [$this, 'get_log_data']);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.', [
+		$this->get_logger()->info('Constructor completed.', [
 			'class' => __CLASS__,
 		]);
 	}
@@ -53,26 +57,30 @@ class Javascript_Validator extends BaseProtection
 		$is_enabled = $this->Controller->get_settings('protection_javascript_enable', 'global');
 
 		if ($is_enabled === '' || $is_enabled === null) {
-			// Default: aktiv, wenn nicht explizit gesetzt
+			// Default: active if not explicitly set
 			$is_enabled = 1;
 		}
 
-		if ($is_enabled) {
-			$this->get_logger()->info('JavaScript-Schutz ist aktiviert.', [
-				'class' => __CLASS__,
-				'method' => __METHOD__,
-			]);
-		} else {
-			$this->get_logger()->warning('JavaScript-Schutz ist deaktiviert.', [
-				'class' => __CLASS__,
-				'method' => __METHOD__,
-			]);
+		$debug = f12_is_debug();
+
+		if ($debug) {
+			if ($is_enabled) {
+				$this->get_logger()->info('JavaScript protection is enabled.', [
+					'class' => __CLASS__,
+					'method' => __METHOD__,
+				]);
+			} else {
+				$this->get_logger()->warning('JavaScript protection is disabled.', [
+					'class' => __CLASS__,
+					'method' => __METHOD__,
+				]);
+			}
 		}
 
 		$result = apply_filters('f12-cf7-captcha-skip-validation-javascript', $is_enabled);
 
-		if ($is_enabled && !$result) {
-			$this->get_logger()->debug('JavaScript-Schutz wird durch Filter übersprungen.', [
+		if ($debug && $is_enabled && !$result) {
+			$this->get_logger()->debug('JavaScript protection skipped by filter.', [
 				'filter' => 'f12-cf7-captcha-skip-validation-javascript',
 				'original_state' => $is_enabled,
 			]);
@@ -90,30 +98,30 @@ class Javascript_Validator extends BaseProtection
      */
 	public function get_log_data($data)
 	{
-		$this->get_logger()->info('Füge Timer-Daten zu den Log-Daten hinzu.', [
+		$this->get_logger()->info('Adding timer data to log data.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Holen Sie sich die Standarddaten
+		// Get the default data
 		$data['Timer Data'] = $this->get_timer_as_string();
-		$this->get_logger()->debug('Gesamte Timer-Daten hinzugefügt.', [
+		$this->get_logger()->debug('Complete timer data added.', [
 			'timer_data' => $data['Timer Data'],
 		]);
 
-		// Holen Sie sich die PHP-Daten
+		// Get the PHP data
 		$data['Timer Data PHP'] = $this->get_timer_as_string('php');
-		$this->get_logger()->debug('PHP-Timer-Daten hinzugefügt.', [
+		$this->get_logger()->debug('PHP timer data added.', [
 			'timer_data_php' => $data['Timer Data PHP'],
 		]);
 
-		// Holen Sie sich die JS-Daten
+		// Get the JS data
 		$data['Timer Data JS'] = $this->get_timer_as_string('js');
-		$this->get_logger()->debug('JS-Timer-Daten hinzugefügt.', [
+		$this->get_logger()->debug('JS timer data added.', [
 			'timer_data_js' => $data['Timer Data JS'],
 		]);
 
-		$this->get_logger()->info('Log-Daten-Array vervollständigt.', [
+		$this->get_logger()->info('Log data array completed.', [
 			'final_data_keys' => array_keys($data),
 		]);
 
@@ -128,7 +136,7 @@ class Javascript_Validator extends BaseProtection
      */
 	public function init_js()
 	{
-		$this->get_logger()->info('Initialisiere JavaScript-Timer-Daten.', [
+		$this->get_logger()->info('Initializing JavaScript timer data.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -137,51 +145,59 @@ class Javascript_Validator extends BaseProtection
 		$end = 0.0;
 
 		// Standard-Verarbeitung
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		if (isset($_POST['js_start_time']) && isset($_POST['js_end_time'])) {
-			$start = (float)$_POST['js_start_time'];
-			$end = (float)$_POST['js_end_time'];
-			$this->get_logger()->debug('Standard-JS-Timer-Daten aus $_POST gefunden.', [
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
+			$start = (float) sanitize_text_field( wp_unslash( $_POST['js_start_time'] ) );
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
+			$end = (float) sanitize_text_field( wp_unslash( $_POST['js_end_time'] ) );
+			$this->get_logger()->debug('Standard JS timer data found in $_POST.', [
 				'start' => $start,
 				'end' => $end,
 			]);
 		}
 
-		// Spezifische Avada-Verarbeitung
+		// Avada-specific processing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		if (isset($_POST['formData']) && !is_array($_POST['formData'])) {
-			$this->get_logger()->debug('Avada-spezifische FormData-Struktur erkannt.');
-			parse_str(wp_unslash($_POST['formData']), $form_data);
+			$this->get_logger()->debug('Avada-specific FormData structure detected.');
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
+			parse_str( wp_unslash( $_POST['formData'] ), $form_data );
+			$form_data = array_map( 'sanitize_text_field', $form_data );
 
 			if (isset($form_data['js_start_time']) && isset($form_data['js_end_time'])) {
 				$start = (float)$form_data['js_start_time'];
 				$end = (float)$form_data['js_end_time'];
-				$this->get_logger()->debug('JS-Timer-Daten aus Avada-FormData gefunden.', [
+				$this->get_logger()->debug('JS timer data found in Avada FormData.', [
 					'start' => $start,
 					'end' => $end,
 				]);
 			}
 		}
 
-		// Spezifische Fluent Forms-Verarbeitung
+		// Fluent Forms-specific processing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		if (isset($_POST['data']) && defined('FLUENTFORM') && is_string($_POST['data'])) {
-			$this->get_logger()->debug('Fluent Forms-spezifische Datenstruktur erkannt.');
-			$decodedFormData = urldecode($_POST['data']);
+			$this->get_logger()->debug('Fluent Forms-specific data structure detected.');
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
+			$decodedFormData = urldecode( wp_unslash( $_POST['data'] ) );
 			parse_str($decodedFormData, $form_data);
 
 			if (isset($form_data['js_start_time'])) {
 				$start = (float)$form_data['js_start_time'];
-				$this->get_logger()->debug('JS-Start-Zeit aus Fluent Forms-Daten gefunden.', ['start' => $start]);
+				$this->get_logger()->debug('JS start time found in Fluent Forms data.', ['start' => $start]);
 			}
 
 			if (isset($form_data['js_end_time'])) {
 				$end = (float)$form_data['js_end_time'];
-				$this->get_logger()->debug('JS-End-Zeit aus Fluent Forms-Daten gefunden.', ['end' => $end]);
+				$this->get_logger()->debug('JS end time found in Fluent Forms data.', ['end' => $end]);
 			}
 		}
 
 		$this->set_start_time('js', $start);
 		$this->set_end_time('js', $end);
 
-		$this->get_logger()->info('JavaScript-Timer-Daten erfolgreich gesetzt.', [
+		$this->get_logger()->info('JavaScript timer data set successfully.', [
 			'js_start' => $this->get_start_time('js'),
 			'js_end' => $this->get_end_time('js'),
 		]);
@@ -195,7 +211,7 @@ class Javascript_Validator extends BaseProtection
      */
 	private function set_start_time(string $type, float $microtime)
 	{
-		$this->get_logger()->debug("Setze Startzeit für den Typ '{$type}'.", [
+		$this->get_logger()->debug("Setting start time for type '{$type}'.", [
 			'class'     => __CLASS__,
 			'method'    => __METHOD__,
 			'type'      => $type,
@@ -213,7 +229,7 @@ class Javascript_Validator extends BaseProtection
      */
 	private function set_end_time(string $type, float $microtime)
 	{
-		$this->get_logger()->debug("Setze Endzeit für den Typ '{$type}'.", [
+		$this->get_logger()->debug("Setting end time for type '{$type}'.", [
 			'class'     => __CLASS__,
 			'method'    => __METHOD__,
 			'type'      => $type,
@@ -244,57 +260,64 @@ class Javascript_Validator extends BaseProtection
      */
 	private function init_php()
 	{
-		$this->get_logger()->info('Initialisiere PHP-Timer-Daten.', [
+		$this->get_logger()->info('Initializing PHP timer data.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$start = 0.0;
 
-		// Standard-Verarbeitung (z.B. für Contact Form 7)
+		// Standard processing (e.g. for Contact Form 7)
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		if (isset($_POST['php_start_time'])) {
-			$start = (float)$_POST['php_start_time'];
-			$this->get_logger()->debug('Standard-PHP-Startzeit aus $_POST gefunden.', [
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
+			$start = (float) sanitize_text_field( wp_unslash( $_POST['php_start_time'] ) );
+			$this->get_logger()->debug('Standard PHP start time found in $_POST.', [
 				'start' => $start,
 			]);
 		}
 
-		// Spezifische Avada-Verarbeitung
+		// Avada-specific processing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		if (isset($_POST['formData'])) {
-			$this->get_logger()->debug('Avada-spezifische FormData-Struktur erkannt.');
-			parse_str(wp_unslash($_POST['formData']), $form_data);
+			$this->get_logger()->debug('Avada-specific FormData structure detected.');
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
+			parse_str( wp_unslash( $_POST['formData'] ), $form_data );
+			$form_data = array_map( 'sanitize_text_field', $form_data );
 
 			if (isset($form_data['php_start_time'])) {
 				$start = (float)$form_data['php_start_time'];
-				$this->get_logger()->debug('PHP-Startzeit aus Avada-FormData gefunden.', [
+				$this->get_logger()->debug('PHP start time found in Avada FormData.', [
 					'start' => $start,
 				]);
 			}
 		}
 
-		// Spezifische Fluent Forms-Verarbeitung
+		// Fluent Forms-specific processing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		if (isset($_POST['data']) && defined('FLUENTFORM') && is_string($_POST['data'])) {
-			$this->get_logger()->debug('Fluent Forms-spezifische Datenstruktur erkannt.');
-			$decodedFormData = urldecode($_POST['data']);
+			$this->get_logger()->debug('Fluent Forms-specific data structure detected.');
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
+			$decodedFormData = urldecode( wp_unslash( $_POST['data'] ) );
 			parse_str($decodedFormData, $form_data);
 
 			if (isset($form_data['php_start_time'])) {
 				$start = (float)$form_data['php_start_time'];
-				$this->get_logger()->debug('PHP-Startzeit aus Fluent Forms-Daten gefunden.', ['start' => $start]);
+				$this->get_logger()->debug('PHP start time found in Fluent Forms data.', ['start' => $start]);
 			}
 		}
 
 		$this->set_start_time('php', $start);
 
 		if ($start != 0.0) {
-			$this->get_logger()->debug('PHP-Startzeit existiert. Setze Endzeit.');
+			$this->get_logger()->debug('PHP start time exists. Setting end time.');
 			$this->set_end_time('php', microtime(true));
 		} else {
-			$this->get_logger()->debug('PHP-Startzeit fehlt. Setze aktuelle Zeit als Startzeit.');
+			$this->get_logger()->debug('PHP start time missing. Setting current time as start time.');
 			$this->set_start_time('php', microtime(true));
 		}
 
-		$this->get_logger()->info('PHP-Timer-Daten erfolgreich gesetzt.', [
+		$this->get_logger()->info('PHP timer data set successfully.', [
 			'php_start' => $this->get_start_time('php'),
 			'php_end' => $this->get_end_time('php'),
 		]);
@@ -309,18 +332,18 @@ class Javascript_Validator extends BaseProtection
      */
 	public function get_form_field(): string
 	{
-		$this->get_logger()->info('Generiere verborgene Formularfelder für den Timer.', [
+		$this->get_logger()->info('Generating hidden form fields for timer.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (!$this->is_enabled()) {
-			$this->get_logger()->warning('Timer-Felder werden nicht generiert, da der JavaScript-Schutz deaktiviert ist.');
+			$this->get_logger()->warning('Timer fields not generated because JavaScript protection is disabled.');
 			return '';
 		}
 
 		$time = $this->get_start_time('php');
-		$this->get_logger()->debug('PHP-Startzeit-Wert: ' . $time);
+		$this->get_logger()->debug('PHP start time value: ' . $time);
 
 		$additional_fields = [
 			'<input type="hidden" name="php_start_time" value="' . esc_attr($time) . '" />',
@@ -330,7 +353,7 @@ class Javascript_Validator extends BaseProtection
 
 		$output = implode("", $additional_fields);
 
-		$this->get_logger()->debug('Generierte Formularfelder zurückgegeben.', [
+		$this->get_logger()->debug('Generated form fields returned.', [
 			'output_length' => strlen($output),
 		]);
 
@@ -348,25 +371,25 @@ class Javascript_Validator extends BaseProtection
      */
 	public function get_captcha(...$args): string
 	{
-		$this->get_logger()->info('Versuche, das Captcha-Formularfeld zu generieren.', [
+		$this->get_logger()->info('Attempting to generate captcha form field.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (!$this->is_enabled()) {
-			$this->get_logger()->warning('Captcha-Ausgabe übersprungen, da der JavaScript-Schutz deaktiviert ist.');
+			$this->get_logger()->warning('Captcha output skipped because JavaScript protection is disabled.');
 			return '';
 		}
 
 		$form_field_html = $this->get_form_field();
 
 		if (empty($form_field_html)) {
-			$this->get_logger()->error('Die Generierung des Formularfeldes ist fehlgeschlagen.', [
+			$this->get_logger()->error('Form field generation failed.', [
 				'class' => __CLASS__,
 			]);
-			// Optional: Ein Fallback-Wert oder eine Fehlermeldung
+			// Optional: A fallback value or error message
 		} else {
-			$this->get_logger()->debug('Captcha-Formularfeld erfolgreich generiert.', [
+			$this->get_logger()->debug('Captcha form field generated successfully.', [
 				'html_length' => strlen($form_field_html),
 			]);
 		}
@@ -386,7 +409,7 @@ class Javascript_Validator extends BaseProtection
 	private function get_start_time(string $type = 'php'): float
 	{
 		if (!isset($this->start_time[$type])) {
-			$this->get_logger()->error("Fehler: Startzeit-Typ '{$type}' nicht gefunden.", [
+			$this->get_logger()->error("Error: Start time type '{$type}' not found.", [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 				'available_types' => array_keys($this->start_time),
@@ -394,7 +417,7 @@ class Javascript_Validator extends BaseProtection
 			return 0.0;
 		}
 
-		$this->get_logger()->debug("Startzeit für Typ '{$type}' abgerufen: " . $this->start_time[$type], [
+		$this->get_logger()->debug("Start time for type '{$type}' retrieved: " . $this->start_time[$type], [
 			'type' => $type,
 		]);
 
@@ -413,7 +436,7 @@ class Javascript_Validator extends BaseProtection
 	private function get_end_time(string $type = 'php'): float
 	{
 		if (!isset($this->end_time[$type])) {
-			$this->get_logger()->error("Fehler: Endzeit-Typ '{$type}' nicht gefunden.", [
+			$this->get_logger()->error("Error: End time type '{$type}' not found.", [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 				'available_types' => array_keys($this->end_time),
@@ -421,7 +444,7 @@ class Javascript_Validator extends BaseProtection
 			return 0.0;
 		}
 
-		$this->get_logger()->debug("Endzeit für Typ '{$type}' abgerufen: " . $this->end_time[$type], [
+		$this->get_logger()->debug("End time for type '{$type}' retrieved: " . $this->end_time[$type], [
 			'type' => $type,
 		]);
 
@@ -436,7 +459,7 @@ class Javascript_Validator extends BaseProtection
      */
 	private function get_difference(string $type = 'php', string $output = 'ms'): string
 	{
-		$this->get_logger()->info("Berechne die Zeitdifferenz für Typ '{$type}'.", [
+		$this->get_logger()->info("Calculating time difference for type '{$type}'.", [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'output_format' => $output,
@@ -447,21 +470,21 @@ class Javascript_Validator extends BaseProtection
 
 		$difference = $end_time - $start_time;
 
-		$this->get_logger()->debug("Roh-Zeitdifferenz: " . $difference . " Sekunden.", [
+		$this->get_logger()->debug("Raw time difference: " . $difference . " seconds.", [
 			'start_time' => $start_time,
 			'end_time' => $end_time,
 		]);
 
 		if ($output === 'ms') {
 			$result = round($difference * 1000);
-			$this->get_logger()->debug('Zeit in Millisekunden umgerechnet.', [
+			$this->get_logger()->debug('Time converted to milliseconds.', [
 				'result_ms' => $result,
 			]);
 			return (string)$result;
 		}
 
 		$result = round($difference);
-		$this->get_logger()->debug('Zeit in Sekunden gerundet.', [
+		$this->get_logger()->debug('Time rounded to seconds.', [
 			'result_s' => $result,
 		]);
 		return (string)$result;
@@ -478,7 +501,7 @@ class Javascript_Validator extends BaseProtection
      */
 	private function get_timer_as_string(string $type = 'php'): string
 	{
-		$this->get_logger()->info("Erzeuge eine formatierte Zeitangabe als Zeichenkette für Typ '{$type}'.", [
+		$this->get_logger()->info("Creating formatted time string for type '{$type}'.", [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -487,17 +510,17 @@ class Javascript_Validator extends BaseProtection
 		$end_time = $this->get_end_time($type);
 
 		if ($start_time === 0.0 || $end_time === 0.0) {
-			$this->get_logger()->warning('Zeitdaten fehlen oder sind ungültig. Kann die Zeichenkette nicht formatieren.', [
+			$this->get_logger()->warning('Time data missing or invalid. Cannot format string.', [
 				'start_time' => $start_time,
 				'end_time' => $end_time,
 			]);
-			return 'Zeitdaten nicht verfügbar.';
+			return 'Time data not available.';
 		}
 
 		$data = [
-			'Formular geladen' => date('d.m.Y H:i:s', (int)$start_time) . ' [' . $start_time . ']',
-			'Formular gesendet' => date('d.m.Y H:i:s', (int)$end_time) . ' [' . $end_time . ']',
-			'Verstrichene Zeit' => $this->get_difference($type) . ' ms, ' . $this->get_difference($type, 's') . ' s',
+			'Form loaded' => date('d.m.Y H:i:s', (int)$start_time) . ' [' . $start_time . ']',
+			'Form submitted' => date('d.m.Y H:i:s', (int)$end_time) . ' [' . $end_time . ']',
+			'Elapsed time' => $this->get_difference($type) . ' ms, ' . $this->get_difference($type, 's') . ' s',
 		];
 
 		$response = '';
@@ -505,9 +528,9 @@ class Javascript_Validator extends BaseProtection
 			$response .= $key . ': ' . $value . ', ';
 		}
 
-		$response = rtrim($response, ', '); // Entfernt das letzte Komma und Leerzeichen
+		$response = rtrim($response, ', '); // Remove trailing comma and space
 
-		$this->get_logger()->debug("Formatierte Zeitzeichenkette erstellt.", [
+		$this->get_logger()->debug("Formatted time string created.", [
 			'output' => $response,
 		]);
 
@@ -521,31 +544,43 @@ class Javascript_Validator extends BaseProtection
      */
 	public function is_human(): bool
 	{
-		$this->get_logger()->info('Führe JavaScript-basierte Human-Überprüfung durch.', [
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		]);
+		$debug = f12_is_debug();
 
-		// Überprüfe die Differenz der JavaScript-Zeiten
+		if ($debug) {
+			$this->get_logger()->info('Performing JavaScript-based human verification.', [
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+		}
+
+		// Check JavaScript time difference
 		$js_difference = $this->get_difference('js');
 		if ((string)$js_difference === '0' || (string)$js_difference === '0.0') {
-			$this->get_logger()->warning('JS-Zeitdifferenz ist Null. Möglicherweise ein Bot oder technisches Problem.');
+			if ($debug) {
+				$this->get_logger()->warning('JS time difference is zero. Possibly a bot or technical issue.');
+			}
 			return false;
 		}
 
-		// Überprüfe, ob die Startzeit erfasst wurde
+		// Check if start time was captured
 		if ($this->get_start_time('js') == 0.0) {
-			$this->get_logger()->warning('JS-Startzeit wurde nicht erfasst.');
+			if ($debug) {
+				$this->get_logger()->warning('JS start time was not captured.');
+			}
 			return false;
 		}
 
-		// Überprüfe, ob die Endzeit erfasst wurde
+		// Check if end time was captured
 		if ($this->get_end_time('js') == 0.0) {
-			$this->get_logger()->warning('JS-Endzeit wurde nicht erfasst.');
+			if ($debug) {
+				$this->get_logger()->warning('JS end time was not captured.');
+			}
 			return false;
 		}
 
-		$this->get_logger()->info('JavaScript-basierte Überprüfung erfolgreich. Als Mensch eingestuft.');
+		if ($debug) {
+			$this->get_logger()->info('JavaScript-based verification successful. Classified as human.');
+		}
 
 		return true;
 	}
@@ -559,45 +594,55 @@ class Javascript_Validator extends BaseProtection
      */
 	public function is_spam(): bool
 	{
-		$this->get_logger()->info('Führe Spam-Überprüfung durch.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-		]);
+		$debug = f12_is_debug();
+
+		if ($debug) {
+			$this->get_logger()->info('Performing spam check.', [
+				'class' => __CLASS__,
+				'method' => __METHOD__,
+			]);
+		}
 
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Spam-Check übersprungen: JavaScript-Schutz ist deaktiviert.', [
-				'class' => __CLASS__,
-			]);
+			if ($debug) {
+				$this->get_logger()->debug('Spam check skipped: JavaScript protection is disabled.', [
+					'class' => __CLASS__,
+				]);
+			}
 			return false;
 		}
 
 		if (!$this->is_human()) {
-			$this->get_logger()->warning('Formular als Spam eingestuft: JavaScript-Validierung fehlgeschlagen.', [
-				'class' => __CLASS__,
-			]);
+			if ($debug) {
+				$this->get_logger()->warning('Form classified as spam: JavaScript validation failed.', [
+					'class' => __CLASS__,
+				]);
+			}
 			$this->set_message(__('javascript-protection', 'captcha-for-contact-form-7'));
 			return true;
 		}
 
-		$this->get_logger()->info('Formular als nicht-Spam eingestuft.');
+		if ($debug) {
+			$this->get_logger()->info('Form classified as not spam.');
+		}
 
 		return false;
 	}
 
 	public function success(): void
 	{
-		$this->get_logger()->info('Erfolgreiche Formularübermittlung erkannt.', [
+		$this->get_logger()->info('Successful form submission detected.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Hier kann zusätzliche Logik implementiert werden,
-		// die bei einer erfolgreichen Validierung ausgeführt werden soll.
-		// Zum Beispiel:
-		// - Löschen temporärer Daten
-		// - Senden einer Benachrichtigung
-		// - Aktualisieren von Zählern
+		// Additional logic can be implemented here
+		// to be executed upon successful validation.
+		// For example:
+		// - Delete temporary data
+		// - Send a notification
+		// - Update counters
 
-		// TODO: Implementieren Sie die Erfolg-Logik hier.
+		// TODO: Implement success logic here.
 	}
 }

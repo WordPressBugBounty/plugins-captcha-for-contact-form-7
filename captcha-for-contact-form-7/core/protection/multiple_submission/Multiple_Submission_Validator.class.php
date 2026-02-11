@@ -20,21 +20,21 @@ class Multiple_Submission_Validator extends BaseProtection {
 	{
 		parent::__construct($Controller);
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Lade Submodule
-		$this->get_logger()->info('Lade Submodul: CaptchaTimerCleaner.');
+		// Load submodules
+		$this->get_logger()->info('Loading submodule: CaptchaTimerCleaner.');
 		new CaptchaTimerCleaner($Controller);
 
 		$this->set_message(__('multiple-submission-protection', 'captcha-for-contact-form-7'));
-		$this->get_logger()->debug('Nachricht für mehrfache Übermittlung gesetzt.', [
+		$this->get_logger()->debug('Message for multiple submission set.', [
 			'message_key' => 'multiple-submission-protection',
 		]);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.', [
+		$this->get_logger()->info('Constructor completed.', [
 			'class' => __CLASS__,
 		]);
 	}
@@ -49,14 +49,14 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	public function factory(): CaptchaTimer
 	{
-		$this->get_logger()->info('Erzeuge eine neue Instanz von CaptchaTimer über die Factory-Methode.', [
+		$this->get_logger()->info('Creating new CaptchaTimer instance via factory method.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$captchaTimer = new CaptchaTimer($this->get_logger());
 
-		$this->get_logger()->debug('Neue CaptchaTimer-Instanz erfolgreich erstellt.');
+		$this->get_logger()->debug('New CaptchaTimer instance successfully created.');
 
 		return $captchaTimer;
 	}
@@ -75,17 +75,17 @@ class Multiple_Submission_Validator extends BaseProtection {
 		$is_enabled = $this->Controller->get_settings('protection_multiple_submission_enable', 'global');
 
 		if ($is_enabled === '' || $is_enabled === null) {
-			// Default: aktiv, wenn nicht explizit gesetzt
+			// Default: active if not explicitly set
 			$is_enabled = 1;
 		}
 
 		if ($is_enabled) {
-			$this->get_logger()->info('Schutz gegen mehrfache Übermittlungen ist aktiviert.', [
+			$this->get_logger()->info('Multiple submission protection is enabled.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
 		} else {
-			$this->get_logger()->warning('Schutz gegen mehrfache Übermittlungen ist deaktiviert.', [
+			$this->get_logger()->warning('Multiple submission protection is disabled.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
@@ -94,7 +94,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 		$result = apply_filters('f12-cf7-captcha-skip-validation-multiple_submission', $is_enabled);
 
 		if ($is_enabled && !$result) {
-			$this->get_logger()->debug('Schutz wird durch Filter übersprungen.', [
+			$this->get_logger()->debug('Protection skipped by filter.', [
 				'filter' => 'f12-cf7-captcha-skip-validation-multiple_submission',
 				'original_state' => $is_enabled,
 			]);
@@ -114,18 +114,18 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	public function is_spam(...$args): bool
 	{
-		$this->get_logger()->info('Führe Spam-Überprüfung für Mehrfachübermittlung durch.', [
+		$this->get_logger()->info('Performing spam check for multiple submission.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (!isset($args[0])) {
-			$this->get_logger()->warning('Keine Post-Daten zum Überprüfen verfügbar.');
+			$this->get_logger()->warning('No post data available for checking.');
 			return false;
 		}
 
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Spam-Überprüfung übersprungen, da der Schutz deaktiviert ist.');
+			$this->get_logger()->debug('Spam check skipped because protection is disabled.');
 			return false;
 		}
 
@@ -133,21 +133,21 @@ class Multiple_Submission_Validator extends BaseProtection {
 		$field_name = $this->get_field_name();
 
 		if (!isset($array_post_data[$field_name])) {
-			$this->get_logger()->warning('Hash-Feld fehlt in den übermittelten Daten. Einstufung als Spam.');
+			$this->get_logger()->warning('Hash field missing in submitted data. Classified as spam.');
 			return true;
 		}
 
 		$hash = sanitize_text_field($array_post_data[$field_name]);
-		$this->get_logger()->debug('Abgerufener Hash-Wert.', ['hash' => $hash]);
+		$this->get_logger()->debug('Retrieved hash value.', ['hash' => $hash]);
 
 		/**
-		 * Lade den Timer-Controller und den Timer.
+		 * Load the timer controller and the timer.
 		 */
-		$Timer_Controller = $this->Controller->get_modul('timer');
+		$Timer_Controller = $this->Controller->get_module('timer');
 		$Timer = $Timer_Controller->get_timer($hash);
 
 		if (!$Timer) {
-			$this->get_logger()->warning('Kein passender Timer für den Hash gefunden. Einstufung als Spam.', ['hash' => $hash]);
+			$this->get_logger()->warning('No matching timer found for hash. Classified as spam.', ['hash' => $hash]);
 			return true;
 		}
 
@@ -156,7 +156,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 		$start_time_ms = (float)$Timer->get_value();
 		$time_passed = $time_in_ms - $start_time_ms;
 
-		$this->get_logger()->debug("Zeitüberprüfung durchgeführt.", [
+		$this->get_logger()->debug("Time check performed.", [
 			'start_time_ms' => $start_time_ms,
 			'end_time_ms' => $time_in_ms,
 			'time_passed_ms' => $time_passed,
@@ -164,14 +164,14 @@ class Multiple_Submission_Validator extends BaseProtection {
 		]);
 
 		if ($time_passed < $minimum_time_in_ms) {
-			$this->get_logger()->warning('Formular zu schnell übermittelt. Einstufung als Spam.');
+			$this->get_logger()->warning('Form submitted too quickly. Classified as spam.');
 			return true;
 		}
 
-		$this->get_logger()->info('Validierung erfolgreich. Lösche den Timer-Datensatz.', ['hash' => $hash]);
+		$this->get_logger()->info('Validation successful. Deleting timer record.', ['hash' => $hash]);
 		$Timer->delete();
 
-		$this->get_logger()->info('Formular als nicht-Spam eingestuft.');
+		$this->get_logger()->info('Form classified as not spam.');
 		return false;
 	}
 
@@ -187,13 +187,13 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	public function get_captcha(...$args): string
 	{
-		$this->get_logger()->info('Generiere Captcha-Feld für Mehrfachübermittlungsschutz.', [
+		$this->get_logger()->info('Generating captcha field for multiple submission protection.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (!$this->is_enabled()) {
-			$this->get_logger()->warning('Captcha-Feld wird nicht generiert, da der Schutz deaktiviert ist.');
+			$this->get_logger()->warning('Captcha field not generated because protection is disabled.');
 			return '';
 		}
 
@@ -202,20 +202,20 @@ class Multiple_Submission_Validator extends BaseProtection {
 		/**
 		 * @var Timer_Controller $Timer_Controller
 		 */
-		$Timer_Controller = $this->Controller->get_modul('timer');
+		$Timer_Controller = $this->Controller->get_module('timer');
 
 		if (!$Timer_Controller) {
-			$this->get_logger()->error('Timer-Controller-Modul nicht gefunden.');
+			$this->get_logger()->error('Timer controller module not found.');
 			return '';
 		}
 
 		$hash = $Timer_Controller->add_timer();
 		if (empty($hash)) {
-			$this->get_logger()->error('Fehler beim Hinzufügen des Timers. Konnte keinen Hash generieren.');
+			$this->get_logger()->error('Error adding timer. Could not generate hash.');
 			return '';
 		}
 
-		$this->get_logger()->debug('Neuer Timer-Hash erfolgreich generiert.', ['hash' => $hash]);
+		$this->get_logger()->debug('New timer hash successfully generated.', ['hash' => $hash]);
 
 		$html = sprintf(
 			'<div class="f12t"><input type="hidden" class="f12_timer" name="%s" value="%s"/></div>',
@@ -223,7 +223,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 			esc_attr($hash)
 		);
 
-		$this->get_logger()->info('Verstecktes Captcha-Feld erfolgreich generiert.', [
+		$this->get_logger()->info('Hidden captcha field successfully generated.', [
 			'field_name' => $field_name,
 		]);
 
@@ -241,7 +241,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 	{
 		$validation_time = 2000;
 
-		$this->get_logger()->debug('Rufe die minimale Validierungszeit ab.', [
+		$this->get_logger()->debug('Retrieving minimum validation time.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'time_in_ms' => $validation_time,
@@ -261,7 +261,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 	{
 		$field_name = 'f12_multiple_submission_protection';
 
-		$this->get_logger()->debug('Rufe den Namen des Feldes ab.', [
+		$this->get_logger()->debug('Retrieving field name.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'field_name' => $field_name,
@@ -279,28 +279,28 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	protected function on_init(): void
 	{
-		$this->get_logger()->info('on_init-Methode wird ausgeführt.', [
+		$this->get_logger()->info('on_init method executing.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// TODO: Implementieren Sie hier die Initialisierungslogik.
-		// Beispiel: Hinzufügen von Hooks, Registrieren von Shortcodes etc.
+		// TODO: Implement the initialization logic here.
+		// Example: Adding hooks, registering shortcodes, etc.
 
-		$this->get_logger()->info('on_init-Methode abgeschlossen.');
+		$this->get_logger()->info('on_init method completed.');
 	}
 
 	public function success(): void
 	{
-		$this->get_logger()->info('Erfolgreiche Validierung der Mehrfachübermittlung.', [
+		$this->get_logger()->info('Successful multiple submission validation.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// TODO: Implementieren Sie hier die Logik für den Erfolgsfall.
-		// In diesem spezifischen Kontext könnte dies bedeuten, dass keine weiteren Aktionen notwendig sind,
-		// da die Überprüfung bereits in der is_spam()-Methode stattgefunden hat.
-		// Sollte der Timer nach erfolgreicher Validierung erst hier gelöscht werden,
-		// müsste die Löschlogik von is_spam() hierher verschoben werden.
+		// TODO: Implement the logic for the success case here.
+		// In this specific context, this could mean that no further actions are necessary,
+		// since the check has already taken place in the is_spam() method.
+		// If the timer should only be deleted here after successful validation,
+		// the deletion logic would need to be moved from is_spam() to here.
 	}
 }

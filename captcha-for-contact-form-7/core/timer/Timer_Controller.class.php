@@ -10,9 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once( 'CaptchaTimer.class.php' );
-require_once( 'CaptchaTimerCleaner.class.php' );
-
 /**
  * Class Timer_Controller
  * Enables the validation of forms / comments by submit time
@@ -30,20 +27,20 @@ class Timer_Controller extends BaseModul {
 	public function __construct(CF7Captcha $Controller)
 	{
 		parent::__construct($Controller);
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Instanziiere den CaptchaTimerCleaner
+		// Instantiate the CaptchaTimerCleaner
 		$this->Captcha_Timer_Cleaner = new CaptchaTimerCleaner($Controller);
-		$this->get_logger()->debug('CaptchaTimerCleaner-Instanz erstellt.');
+		$this->get_logger()->debug('CaptchaTimerCleaner instance created.');
 
-		// Füge den '_init'-Hook hinzu
+		// Add the '_init' hook
 		add_action('init', array($this, '_init'));
-		$this->get_logger()->debug('Hook "init" für die Methode "_init" hinzugefügt.');
+		$this->get_logger()->debug('Hook "init" added for the "_init" method.');
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		$this->get_logger()->info('Constructor completed.');
 	}
 
 	/**
@@ -56,18 +53,18 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function get_timer_cleaner(): CaptchaTimerCleaner
 	{
-		$this->get_logger()->info('Rufe die Instanz des Captcha-Timer-Cleaners ab.', [
+		$this->get_logger()->info('Retrieving the captcha timer cleaner instance.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Gibt die bereits im Konstruktor erstellte Instanz des Cleaners zurück.
+		// Return the cleaner instance already created in the constructor.
 		if (!($this->Captcha_Timer_Cleaner instanceof CaptchaTimerCleaner)) {
-			$this->get_logger()->error('CaptchaTimerCleaner-Instanz ist nicht verfügbar oder vom falschen Typ.');
-			// Optional: Hier könnte man eine neue Instanz erstellen oder eine Exception werfen.
-			// Da die Instanz im Konstruktor erstellt wird, ist dies ein unerwarteter Zustand.
+			$this->get_logger()->error('CaptchaTimerCleaner instance is not available or has the wrong type.');
+			// Optional: A new instance could be created here or an exception could be thrown.
+			// Since the instance is created in the constructor, this is an unexpected state.
 		} else {
-			$this->get_logger()->debug('CaptchaTimerCleaner-Instanz erfolgreich zurückgegeben.');
+			$this->get_logger()->debug('CaptchaTimerCleaner instance successfully returned.');
 		}
 
 		return $this->Captcha_Timer_Cleaner;
@@ -82,15 +79,15 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function factory(): CaptchaTimer
 	{
-		$this->get_logger()->info('Erstelle eine neue Instanz von CaptchaTimer über die Factory-Methode.', [
+		$this->get_logger()->info('Creating a new CaptchaTimer instance via the factory method.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Instanziiere ein neues CaptchaTimer-Objekt und übergebe den Logger.
+		// Instantiate a new CaptchaTimer object and pass the logger.
 		$timer = new CaptchaTimer($this->get_logger());
 
-		$this->get_logger()->info('CaptchaTimer-Objekt erfolgreich erstellt.');
+		$this->get_logger()->info('CaptchaTimer object successfully created.');
 
 		return $timer;
 	}
@@ -110,9 +107,9 @@ class Timer_Controller extends BaseModul {
 		$is_enabled = $this->Controller->get_settings('protection_time_enable', 'global') === 1;
 
 		if ($is_enabled) {
-			$this->get_logger()->info('Timer-Schutz ist aktiviert.');
+			$this->get_logger()->info('Timer protection is enabled.');
 		} else {
-			$this->get_logger()->info('Timer-Schutz ist deaktiviert.');
+			$this->get_logger()->info('Timer protection is disabled.');
 		}
 
 		return $is_enabled;
@@ -128,22 +125,22 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function get_latest_timer(): ?CaptchaTimer
 	{
-		$this->get_logger()->info('Rufe den zuletzt erstellten Timer ab.', [
+		$this->get_logger()->info('Retrieving the most recently created timer.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Überprüfe, ob die Eigenschaft Latest_Timer eine Instanz von CaptchaTimer ist.
+		// Check if the Latest_Timer property is an instance of CaptchaTimer.
 		if ($this->Latest_Timer instanceof CaptchaTimer) {
-			$this->get_logger()->debug('Der zuletzt erstellte Timer wurde erfolgreich abgerufen.', [
+			$this->get_logger()->debug('The most recently created timer was successfully retrieved.', [
 				'timer_hash' => $this->Latest_Timer->get_hash(),
 			]);
 			return $this->Latest_Timer;
 		}
 
-		$this->get_logger()->info('Es wurde kein zuletzt erstellter Timer gefunden. Rückgabe von null.');
+		$this->get_logger()->info('No recently created timer was found. Returning null.');
 
-		// Wenn die Eigenschaft null ist, gib null zurück.
+		// If the property is null, return null.
 		return null;
 	}
 
@@ -152,16 +149,16 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function _init()
 	{
-		$this->get_logger()->info('Führe die Initialisierungsmethode "_init" aus.', [
+		$this->get_logger()->info('Executing the "_init" initialization method.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Löst eine Aktion aus, um anderen Teilen des Codes die Initialisierung zu ermöglichen.
+		// Trigger an action to allow other parts of the code to initialize.
 		do_action('f12_cf7_captcha_timer_validator_init');
-		$this->get_logger()->debug('Die Aktion "f12_cf7_captcha_timer_validator_init" wurde ausgelöst.');
+		$this->get_logger()->debug('The action "f12_cf7_captcha_timer_validator_init" was triggered.');
 
-		$this->get_logger()->info('Die Initialisierungsmethode ist abgeschlossen.');
+		$this->get_logger()->info('The initialization method is complete.');
 	}
 
 	/**
@@ -171,26 +168,26 @@ class Timer_Controller extends BaseModul {
 	 */
 	private function get_create_time(): string
 	{
-		$this->get_logger()->info('Rufe die Erstellungszeit ab. Überprüfe, ob sie bereits gesetzt ist.');
+		$this->get_logger()->info('Retrieving the creation time. Checking if it is already set.');
 
-		// Prüfe, ob die Eigenschaft `createtime` leer ist.
+		// Check if the `createtime` property is empty.
 		if (empty($this->createtime)) {
-			$this->get_logger()->debug('Die Erstellungszeit ist leer. Erstelle ein neues Datum-Objekt und setze die Zeit.');
+			$this->get_logger()->debug('The creation time is empty. Creating a new date object and setting the time.');
 
 			try {
-				// Instanziiere ein neues DateTime-Objekt, um die aktuelle Zeit zu erfassen.
+				// Instantiate a new DateTime object to capture the current time.
 				$dt = new \DateTime();
-				// Formatiere das Datum in das SQL-kompatible Format 'YYYY-MM-DD HH:MM:SS'.
+				// Format the date into the SQL-compatible format 'YYYY-MM-DD HH:MM:SS'.
 				$this->createtime = $dt->format('Y-m-d H:i:s');
-				$this->get_logger()->info('Erstellungszeit erfolgreich auf die aktuelle Zeit gesetzt.', ['createtime' => $this->createtime]);
+				$this->get_logger()->info('Creation time successfully set to the current time.', ['createtime' => $this->createtime]);
 			} catch (\Exception $e) {
-				$this->get_logger()->error('Fehler beim Erstellen des DateTime-Objekts.', ['error' => $e->getMessage()]);
-				// Im Fehlerfall kann ein leerer String oder ein Standardwert zurückgegeben werden,
-				// um einen weiteren Fehler zu vermeiden.
+				$this->get_logger()->error('Error creating the DateTime object.', ['error' => esc_html($e->getMessage())]);
+				// In case of error, an empty string or a default value can be returned
+				// to avoid further errors.
 				return '';
 			}
 		} else {
-			$this->get_logger()->debug('Die Erstellungszeit ist bereits vorhanden. Gebe den bestehenden Wert zurück.');
+			$this->get_logger()->debug('The creation time already exists. Returning the existing value.');
 		}
 
 		return $this->createtime;
@@ -205,22 +202,22 @@ class Timer_Controller extends BaseModul {
 	 */
 	private function generate_hash(string $user_ip_address): string
 	{
-		$this->get_logger()->info('Generiere einen neuen eindeutigen Hash-Wert für den Timer.', [
+		$this->get_logger()->info('Generating a new unique hash value for the timer.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Kombiniere den aktuellen Zeitstempel (sekundengenau) mit der IP-Adresse des Benutzers,
-		// um eine einzigartige, nicht-vorhersehbare Zeichenkette zu erstellen.
-		// Die IP-Adresse sorgt dafür, dass Hashes für verschiedene Benutzer unterschiedlich sind.
+		// Combine the current timestamp (seconds precision) with the user's IP address
+		// to create a unique, unpredictable string.
+		// The IP address ensures that hashes are different for different users.
 		$data_to_hash = time() . $user_ip_address;
 
-		// Verwende password_hash() mit dem Standard-Algorithmus (PASSWORD_DEFAULT).
-		// Dies bietet eine starke, salzige Hashing-Methode, die sicherstellt,
-		// dass der Hash nicht leicht erraten oder in einer Rainbow-Tabelle nachgeschlagen werden kann.
+		// Use password_hash() with the default algorithm (PASSWORD_DEFAULT).
+		// This provides a strong, salted hashing method that ensures
+		// the hash cannot be easily guessed or looked up in a rainbow table.
 		$hash = password_hash($data_to_hash, PASSWORD_DEFAULT);
 
-		$this->get_logger()->debug('Hash-Generierung abgeschlossen. Der resultierende Hash ist ' . strlen($hash) . ' Zeichen lang.');
+		$this->get_logger()->debug('Hash generation completed. The resulting hash is ' . strlen($hash) . ' characters long.');
 
 		return $hash;
 	}
@@ -234,17 +231,17 @@ class Timer_Controller extends BaseModul {
 	{
 		$time_in_seconds = microtime(true);
 
-		$this->get_logger()->debug('Rufe die aktuelle UNIX-Zeit in Millisekunden ab.', [
+		$this->get_logger()->debug('Retrieving the current UNIX time in milliseconds.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'raw_time' => $time_in_seconds,
 		]);
 
-		// Konvertiere die Zeit von Sekunden in Millisekunden und runde das Ergebnis.
-		// microtime(true) gibt die Zeit als float mit hoher Präzision zurück.
+		// Convert the time from seconds to milliseconds and round the result.
+		// microtime(true) returns the time as a float with high precision.
 		$time_in_ms = round($time_in_seconds * 1000);
 
-		$this->get_logger()->debug('Konvertierte Zeit in Millisekunden: ' . $time_in_ms);
+		$this->get_logger()->debug('Converted time in milliseconds: ' . $time_in_ms);
 
 		return $time_in_ms;
 	}
@@ -261,26 +258,26 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function add_timer(): ?string
 	{
-		$this->get_logger()->info('Starte den Prozess zum Hinzufügen eines neuen Timer-Eintrags zur Datenbank.');
+		$this->get_logger()->info('Starting the process to add a new timer entry to the database.');
 
 		try {
-			// Rufe die User-Data-Instanz ab, um die IP-Adresse des Benutzers zu erhalten.
-			$User_Data = $this->Controller->get_modul('user-data');
+			// Retrieve the user data instance to get the user's IP address.
+			$User_Data = $this->Controller->get_module('user-data');
 			$user_ip_address = $User_Data->get_ip_address();
-			$this->get_logger()->debug('Benutzer-IP-Adresse abgerufen.', ['ip' => $user_ip_address]);
+			$this->get_logger()->debug('User IP address retrieved.', ['ip' => $user_ip_address]);
 		} catch (\Exception $e) {
-			$this->get_logger()->error('Fehler beim Abrufen der Benutzerdaten. Timer kann nicht erstellt werden.', ['error' => $e->getMessage()]);
+			$this->get_logger()->error('Error retrieving user data. Timer cannot be created.', ['error' => esc_html($e->getMessage())]);
 			return null;
 		}
 
-		// Generiere einen eindeutigen Hash für den Timer.
+		// Generate a unique hash for the timer.
 		$hash = $this->generate_hash($user_ip_address);
 
-		// Hole die aktuelle Zeit in Millisekunden und die formatierte Erstellungszeit.
+		// Get the current time in milliseconds and the formatted creation time.
 		$time_in_ms = $this->get_time_in_ms();
 		$create_time = $this->get_create_time();
 
-		// Erstelle eine neue CaptchaTimer-Instanz mit den vorbereiteten Daten.
+		// Create a new CaptchaTimer instance with the prepared data.
 		$CaptchaTimer = new CaptchaTimer(
 			$this->get_logger(),
 			[
@@ -290,26 +287,26 @@ class Timer_Controller extends BaseModul {
 			]
 		);
 
-		$this->get_logger()->debug('Neues CaptchaTimer-Objekt erstellt.', [
+		$this->get_logger()->debug('New CaptchaTimer object created.', [
 			'hash' => $hash,
 			'value' => $time_in_ms,
 			'createtime' => $create_time,
 		]);
 
-		// Versuche, den Timer-Eintrag in der Datenbank zu speichern.
+		// Try to save the timer entry to the database.
 		if ($CaptchaTimer->save()) {
-			$this->get_logger()->info('Timer-Eintrag erfolgreich in der Datenbank gespeichert.');
+			$this->get_logger()->info('Timer entry successfully saved to the database.');
 
-			// Speichere die Instanz als den neuesten Timer für den späteren Zugriff.
+			// Store the instance as the latest timer for later access.
 			$this->Latest_Timer = $CaptchaTimer;
 
-			// Gib den generierten Hash zurück, der im Formular-HTML verwendet wird.
+			// Return the generated hash that is used in the form HTML.
 			return $hash;
 		}
 
-		$this->get_logger()->error('Fehler beim Speichern des Timer-Eintrags in der Datenbank. Rückgabe von null.');
+		$this->get_logger()->error('Error saving the timer entry to the database. Returning null.');
 
-		// Gib null zurück, wenn das Speichern fehlschlägt.
+		// Return null if saving fails.
 		return null;
 	}
 
@@ -324,7 +321,7 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function get_timer(string $hash): ?CaptchaTimer
 	{
-		$this->get_logger()->info('Rufe einen Captcha-Timer anhand des Hash-Werts ab.', [
+		$this->get_logger()->info('Retrieving a captcha timer by hash value.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'hash' => $hash,
@@ -333,9 +330,10 @@ class Timer_Controller extends BaseModul {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$error_message = 'The global variable $wpdb is not defined.';
 			$this->get_logger()->error($error_message);
-			throw new RuntimeException($error_message);
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+			throw new RuntimeException( $error_message );
 		}
 
 		try {
@@ -343,15 +341,15 @@ class Timer_Controller extends BaseModul {
 			$timer = $timer_handler->get_by_hash($hash);
 
 			if ($timer) {
-				$this->get_logger()->info('Timer-Eintrag erfolgreich abgerufen.');
+				$this->get_logger()->info('Timer entry successfully retrieved.');
 			} else {
-				$this->get_logger()->notice('Kein Timer-Eintrag für den gegebenen Hash gefunden.');
+				$this->get_logger()->notice('No timer entry found for the given hash.');
 			}
 
 			return $timer;
 
 		} catch (RuntimeException $e) {
-			$this->get_logger()->error('Fehler beim Abrufen des Timers.', [
+			$this->get_logger()->error('Error retrieving the timer.', [
 				'error' => $e->getMessage(),
 			]);
 			return null;
@@ -369,7 +367,7 @@ class Timer_Controller extends BaseModul {
 	 */
 	public function remove_timer(string $hash): void
 	{
-		$this->get_logger()->info('Starte den Prozess zum Entfernen eines Timers anhand des Hash-Wertes.', [
+		$this->get_logger()->info('Starting the process to remove a timer by hash value.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'hash' => $hash,
@@ -378,9 +376,10 @@ class Timer_Controller extends BaseModul {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$error_message = 'Die globale Variable $wpdb ist nicht definiert.';
+			$error_message = 'The global variable $wpdb is not defined.';
 			$this->get_logger()->error($error_message);
-			throw new RuntimeException($error_message);
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
+			throw new RuntimeException( $error_message );
 		}
 
 		try {
@@ -388,12 +387,12 @@ class Timer_Controller extends BaseModul {
 			$is_deleted = $timer_handler->delete_by_hash($hash);
 
 			if ($is_deleted) {
-				$this->get_logger()->info('Timer-Eintrag erfolgreich entfernt.', ['hash' => $hash]);
+				$this->get_logger()->info('Timer entry successfully removed.', ['hash' => $hash]);
 			} else {
-				$this->get_logger()->warning('Kein Timer-Eintrag zum Löschen gefunden oder Löschung fehlgeschlagen.', ['hash' => $hash]);
+				$this->get_logger()->warning('No timer entry found for deletion or deletion failed.', ['hash' => $hash]);
 			}
 		} catch (\Exception $e) {
-			$this->get_logger()->error('Fehler beim Löschen des Timer-Eintrags.', [
+			$this->get_logger()->error('Error deleting the timer entry.', [
 				'error' => $e->getMessage(),
 			]);
 		}

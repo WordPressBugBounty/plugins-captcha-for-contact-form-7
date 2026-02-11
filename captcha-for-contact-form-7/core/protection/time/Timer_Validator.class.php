@@ -17,17 +17,17 @@ class Timer_Validator extends BaseProtection {
 	{
 		parent::__construct($Controller);
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$this->set_message(__('timer-protection', 'captcha-for-contact-form-7'));
-		$this->get_logger()->debug('Nachricht für den Timer-Schutz gesetzt.', [
+		$this->get_logger()->debug('Message for timer protection set.', [
 			'message_key' => 'timer-protection',
 		]);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		$this->get_logger()->info('Constructor completed.');
 	}
 
 	/**
@@ -39,71 +39,71 @@ class Timer_Validator extends BaseProtection {
 	 */
 	public function is_spam(...$args): bool
 	{
-		$this->get_logger()->info('Führe Spam-Überprüfung für Timer-Schutz durch.', [
+		$this->get_logger()->info('Performing spam check for timer protection.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Wenn keine Argumente übergeben wurden, kann es kein Spam sein.
+		// If no arguments were passed, it cannot be spam.
 		if (!isset($args[0])) {
-			$this->get_logger()->warning('Keine Post-Daten zum Überprüfen verfügbar.');
+			$this->get_logger()->warning('No post data available for checking.');
 			return false;
 		}
 
-		// Wenn der Timer-Schutz deaktiviert ist, überspringe die Überprüfung.
+		// If timer protection is disabled, skip the check.
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Spam-Überprüfung übersprungen, da der Timer-Schutz deaktiviert ist.');
+			$this->get_logger()->debug('Spam check skipped because timer protection is disabled.');
 			return false;
 		}
 
 		$array_post_data = $args[0];
 		$field_name = $this->get_field_name();
 
-		// Wenn das spezielle Feld für den Timer-Schutz fehlt, ist es wahrscheinlich ein Bot.
+		// If the special field for timer protection is missing, it is probably a bot.
 		if (!isset($array_post_data[$field_name])) {
-			$this->get_logger()->warning('Timer-Feld fehlt in den übermittelten Daten. Einstufung als Spam.');
+			$this->get_logger()->warning('Timer field missing in submitted data. Classified as spam.');
 			return true;
 		}
 
 		$hash = sanitize_text_field($array_post_data[$field_name]);
-		$this->get_logger()->debug('Abgerufener Hash-Wert: ' . $hash);
+		$this->get_logger()->debug('Retrieved hash value: ' . $hash);
 
 		/**
-		 * Lade den Timer-Controller und den spezifischen Timer.
+		 * Load the timer controller and the specific timer.
 		 */
-		$Timer_Controller = $this->Controller->get_modul('timer');
+		$Timer_Controller = $this->Controller->get_module('timer');
 		$Timer = $Timer_Controller->get_timer($hash);
 
-		// Wenn der Timer nicht gefunden wird, ist der Hash ungültig oder abgelaufen.
+		// If the timer is not found, the hash is invalid or expired.
 		if (!$Timer) {
-			$this->get_logger()->warning('Kein passender Timer für den Hash gefunden. Einstufung als Spam.', ['hash' => $hash]);
+			$this->get_logger()->warning('No matching timer found for hash. Classified as spam.', ['hash' => $hash]);
 			return true;
 		}
 
-		// Berechne die verstrichene Zeit
+		// Calculate the elapsed time
 		$time_in_ms = round(microtime(true) * 1000);
 		$minimum_time_in_ms = $this->get_validation_time();
 		$start_time_ms = (float)$Timer->get_value();
 		$time_passed = $time_in_ms - $start_time_ms;
 
-		$this->get_logger()->debug("Zeitüberprüfung durchgeführt.", [
+		$this->get_logger()->debug("Time check performed.", [
 			'start_time_ms' => $start_time_ms,
 			'end_time_ms' => $time_in_ms,
 			'time_passed_ms' => $time_passed,
 			'minimum_time_ms' => $minimum_time_in_ms,
 		]);
 
-		// Wenn die verstrichene Zeit unter dem Mindestwert liegt, ist es wahrscheinlich ein Bot.
+		// If the elapsed time is below the minimum value, it is probably a bot.
 		if ($time_passed < $minimum_time_in_ms) {
-			$this->get_logger()->warning('Formular zu schnell übermittelt. Einstufung als Spam.');
+			$this->get_logger()->warning('Form submitted too quickly. Classified as spam.');
 			return true;
 		}
 
-		// Die Überprüfung war erfolgreich, lösche den Timer, um Mehrfachverwendung zu verhindern.
-		$this->get_logger()->info('Validierung erfolgreich. Lösche den Timer-Datensatz.', ['hash' => $hash]);
+		// The check was successful, delete the timer to prevent multiple use.
+		$this->get_logger()->info('Validation successful. Deleting timer record.', ['hash' => $hash]);
 		$Timer->delete();
 
-		$this->get_logger()->info('Formular als nicht-Spam eingestuft.');
+		$this->get_logger()->info('Form classified as not spam.');
 		return false;
 	}
 
@@ -119,37 +119,37 @@ class Timer_Validator extends BaseProtection {
 	 */
 	public function get_captcha(...$args): string
 	{
-		$this->get_logger()->info('Generiere das Captcha-Feld für den Timer-Schutz.', [
+		$this->get_logger()->info('Generating captcha field for timer protection.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (!$this->is_enabled()) {
-			$this->get_logger()->warning('Captcha-Feld wird nicht generiert, da der Timer-Schutz deaktiviert ist.');
+			$this->get_logger()->warning('Captcha field not generated because timer protection is disabled.');
 			return '';
 		}
 
 		$field_name = $this->get_field_name();
-		$this->get_logger()->debug('Name des Feldes: ' . $field_name);
+		$this->get_logger()->debug('Field name: ' . $field_name);
 
 		/**
 		 * @var Timer_Controller $Timer_Controller
 		 */
-		$Timer_Controller = $this->Controller->get_modul('timer');
+		$Timer_Controller = $this->Controller->get_module('timer');
 
 		if (!$Timer_Controller) {
-			$this->get_logger()->error('Das Modul "timer" konnte nicht geladen werden.');
+			$this->get_logger()->error('The "timer" module could not be loaded.');
 			return '';
 		}
 
 		$hash = $Timer_Controller->add_timer();
 
 		if (empty($hash)) {
-			$this->get_logger()->error('Fehler beim Hinzufügen des Timers. Konnte keinen Hash generieren.');
+			$this->get_logger()->error('Error adding timer. Could not generate hash.');
 			return '';
 		}
 
-		$this->get_logger()->debug('Neuer Timer-Hash erfolgreich generiert.', ['hash' => $hash]);
+		$this->get_logger()->debug('New timer hash successfully generated.', ['hash' => $hash]);
 
 		$html = sprintf(
 			'<div class="f12t"><input type="hidden" class="f12_timer" name="%s" value="%s"/></div>',
@@ -157,7 +157,7 @@ class Timer_Validator extends BaseProtection {
 			esc_attr($hash)
 		);
 
-		$this->get_logger()->info('Verstecktes Captcha-Feld erfolgreich generiert.', [
+		$this->get_logger()->info('Hidden captcha field successfully generated.', [
 			'html_length' => strlen($html),
 		]);
 
@@ -173,7 +173,7 @@ class Timer_Validator extends BaseProtection {
 	{
 		$validation_time = 2000;
 
-		$this->get_logger()->debug('Rufe die minimale Validierungszeit ab.', [
+		$this->get_logger()->debug('Retrieving minimum validation time.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'time_in_ms' => $validation_time,
@@ -191,7 +191,7 @@ class Timer_Validator extends BaseProtection {
 	{
 		$field_name = $this->Controller->get_settings('protection_time_field_name', 'global');
 
-		$this->get_logger()->debug('Rufe den Namen des Formularfelds für den Timerschutz ab.', [
+		$this->get_logger()->debug('Retrieving form field name for timer protection.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'field_name' => $field_name,
@@ -207,15 +207,15 @@ class Timer_Validator extends BaseProtection {
 	 */
 	protected function on_init(): void
 	{
-		$this->get_logger()->info('on_init-Methode wird ausgeführt.', [
+		$this->get_logger()->info('on_init method executing.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// TODO: Implementieren Sie hier die Initialisierungslogik.
-		// Beispiel: Hinzufügen von Hooks, Registrieren von Shortcodes etc.
+		// TODO: Implement the initialization logic here.
+		// Example: Adding hooks, registering shortcodes, etc.
 
-		$this->get_logger()->info('on_init-Methode abgeschlossen.');
+		$this->get_logger()->info('on_init method completed.');
 	}
 
 	/**
@@ -228,15 +228,15 @@ class Timer_Validator extends BaseProtection {
 		$is_enabled = (int)$this->Controller->get_settings('protection_time_enable', 'global') === 1;
 
 		if ($is_enabled) {
-			$this->get_logger()->info('Timer-Schutz ist global aktiviert.');
+			$this->get_logger()->info('Timer protection is globally enabled.');
 		} else {
-			$this->get_logger()->warning('Timer-Schutz ist global deaktiviert. Validierung wird übersprungen.');
+			$this->get_logger()->warning('Timer protection is globally disabled. Validation will be skipped.');
 		}
 
 		$filtered_state = apply_filters('f12-cf7-captcha-skip-validation-timer', $is_enabled);
 
 		if ($is_enabled && !$filtered_state) {
-			$this->get_logger()->debug('Der Timer-Schutz wurde durch einen externen Filter deaktiviert.', [
+			$this->get_logger()->debug('Timer protection was disabled by an external filter.', [
 				'filter_name' => 'f12-cf7-captcha-skip-validation-timer',
 			]);
 		}
@@ -246,13 +246,13 @@ class Timer_Validator extends BaseProtection {
 
 	public function success(): void
 	{
-		$this->get_logger()->info('Erfolgreiche Validierung der Timer-Überprüfung.', [
+		$this->get_logger()->info('Successful timer validation.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// TODO: Implementieren Sie hier die Logik, die nach einer erfolgreichen Überprüfung ausgeführt werden soll.
-		// In diesem Kontext ist es unwahrscheinlich, dass zusätzliche Aktionen erforderlich sind,
-		// da die Überprüfung primär in der is_spam()-Methode stattfindet.
+		// TODO: Implement the logic here that should be executed after a successful check.
+		// In this context, it is unlikely that additional actions are required,
+		// since the check primarily takes place in the is_spam() method.
 	}
 }

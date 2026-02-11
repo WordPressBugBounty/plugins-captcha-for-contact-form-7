@@ -38,25 +38,74 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	private bool $store_image = false;
 
 	/**
+	 * Captcha pool for pre-generated images.
+	 *
+	 * @var CaptchaPool|null
+	 */
+	private ?CaptchaPool $pool = null;
+
+	/**
+	 * Whether this captcha was loaded from pool.
+	 *
+	 * @var bool
+	 */
+	private bool $from_pool = false;
+
+	/**
 	 * constructor.
 	 */
 	public function __construct( CF7Captcha $Controller, int $length = 6 ) {
-		parent::__construct( $Controller, $length );
+		// Try to get from pool first for performance
+		$this->pool = new CaptchaPool( $Controller );
+		$pooled     = $this->pool->get_from_pool();
+
+		if ( $pooled !== null ) {
+			// Use pre-generated captcha from pool
+			$this->_captcha   = $pooled['code'];
+			$this->image      = $pooled['image'];
+			$this->from_pool  = true;
+
+			// Still need to call parent for other initialization,
+			// but skip captcha generation by passing length 0 and then setting _captcha
+			parent::__construct( $Controller, 0 );
+			$this->_captcha = $pooled['code'];
+
+			$this->get_logger()->info(
+				"__construct(): Captcha loaded from pool (fast path)",
+				[
+					'plugin'    => 'f12-cf7-captcha',
+					'class'     => __CLASS__,
+					'pool_size' => $this->pool->get_pool_size(),
+				]
+			);
+		} else {
+			// Fall back to regular generation
+			parent::__construct( $Controller, $length );
+
+			$this->get_logger()->debug(
+				"__construct(): Captcha generated on-demand (pool empty)",
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'class'  => __CLASS__,
+				]
+			);
+		}
 
 		$this->_font = plugin_dir_path( dirname( dirname( __FILE__ ) ) ) . 'assets/arial.ttf';
 
 		if ( file_exists( $this->_font ) ) {
 			$this->get_logger()->info(
-				"__construct(): Captcha-Image-Generator initialisiert – Font geladen",
+				"__construct(): Captcha image generator initialized - font loaded",
 				[
-					'plugin' => 'f12-cf7-captcha',
-					'class'  => __CLASS__,
-					'font'   => $this->_font
+					'plugin'    => 'f12-cf7-captcha',
+					'class'     => __CLASS__,
+					'font'      => $this->_font,
+					'from_pool' => $this->from_pool,
 				]
 			);
 		} else {
 			$this->get_logger()->error(
-				"__construct(): Captcha-Image-Generator initialisiert – Font nicht gefunden",
+				"__construct(): Captcha image generator initialized - font not found",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__,
@@ -77,11 +126,11 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		$this->store_image = $store_image;
 
 		$this->get_logger()->info(
-			"enable_image_storing(): Bildspeicherung umgeschaltet",
+			"enable_image_storing(): Image storing toggled",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
-				'status' => $store_image ? 'aktiviert' : 'deaktiviert'
+				'status' => $store_image ? 'enabled' : 'disabled'
 			]
 		);
 	}
@@ -97,7 +146,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 
 		if ( empty( $image ) ) {
 			$this->get_logger()->error(
-				"get_ajax_response(): Kein Captcha-Bild erzeugt",
+				"get_ajax_response(): No captcha image generated",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__
@@ -108,12 +157,12 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->info(
-			"get_ajax_response(): Captcha-Bild erfolgreich erzeugt",
+			"get_ajax_response(): Captcha image successfully generated",
 			[
 				'plugin'  => 'f12-cf7-captcha',
 				'class'   => __CLASS__,
 				'length'  => strlen( $image ),
-				'preview' => substr( $image, 0, 30 ) . '...' // nur kleine Vorschau loggen, kein Klartext-Bild
+				'preview' => substr( $image, 0, 30 ) . '...' // only log small preview, no plain text image
 			]
 		);
 
@@ -123,15 +172,30 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	/**
 	 * Generates and returns the captcha image.
 	 *
+	 * Uses pre-generated image from pool if available for improved performance.
+	 *
 	 * @return string The captcha image HTML markup.
 	 */
 	public function get_image(): string {
+		// Return cached/pooled image if available
+		if ( $this->image !== null ) {
+			$this->get_logger()->debug(
+				"get_image(): Returning cached/pooled image",
+				[
+					'plugin'    => 'f12-cf7-captcha',
+					'class'     => __CLASS__,
+					'from_pool' => $this->from_pool,
+				]
+			);
+			return $this->image;
+		}
+
 		// the captcha
 		$captcha = $this->get();
 
 		if ( empty( $captcha ) ) {
 			$this->get_logger()->error(
-				"get_image(): Kein Captcha vorhanden → Bild konnte nicht generiert werden",
+				"get_image(): No captcha present - image could not be generated",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => __CLASS__
@@ -142,7 +206,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->debug(
-			"get_image(): Starte Generierung neues Captcha-Bild",
+			"get_image(): Starting generation of new captcha image (on-demand)",
 			[
 				'plugin'         => 'f12-cf7-captcha',
 				'class'          => __CLASS__,
@@ -182,17 +246,21 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 
 		ob_start();
 		imagepng( $image );
-		$image = ob_get_contents();
+		$image_data = ob_get_contents();
 		ob_end_clean();
+
+		imagedestroy( $image );
+
 		$rand = uniqid('cpi_', true);
-		$this->image = '<span class="captcha-image"><img id="'.$rand.'" alt="captcha" src="data:image/png;base64,' . base64_encode( $image ) . '"/></span>';
+		// Attributes to prevent lazy-loading plugins from breaking data: URLs
+		$this->image = '<span class="captcha-image"><img id="'.$rand.'" alt="captcha" loading="eager" decoding="sync" class="no-lazy skip-lazy" data-skip-lazy="true" data-no-lazy="1" src="data:image/png;base64,' . base64_encode( $image_data ) . '"/></span>';
 
 		$this->get_logger()->info(
-			"get_image(): Neues Captcha-Bild generiert",
+			"get_image(): New captcha image generated on-demand",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__,
-				'bytes'  => strlen( $image )
+				'bytes'  => strlen( $image_data )
 			]
 		);
 
@@ -209,11 +277,11 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	 */
 	public function is_valid( string $captcha_code, string $captcha_hash ): bool {
 		/** @var UserData $User_Data */
-		$User_Data  = $this->Controller->get_modul( 'user-data' );
+		$User_Data  = $this->Controller->get_module( 'user-data' );
 		$ip_address = $User_Data->get_ip_address();
 
 		$this->get_logger()->debug(
-			"is_valid(): Starte Validierung",
+			"is_valid(): Starting validation",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'ip'     => $ip_address,
@@ -226,7 +294,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 
 		if ( ! $Captcha ) {
 			$this->get_logger()->warning(
-				"is_valid(): Kein Captcha für Hash gefunden",
+				"is_valid(): No captcha found for hash",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'ip'     => $ip_address,
@@ -239,7 +307,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 
 		if ( $Captcha->get_validated() == 1 ) {
 			$this->get_logger()->info(
-				"is_valid(): Captcha bereits validiert → ungültig",
+				"is_valid(): Captcha already validated - invalid",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $Captcha->get_id()
@@ -254,7 +322,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 
 		if ( $captcha_code !== $Captcha->get_code() ) {
 			$this->get_logger()->warning(
-				"is_valid(): Code stimmt nicht überein → ungültig",
+				"is_valid(): Code does not match - invalid",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'id'        => $Captcha->get_id(),
@@ -267,7 +335,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->info(
-			"is_valid(): Captcha erfolgreich validiert",
+			"is_valid(): Captcha successfully validated",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'id'     => $Captcha->get_id()
@@ -320,7 +388,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		/**
 		 * @var UserData $User_Data
 		 */
-		$User_Data  = $this->Controller->get_modul( 'user-data' );
+		$User_Data  = $this->Controller->get_module( 'user-data' );
 		$ip_address = $User_Data->get_ip_address();
 
 		/*
@@ -329,7 +397,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		if ( $this->Captcha_Session != null ) {
 			$Captcha_Session = $this->Captcha_Session;
 			$this->get_logger()->debug(
-				"get_field(): Vorhandene Captcha-Session wiederverwendet",
+				"get_field(): Existing captcha session reused",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'ip'     => $ip_address,
@@ -338,7 +406,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		} else {
 			$Captcha_Session = new Captcha( $this->Controller->get_logger(), $ip_address );
 			$this->get_logger()->debug(
-				"get_field(): Neue Captcha-Session erstellt",
+				"get_field(): New captcha session created",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'ip'     => $ip_address,
@@ -411,7 +479,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		 *
 		 * @var TemplateController $TemplateController
 		 */
-		$TemplateController = $this->Controller->get_modul( 'template' );
+		$TemplateController = $this->Controller->get_module( 'template' );
 
 
 		/*
@@ -424,7 +492,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		}
 
 		$this->get_logger()->info(
-			"get_field(): Captcha-Feld wird generiert",
+			"get_field(): Captcha field is being generated",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'field_name' => $field_name,
@@ -472,7 +540,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 
 		if ( $filtered !== $captcha ) {
 			$this->get_logger()->debug(
-				"get_field(): Captcha-Feld durch Filter modifiziert",
+				"get_field(): Captcha field modified by filter",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'field_name' => $field_name

@@ -5,6 +5,10 @@ namespace f12_cf7_captcha\core;
 use f12_cf7_captcha\CF7Captcha;
 use Forge12\Shared\LoggerInterface;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 abstract class BaseModul {
 	protected string $message = '';
 	/**
@@ -23,7 +27,9 @@ abstract class BaseModul {
 	{
 		$this->Controller = $Controller;
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		if (f12_is_debug()) {
+			$this->get_logger()->info('Constructor completed.');
+		}
 	}
 
 	public function get_logger() : LoggerInterface {
@@ -37,11 +43,13 @@ abstract class BaseModul {
 	 */
 	public function get_message(): string
 	{
-		$this->get_logger()->debug('Rufe die Nachrichten-Eigenschaft ab.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-			'message' => $this->message,
-		]);
+		if (f12_is_debug()) {
+			$this->get_logger()->debug('Retrieving message property.', [
+				'class' => __CLASS__,
+				'method' => __METHOD__,
+				'message' => $this->message,
+			]);
+		}
 
 		return $this->message;
 	}
@@ -55,15 +63,19 @@ abstract class BaseModul {
 	 */
 	protected function set_message(string $message): void
 	{
-		$this->get_logger()->info('Setze die Nachrichteneigenschaft.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-			'old_message' => $this->message,
-			'new_message' => $message,
-		]);
+		if (f12_is_debug()) {
+			$this->get_logger()->info('Setting message property.', [
+				'class' => __CLASS__,
+				'method' => __METHOD__,
+				'old_message' => $this->message,
+				'new_message' => $message,
+			]);
+		}
 
 		$this->message = $message;
 
-		$this->get_logger()->debug('Nachricht erfolgreich gesetzt.');
+		if (f12_is_debug()) {
+			$this->get_logger()->debug('Message set successfully.');
+		}
 	}
 }

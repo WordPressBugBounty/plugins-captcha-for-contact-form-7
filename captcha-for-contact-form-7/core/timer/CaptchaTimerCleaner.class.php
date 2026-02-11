@@ -19,15 +19,15 @@ class CaptchaTimerCleaner extends BaseModul
 	public function __construct(CF7Captcha $Controller)
 	{
 		parent::__construct($Controller);
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		add_action('dailyCaptchaTimerClear', array($this, 'clean'));
-		$this->get_logger()->debug('Hook "dailyCaptchaTimerClear" für die Methode "clean" hinzugefügt.');
+		$this->get_logger()->debug('Hook "dailyCaptchaTimerClear" added for the "clean" method.');
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.');
+		$this->get_logger()->info('Constructor completed.');
 	}
     /**
      * Clean all captchas older than 1 day
@@ -36,28 +36,28 @@ class CaptchaTimerCleaner extends BaseModul
      */
 	public function clean(): int
 	{
-		$this->get_logger()->info('Starte den täglichen Bereinigungsjob für abgelaufene Timer-Einträge.', [
+		$this->get_logger()->info('Starting the daily cleanup job for expired timer entries.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		try {
-			// Erzeuge ein DateTime-Objekt, das 24 Stunden in der Vergangenheit liegt
+			// Create a DateTime object that is 24 hours in the past
 			$date_time = new \DateTime('-1 Day');
 			$date_time_formatted = $date_time->format('Y-m-d H:i:s');
-			$this->get_logger()->debug('Zeitstempel für die Bereinigung: ' . $date_time_formatted);
+			$this->get_logger()->debug('Timestamp for cleanup: ' . $date_time_formatted);
 		} catch (\Exception $e) {
-			$this->get_logger()->error('Fehler beim Erstellen des DateTime-Objekts. Bereinigung abgebrochen.', [
+			$this->get_logger()->error('Error creating the DateTime object. Cleanup aborted.', [
 				'error' => $e->getMessage(),
 			]);
 			return 0;
 		}
 
-		// Instanziiere ein neues CaptchaTimer-Objekt und rufe die Löschfunktion auf
+		// Instantiate a new CaptchaTimer object and call the delete function
 		$timer_handler = new CaptchaTimer($this->get_logger());
 		$rows_deleted = $timer_handler->delete_older_than($date_time_formatted);
 
-		$this->get_logger()->info('Bereinigung abgeschlossen.', [
+		$this->get_logger()->info('Cleanup completed.', [
 			'rows_deleted' => $rows_deleted,
 		]);
 
@@ -71,18 +71,18 @@ class CaptchaTimerCleaner extends BaseModul
      */
 	public function reset_table(): int
 	{
-		$this->get_logger()->info('Starte den Vorgang, um die gesamte Tabelle über den Haupt-Controller zurückzusetzen.', [
+		$this->get_logger()->info('Starting the process to reset the entire table via the main controller.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Instanziiere ein neues CaptchaTimer-Objekt, um auf die reset_table()-Methode zuzugreifen
+		// Instantiate a new CaptchaTimer object to access the reset_table() method
 		$timer_handler = new CaptchaTimer($this->get_logger());
 
-		// Rufe die Methode auf und speichere das Ergebnis
+		// Call the method and store the result
 		$rows_deleted = $timer_handler->reset_table();
 
-		$this->get_logger()->info('Zurücksetzen der Tabelle abgeschlossen.', [
+		$this->get_logger()->info('Table reset completed.', [
 			'rows_deleted' => $rows_deleted,
 		]);
 

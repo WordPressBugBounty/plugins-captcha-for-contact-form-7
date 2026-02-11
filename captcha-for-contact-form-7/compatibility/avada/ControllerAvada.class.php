@@ -4,7 +4,6 @@ namespace f12_cf7_captcha\compatibility;
 
 use f12_cf7_captcha\core\BaseController;
 use f12_cf7_captcha\core\protection\Protection;
-use f12_cf7_captcha\core\Validator;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -14,162 +13,57 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerAvada
  */
 class ControllerAvada extends BaseController {
-	/**
-	 * @var string
-	 */
 	protected string $name = 'Avada';
-
-	/**
-	 * @var string $id  The unique identifier for the entity.
-	 *                  This should be a string value.
-	 */
 	protected string $id = 'avada';
+	protected string $settings_key = 'protection_avada_enable';
 
-	/**
-	 * Check if Avada captcha integration is enabled
-	 *
-	 * @return bool Returns true if Avada captcha integration is enabled, false otherwise
-	 * @throws \Exception
-	 */
-	public function is_enabled(): bool {
-		$this->get_logger()->info( 'Überprüfe, ob die Avada-Kompatibilität aktiviert ist.', [
+	protected array $hooks = [
+		['type' => 'filter', 'hook' => 'fusion_element_form_content', 'method' => 'wp_add_spam_protection', 'priority' => 10, 'args' => 2],
+		['type' => 'filter', 'hook' => 'fusion_form_demo_mode', 'method' => 'wp_is_spam'],
+	];
 
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
-		// Überprüfe, ob das Avada-Plugin installiert ist.
-		$is_installed = $this->is_installed();
-		$this->get_logger()->debug( 'Installationsstatus des Moduls: ' . ( $is_installed ? 'Installiert' : 'Nicht installiert' ) );
-
-		// Rufe den Aktivierungsstatus aus den globalen Einstellungen ab.
-		$setting_value = $this->Controller->get_settings( 'protection_avada_enable', 'global' );
-		$this->get_logger()->debug( 'Wert der Einstellung "protection_avada_enable": ' . $setting_value );
-
-		if ($setting_value === '' || $setting_value === null) {
-			// Default: aktiv, wenn nicht explizit gesetzt
-			$setting_value = 1;
-			$this->get_logger()->debug( 'Wert der Einstellung "protection_avada_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
-		}
-
-		// Die Kompatibilität ist nur aktiviert, wenn beide Bedingungen erfüllt sind.
-		$is_active = $is_installed && ( (int) $setting_value === 1 );
-
-		$this->get_logger()->debug( 'Modulstatus vor dem Filter: ' . ( $is_active ? 'Aktiv' : 'Inaktiv' ) );
-
-		// Wende einen Filter an, um anderen Entwicklern die Möglichkeit zu geben, das Verhalten zu überschreiben.
-		// Der Filter 'f12_cf7_captcha_is_installed_avada' erlaubt es, den Aktivierungsstatus
-		// von außen zu modifizieren, bevor er zurückgegeben wird.
-		$result = apply_filters( 'f12_cf7_captcha_is_installed_avada', $is_active );
-
-		$this->get_logger()->info( 'Endgültiger Status nach dem Filter: ' . ( $result ? 'Aktiv' : 'Inaktiv' ) );
-
-		return $result;
-	}
-
-	/**
-	 * Checks if Avada theme is installed.
-	 *
-	 * @return bool Returns true if Avada theme is installed, false otherwise.
-	 */
 	public function is_installed(): bool {
-		$this->get_logger()->info( 'Überprüfe, ob das Avada-Theme installiert ist.', [
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
-		// Die Methode `function_exists()` ist die Standard-WordPress-Funktion,
-		// um zu überprüfen, ob eine Funktion (und somit ein Theme oder Plugin) geladen wurde.
-		// 'Avada' ist hier der spezifische Name einer Funktion, die vom Avada-Theme bereitgestellt wird.
 		$is_installed = function_exists( 'Avada' );
-
-		if ( $is_installed ) {
-			$this->get_logger()->info( 'Das Avada-Theme wurde erfolgreich erkannt.' );
-		} else {
-			$this->get_logger()->info( 'Das Avada-Theme ist nicht installiert oder nicht aktiv.' );
-		}
-
-		// Gib den booleschen Wert zurück, der angibt, ob die Funktion existiert.
+		$this->get_logger()->debug( 'Avada installed: ' . ( $is_installed ? 'Yes' : 'No' ) );
 		return $is_installed;
-	}
-
-	/**
-	 * Initialize Avada settings and validators
-	 */
-	protected function on_init(): void {
-		// Sets the name of the component for the UI. The name is translatable.
-		$this->name = __( 'Avada', 'captcha-for-contact-form-7' );
-		$this->get_logger()->info( 'Komponentenname auf "Avada" gesetzt.' );
-
-		// Adds a filter to the Avada form content to insert spam protection fields.
-		// The filter `fusion_element_form_content` is a specific hook provided by the Avada theme.
-		// The `wp_add_spam_protection` method of this class will be called with a priority of 10.
-		add_filter( 'fusion_element_form_content', [ $this, 'wp_add_spam_protection' ], 10, 2 );
-		$this->get_logger()->debug( 'Filter "fusion_element_form_content" für die Spam-Schutz-Felder registriert.' );
-
-		// Adds a filter to check if a form submission is spam.
-		// The filter `fusion_form_demo_mode` is used by Avada to check form validity.
-		// The `wp_is_spam` method of this class will be called to perform the spam check.
-		add_filter( 'fusion_form_demo_mode', [ $this, 'wp_is_spam' ], 10, 1 );
-		$this->get_logger()->debug( 'Filter "fusion_form_demo_mode" für die Spam-Prüfung registriert.' );
-
-		$this->get_logger()->info( 'Initialisierung der Avada-Komponente abgeschlossen. Hooks wurden registriert.' );
 	}
 
 	/**
 	 * Adds spam protection to the given HTML form
 	 *
-	 * @param string $html    The HTML form content
-	 * @param mixed  ...$args Additional arguments (not used in this method)
+	 * @param mixed ...$args First argument is the HTML form content string.
 	 *
 	 * @return string The modified HTML form content with spam protection added
 	 */
-	public function wp_add_spam_protection( string $html ): string {
-		$this->get_logger()->info( 'Füge Spam-Schutz-Elemente zum Avada-Formular-HTML hinzu.', [
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
+	public function wp_add_spam_protection( ...$args ): string {
+		$html = (string) ($args[0] ?? '');
+		$this->get_logger()->info( 'Adding spam protection elements to Avada form HTML.' );
 
-		// Rufe die HTML-Struktur des Captchas ab.
-		$captcha_html = $this->Controller->get_modul( 'protection' )->get_captcha();
-		$this->get_logger()->debug( 'Captcha-HTML abgerufen.', [ 'html_length' => strlen( $captcha_html ) ] );
-
-		// Standardposition für das Captcha. Dies kann in zukünftigen Versionen konfigurierbar gemacht werden.
-		$position = 'before_submit';
+		$captcha_html = $this->Controller->get_module( 'protection' )->get_captcha();
 
 		$is_captcha_added = false;
 
-		// Füge das Captcha vor dem Absende-Button hinzu.
-		if ( $position === 'before_submit' && str_contains( $html, '<div class="fusion-form-field fusion-form-submit-field' ) ) {
+		if ( strpos( $html, '<div class="fusion-form-field fusion-form-submit-field' ) !== false ) {
 			$html             = str_replace(
 				'<div class="fusion-form-field fusion-form-submit-field',
 				$captcha_html . '<div class="fusion-form-field fusion-form-submit-field',
 				$html
 			);
 			$is_captcha_added = true;
-			$this->get_logger()->info( 'Captcha vor dem Absende-Button eingefügt.' );
 		}
 
-		// Füge das Captcha vor dem schließenden </form>-Tag hinzu.
-		if ( ! $is_captcha_added && str_contains( $html, '</form>' ) ) {
+		if ( ! $is_captcha_added && strpos( $html, '</form>' ) !== false ) {
 			$html             = str_replace(
 				'</form>',
 				$captcha_html . '</form>',
 				$html
 			);
 			$is_captcha_added = true;
-			$this->get_logger()->info( 'Captcha vor dem schließenden Formular-Tag eingefügt.' );
 		}
 
-		// Fallback: Füge das Captcha am Ende des HTML-Strings hinzu, wenn keine spezifische Position gefunden wurde.
 		if ( ! $is_captcha_added ) {
 			$html .= $captcha_html;
-			$this->get_logger()->info( 'Fallback: Captcha am Ende des Formulars eingefügt.' );
 		}
-
-		$this->get_logger()->info( 'Spam-Schutz-Elemente erfolgreich hinzugefügt. Gebe das modifizierte HTML zurück.' );
 
 		return $html;
 	}
@@ -182,79 +76,45 @@ class ControllerAvada extends BaseController {
 	 * @return array The associative array representation of the form data
 	 */
 	protected function form_data_to_arary( string $data ): array {
-		// Logge den Beginn des Prozesses
-		$this->get_logger()->info( 'Konvertiere Formulardaten-String in ein Array.', [
-			'class'        => __CLASS__,
-			'method'       => __METHOD__,
-			'input_length' => strlen( $data ),
-		] );
-
-		// Entfernt Slashes (\\) aus dem String, die von der WordPress-Funktion `addslashes`
-		// oder ähnlichen Mechanismen zur Sicherheits- oder Escaping-Zwecken hinzugefügt wurden.
-		// Der Code ignoriert PHPCS-Warnungen für fehlende Nonce-Überprüfung und Sanitisierung,
-		// was in einer realen Anwendung ein potenzielles Sicherheitsrisiko darstellen könnte.
 		$unslashed_data = wp_unslash( $data );
-		$this->get_logger()->debug( 'Input-String mit wp_unslash() bereinigt.' );
-
 		$value = [];
-		// Die PHP-Funktion `parse_str()` zerlegt den URL-kodierten Abfragestring und
-		// befüllt das `value`-Array mit den Schlüssel-Wert-Paaren.
-		// Beispiel: "firstName=John&lastName=Doe" wird zu `['firstName' => 'John', 'lastName' => 'Doe']`.
 		parse_str( $unslashed_data, $value );
-
-		// Logge den Abschluss des Prozesses und das Ergebnis
-		$this->get_logger()->info( 'Konvertierung erfolgreich. Gebe Array zurück.', [
-			'array_keys' => array_keys( $value ),
-			'array_size' => count( $value ),
-		] );
-
-		// Gib das resultierende Array zurück.
 		return $value;
 	}
 
 	/**
 	 * Checks if the submitted form data is considered as spam
 	 *
-	 * @param mixed ...$args The arguments passed to the function (variadic)
+	 * @param mixed ...$args The arguments passed to the function
 	 *
-	 * @return mixed The original value if the form data is not spam, otherwise does not return anything
+	 * @return mixed The original value if not spam
 	 */
 	public function wp_is_spam( ...$args ) {
-		$this->get_logger()->info( 'Starte die Spam-Überprüfung.', [
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
+		$this->get_logger()->info( 'Starting spam check for Avada.' );
 
 		$value = $args[0];
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Avada theme
 		if ( ! isset( $_POST['formData'] ) ) {
-			$this->get_logger()->notice( 'Keine Formulardaten gefunden. Breche Spam-Überprüfung ab.' );
-
 			return false;
 		}
 
-		// Formulardaten als Array
-		$array_post_data = $this->form_data_to_arary( $_POST['formData'] );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by Avada theme; sanitized after parse_str()
+		$array_post_data = $this->form_data_to_arary( wp_unslash( $_POST['formData'] ) );
 
 		/** @var Protection $Protection */
-		$Protection = $this->Controller->get_modul( 'protection' );
+		$Protection = $this->Controller->get_module( 'protection' );
 
 		if ( ! $Protection->is_spam( $array_post_data ) ) {
-			$this->get_logger()->info( 'Kein Spam erkannt. Gebe ursprünglichen Wert zurück.', [
-				'return_value' => $value,
-			] );
-
 			return $value;
 		}
 
-		// Spam erkannt
 		$message = $Protection->get_message() ?: __( 'Invalid input detected.', 'captcha-for-contact-form-7' );
-		$this->get_logger()->warning( 'Spam erkannt! Fehler wird ans letzte sichtbare Feld angehängt.', [
-			'spam_message' => $message,
-		] );
+		$this->get_logger()->warning( 'Spam detected!' );
 
-		// Finde das letzte sichtbare Feld
-		parse_str( $_POST['formData'], $fields_array );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by Avada theme; sanitized after parse_str()
+		parse_str( wp_unslash( $_POST['formData'] ), $fields_array );
+		$fields_array = array_map( 'sanitize_text_field', $fields_array );
 
 		$last_visible_key = null;
 		$skip_patterns    = [
@@ -286,7 +146,7 @@ class ControllerAvada extends BaseController {
 		}
 
 		if ( ! $last_visible_key ) {
-			$last_visible_key = 'general'; // Fallback
+			$last_visible_key = 'general';
 		}
 
 		wp_send_json( [

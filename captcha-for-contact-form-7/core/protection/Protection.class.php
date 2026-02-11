@@ -5,7 +5,7 @@ namespace f12_cf7_captcha\core\protection;
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseModul;
 use f12_cf7_captcha\core\BaseProtection;
-use f12_cf7_captcha\core\Log_WordPress;
+use f12_cf7_captcha\core\Log_WordPress_Interface;
 use f12_cf7_captcha\core\protection\api\Api;
 use f12_cf7_captcha\core\protection\browser\Browser;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
@@ -21,52 +21,34 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once( 'api/Api.class.php' );
-require_once( 'browser/Browser.php' );
-require_once( 'multiple_submission/Multiple_Submission_Validator.class.php' );
-require_once( 'time/Timer_Validator.class.php' );
-require_once( 'captcha/Captcha_Validator.class.php' );
-require_once( 'rules/RulesHandler.class.php' );
-require_once( 'ip/IPValidator.class.php' );
-require_once( 'ip_blacklist/IP_Blacklist_Validator.php' );
-require_once( 'javascript/Javascript_Validator.php' );
-require_once( 'whitelist/Whitelist_Validator.php' );
 
 class Protection extends BaseModul {
-	protected $_moduls = [];
-	private Log_WordPress $Logger;
+	protected $_modules = [];
+	private Log_WordPress_Interface $Logger;
 
-	public function __construct( CF7Captcha $Controller, Log_WordPress $Logger ) {
+	/**
+	 * In-memory telemetry counter deltas for the current request, flushed once via shutdown hook.
+	 */
+	private static array $pending_deltas = [];
+	private static bool $shutdown_registered = false;
+
+	public function __construct( CF7Captcha $Controller, Log_WordPress_Interface $Logger ) {
 		parent::__construct( $Controller );
-
-		$this->get_logger()->info( 'Konstruktor gestartet.', [
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
 		$this->Logger = $Logger;
-
 		add_action( 'f12_cf7_captcha_compatibilities_loaded', array( $this, 'on_init' ) );
-		$this->get_logger()->debug( 'Hook "f12_cf7_captcha_compatibilities_loaded" für die Methode "on_init" hinzugefügt.' );
-
-		$this->get_logger()->info( 'Konstruktor abgeschlossen.' );
 	}
 
 	/**
 	 * Initializes the modules for the software.
 	 *
-	 * This method initializes the modules required for the software to function properly.
+	 * All modules are loaded, but each module has its own is_enabled() method
+	 * to check if it should be active. The only optimization is for API mode:
+	 * when API is enabled with a key, only API and whitelist modules are loaded.
 	 *
 	 * @return void
 	 */
-	private function init_moduls(): void {
-		$this->get_logger()->info( 'Initialisiere die Schutzmodule für das Kontaktformular.', [
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
-		// Definiere die Module, die initialisiert werden sollen.
+	private function init_modules(): void {
+		// Define the modules to be initialized.
 		$moduls = [
 			'api-validator'                 => new Api( $this->Controller ),
 			'whitelist-validator'           => new Whitelist_Validator( $this->Controller ),
@@ -80,37 +62,20 @@ class Protection extends BaseModul {
 			'captcha-validator'             => new Captcha_Validator( $this->Controller ),
 		];
 
-		$this->get_logger()->debug( 'Module wurden definiert.', [ 'module_count' => count( $moduls ) ] );
-
-		// 2️⃣ Prüfen, ob API aktiviert ist und API-Key vorhanden
+		// Check if API is enabled and API key is present
 		/** @var Api $api */
 		$api = $moduls['api-validator'];
 		$api_key = $this->Controller->get_settings('beta_captcha_api_key', 'beta');
 
 		if ($api->is_enabled() && !empty($api_key)) {
-			$this->get_logger()->notice('API-Validator ist aktiv und API-Key vorhanden – deaktiviere lokale Schutzmodule.', [
-				'plugin' => 'f12-cf7-captcha',
-				'api-key' => substr($api_key, 0, 8) . '…',
-			]);
-
-			// Nur Whitelist & API aktiv lassen
+			// Only keep whitelist & API active
 			$moduls = [
 				'api-validator'       => $api,
 				'whitelist-validator' => $moduls['whitelist-validator'],
 			];
 		}
 
-		// Füge jedes Modul dem internen Modul-Array hinzu.
-		foreach ( $moduls as $name => $BaseModul ) {
-			$this->_moduls[ $name ] = $BaseModul;
-			$this->get_logger()->debug( "Modul '{$name}' wurde erfolgreich geladen.", [
-				'plugin'       => 'f12-cf7-captcha',
-				'module_class' => get_class( $BaseModul ),
-			] );
-		}
-
-
-		$this->get_logger()->info( 'Alle Schutzmodule erfolgreich initialisiert.', [ 'plugin' => 'f12-cf7-captcha' ] );
+		$this->_modules = $moduls;
 	}
 
 	/**
@@ -121,26 +86,22 @@ class Protection extends BaseModul {
 	 * @return BaseProtection The specified module.
 	 * @throws \Exception If the specified module does not exist.
 	 */
-	public function get_modul( string $name ): BaseProtection {
-		$this->get_logger()->info( "Versuche, Modul '{$name}' abzurufen.", [
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
-		if ( ! isset( $this->_moduls[ $name ] ) ) {
-			$error_message = sprintf( 'Modul %s existiert nicht.', $name );
-			$this->get_logger()->error( $error_message, [ 'plugin' => 'f12-cf7-captcha' ] );
+	public function get_module( string $name ): BaseProtection {
+		if ( ! isset( $this->_modules[ $name ] ) ) {
+			$error_message = sprintf( 'Module %s does not exist.', $name );
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
 			throw new \Exception( $error_message );
 		}
 
-		$modul = $this->_moduls[ $name ];
-		$this->get_logger()->debug( "Modul '{$name}' erfolgreich abgerufen.", [
-			'plugin'      => 'f12-cf7-captcha',
-			'modul_class' => get_class( $modul ),
-		] );
+		return $this->_modules[ $name ];
+	}
 
-		return $modul;
+	/**
+	 * @deprecated Use get_module() instead.
+	 */
+	public function get_modul( string $name ): BaseProtection {
+		_deprecated_function( __METHOD__, '2.3.0', 'Protection::get_module()' );
+		return $this->get_module( $name );
 	}
 
 
@@ -150,16 +111,7 @@ class Protection extends BaseModul {
 	 * @return string The name of the field.
 	 */
 	protected function get_field_name(): string {
-		$field_name = 'f12_captcha';
-
-		$this->get_logger()->debug( 'Rufe den Standard-Feldnamen für das Captcha ab.', [
-			'plugin'     => 'f12-cf7-captcha',
-			'class'      => __CLASS__,
-			'method'     => __METHOD__,
-			'field_name' => $field_name,
-		] );
-
-		return $field_name;
+		return 'f12_captcha';
 	}
 
 	/**
@@ -171,39 +123,15 @@ class Protection extends BaseModul {
 	 * @return string The captcha for spam protection.
 	 */
 	public function get_captcha(): string {
-		$this->get_logger()->info( 'Starte die Generierung des kombinierten Captcha-HTML-Codes.', [
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
 		$captcha_parts = [];
 
-		// Iteriere über jedes geladene Modul und rufe dessen Captcha-Code ab
-		foreach ( $this->_moduls as $key => $modul ) {
-			// Stelle sicher, dass die Methode 'get_captcha' existiert, bevor sie aufgerufen wird
+		foreach ( $this->_modules as $key => $modul ) {
 			if ( method_exists( $modul, 'get_captcha' ) ) {
-				$part                  = $modul->get_captcha();
-				$captcha_parts[ $key ] = $part;
-
-				if ( ! empty( $part ) ) {
-					$this->get_logger()->debug( "Captcha-Teil von Modul '{$key}' erfolgreich generiert.", [
-						'html_length' => strlen( $part ),
-					] );
-				}
-			} else {
-				$this->get_logger()->warning( "Modul '{$key}' hat keine 'get_captcha'-Methode. Überspringe." );
+				$captcha_parts[ $key ] = $modul->get_captcha();
 			}
 		}
 
-		// Kombiniere die einzelnen Captcha-Teile zu einem einzigen String
-		$final_captcha_html = implode( "", $captcha_parts );
-
-		$this->get_logger()->info( 'Kombinierter Captcha-HTML-Code erfolgreich generiert.', [
-			'total_length' => strlen( $final_captcha_html ),
-		] );
-
-		return $final_captcha_html;
+		return implode( "", $captcha_parts );
 	}
 
 	/**
@@ -223,69 +151,50 @@ class Protection extends BaseModul {
 	 * @filter f12-cf7-captcha-skip-validation
 	 */
 	public function is_spam( ...$args ): bool {
-		$this->get_logger()->info( 'Starte die Haupt-Spam-Überprüfung für die übermittelten Formulardaten.', [
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
-		// Keine Daten übermittelt
+		// No data submitted
 		if ( ! isset( $args[0] ) ) {
-			$this->get_logger()->info( 'Keine Formulardaten übermittelt. Überspringe Validierung.', [ 'plugin' => 'f12-cf7-captcha' ] );
-
 			return false;
 		}
 
 		$array_post_data = $args[0];
 
-		// Prüfen ob Validation per Filter übersprungen werden soll
+		// Check if validation should be skipped via filter
 		if ( apply_filters( 'f12-cf7-captcha-skip-validation', false, $array_post_data ) ) {
-			$this->get_logger()->notice( 'Validierung wurde durch den Filter "f12-cf7-captcha-skip-validation" übersprungen.', [ 'plugin' => 'f12-cf7-captcha' ] );
-
 			return false;
 		}
 
-		// Counter laden und Gesamtprüfungen hochzählen
-		$counters                 = get_option( 'f12_cf7_captcha_telemetry_counters', [] );
-		$counters['checks_total'] = ( $counters['checks_total'] ?? 0 ) + 1;
+		// Track delta for this request (merged with DB at shutdown)
+		self::$pending_deltas['checks_total'] = ( self::$pending_deltas['checks_total'] ?? 0 ) + 1;
+		$this->schedule_counter_flush();
 
-		// Whitelist prüfen
-		$whitelist = $this->get_modul( 'whitelist-validator' ); // dein neues Modul
+		// Check whitelist
+		$whitelist = $this->get_module( 'whitelist-validator' );
 		if ( $whitelist && $whitelist->is_whitelisted( $array_post_data ) ) {
-			$this->get_logger()->info( "User / IP / E-Mail ist auf der Whitelist. Alle Schutzmaßnahmen übersprungen.", [ 'plugin' => 'f12-cf7-captcha' ] );
+			self::$pending_deltas['checks_clean'] = ( self::$pending_deltas['checks_clean'] ?? 0 ) + 1;
 
-			$counters['checks_clean'] = ( $counters['checks_clean'] ?? 0 ) + 1;
-			update_option( 'f12_cf7_captcha_telemetry_counters', $counters, false );
-
-			return false; // Sofort abbrechen
+			return false;
 		}
 
 		$is_spam         = false;
 		$spam_modul_name = '';
 
-		// Alle Module durchlaufen
-		foreach ( $this->_moduls as $name => $modul ) {
-			$this->get_logger()->info( "Überprüfe Daten mit Modul '{$name}'.", [
-				'plugin'      => 'f12-cf7-captcha',
-				'modul_class' => get_class( $modul ),
-			] );
-
-			if ( $name == "whitelist-validator" ) {
-				$this->get_logger()->info( "Überspringe die Whitelist für is_spam()", [ 'plugin' => 'f12-cf7-captcha' ] );
+		// Iterate through all modules
+		foreach ( $this->_modules as $name => $modul ) {
+			if ( $name === "whitelist-validator" ) {
 				continue;
 			}
 
 			if ( $modul->is_spam( $array_post_data ) ) {
 				$is_spam = true;
 
-				// Modul-Counter hochzählen
-				$counters[ $name ] = ( $counters[ $name ] ?? 0 ) + 1;
+				// Increment module counter
+				self::$pending_deltas[ $name ] = ( self::$pending_deltas[ $name ] ?? 0 ) + 1;
 
-				// Nur erstes Modul setzt Fehlermeldung + Logging
+				// Only first module sets error message + logging
 				if ( $spam_modul_name === '' ) {
 					$spam_modul_name = $name;
 
-					$this->get_logger()->warning( "Modul '{$name}' hat Spam gefunden. Die Verarbeitung wird gestoppt.", [ 'plugin' => 'f12-cf7-captcha' ] );
+					$this->get_logger()->warning( "Module '{$name}' found spam.", [ 'plugin' => 'f12-cf7-captcha' ] );
 					$this->set_message( $modul->get_message() );
 					$this->Logger->maybe_log( 'protection', $array_post_data, true, $this->get_message() );
 				}
@@ -293,57 +202,77 @@ class Protection extends BaseModul {
 		}
 
 		if ( $is_spam ) {
-			// Spam-Counter hochzählen
-			$counters['checks_spam'] = ( $counters['checks_spam'] ?? 0 ) + 1;
-			update_option( 'f12_cf7_captcha_telemetry_counters', $counters, false );
+			self::$pending_deltas['checks_spam'] = ( self::$pending_deltas['checks_spam'] ?? 0 ) + 1;
 		} else {
-			$this->get_logger()->info( 'Alle Module erfolgreich durchlaufen. Kein Spam gefunden.' );
-
-			// Erfolgs-Callbacks ausführen
-			foreach ( $this->_moduls as $modul ) {
+			foreach ( $this->_modules as $modul ) {
 				$modul->success();
 			}
 
-			// Erfolg protokollieren
 			$this->Logger->maybe_log( 'protection', $array_post_data, false );
 
-			// Clean-Counter hochzählen
-			$counters['checks_clean'] = ( $counters['checks_clean'] ?? 0 ) + 1;
-			update_option( 'f12_cf7_captcha_telemetry_counters', $counters, false );
+			self::$pending_deltas['checks_clean'] = ( self::$pending_deltas['checks_clean'] ?? 0 ) + 1;
 		}
-
-		$this->get_logger()->info( 'Spam-Überprüfung abgeschlossen.', [
-			'plugin'       => 'f12-cf7-captcha',
-			'result'       => $is_spam ? 'Spam' : 'Kein Spam',
-			'triggered_by' => $is_spam ? $spam_modul_name : 'N/A',
-		] );
 
 		return $is_spam;
 	}
 
 
+	/**
+	 * Override modules (for testing).
+	 *
+	 * @param array<string, BaseProtection> $modules
+	 */
+	public function set_modules(array $modules): void {
+		$this->_modules = $modules;
+	}
+
+	/**
+	 * Reset static telemetry state (for testing).
+	 *
+	 * @internal
+	 */
+	public static function reset_static_state(): void {
+		self::$pending_deltas = [];
+		self::$shutdown_registered = false;
+	}
+
 	public function on_init(): void {
-		$this->get_logger()->info( 'Starte Initialisierung der Module in der on_init-Methode.', [
-			'plugin' => 'f12-cf7-captcha',
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		] );
-
-		$this->init_moduls();
-
-		$this->get_logger()->info( 'Module erfolgreich initialisiert in on_init.', [ 'plugin' => 'f12-cf7-captcha' ] );
+		$this->init_modules();
 	}
 
 	protected function is_enabled(): bool {
-		$is_enabled = true;
+		return true;
+	}
 
-		$this->get_logger()->info( 'Überprüfe, ob die Methode aktiviert ist. Sie ist standardmäßig aktiviert.', [
-			'plugin'     => 'f12-cf7-captcha',
-			'class'      => __CLASS__,
-			'method'     => __METHOD__,
-			'is_enabled' => $is_enabled,
-		] );
+	/**
+	 * Register the shutdown hook (once) to flush counters at end of request.
+	 */
+	private function schedule_counter_flush(): void {
+		if ( self::$shutdown_registered ) {
+			return;
+		}
+		self::$shutdown_registered = true;
 
-		return $is_enabled;
+		register_shutdown_function( [ __CLASS__, 'flush_counters' ] );
+	}
+
+	/**
+	 * Merge accumulated deltas into the current DB counters (called once at shutdown).
+	 *
+	 * Re-reads from DB at flush time to minimize lost updates under concurrent requests.
+	 */
+	public static function flush_counters(): void {
+		if ( empty( self::$pending_deltas ) ) {
+			return;
+		}
+
+		$current = get_option( 'f12_cf7_captcha_telemetry_counters', [] );
+
+		foreach ( self::$pending_deltas as $key => $delta ) {
+			$current[ $key ] = ( $current[ $key ] ?? 0 ) + $delta;
+		}
+
+		update_option( 'f12_cf7_captcha_telemetry_counters', $current, false );
+		self::$pending_deltas = [];
 	}
 }

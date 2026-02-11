@@ -32,20 +32,10 @@ class CaptchaAjax extends BaseModul {
 	{
 		parent::__construct($Controller);
 
-		add_action('wp_ajax_f12_cf7_captcha_reload', [$this, 'wp_handle_reload_captcha']);
-		add_action('wp_ajax_nopriv_f12_cf7_captcha_reload', [$this, 'wp_handle_reload_captcha']);
-
-		add_action('wp_ajax_f12_cf7_captcha_timer_reload', [$this, 'wp_handle_reload_timer']);
-		add_action('wp_ajax_nopriv_f12_cf7_captcha_timer_reload', [$this, 'wp_handle_reload_timer']);
-
 		$this->get_logger()->info(
-			"__construct(): Ajax-Handler für Captcha registriert",
+			"__construct(): Captcha-Modul registriert",
 			[
 				'plugin'  => 'f12-cf7-captcha',
-				'actions' => [
-					'f12_cf7_captcha_reload',
-					'f12_cf7_captcha_timer_reload'
-				],
 				'class'   => __CLASS__
 			]
 		);
@@ -53,53 +43,56 @@ class CaptchaAjax extends BaseModul {
 
 
 	/**
-	 * Handle the reloading of captcha based on the method specified in the POST request.
+	 * Create a new Captcha instance.
+	 *
+	 * @param string $ip_address The IP address for the captcha.
+	 *
+	 * @return Captcha
+	 */
+	protected function create_captcha(string $ip_address): Captcha {
+		return new Captcha($this->Controller->get_logger(), $ip_address);
+	}
+
+	/**
+	 * Handle the reloading of captcha based on the given method.
+	 *
+	 * @param string $method The captcha method (e.g. 'math', 'image', 'honey').
 	 *
 	 * @return array Returns an array with 'Captcha' and 'Generator' objects.
 	 * @throws RuntimeException Thrown if method is not defined.
 	 */
-	public function handle_reload_captcha(): array
+	public function handle_reload_captcha( string $method ): array
 	{
-		if (!isset($_POST['captchamethod'])) {
-			$this->get_logger()->error(
-				"handle_reload_captcha(): Keine Methode in Request übergeben",
-				['plugin' => 'f12-cf7-captcha']
-			);
-			throw new \RuntimeException('Method not defined.');
-		}
-
-		$method = sanitize_text_field($_POST['captchamethod']);
-
 		$this->get_logger()->debug(
 			"handle_reload_captcha(): Request empfangen",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'method' => $method,
-				'ip'     => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+				'ip'     => isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown'
 			]
 		);
 
 		/** @var Protection $Protection */
-		$Protection = $this->Controller->get_modul('protection');
+		$Protection = $this->Controller->get_module('protection');
 
 		/** @var Captcha_Validator $Captcha_Validator */
-		$Captcha_Validator = $Protection->get_modul('captcha-validator');
+		$Captcha_Validator = $Protection->get_module('captcha-validator');
 
 		/** @var CaptchaGenerator $Captcha_Generator */
 		$Captcha_Generator = $Captcha_Validator->get_generator($method);
 
 		/** @var UserData $User_Data */
-		$User_Data  = $this->Controller->get_modul('user-data');
+		$User_Data  = $this->Controller->get_module('user-data');
 		$ip_address = $User_Data->get_ip_address();
 
 		// Captcha erzeugen & speichern
-		$Captcha = new Captcha($this->Controller->get_logger(), $ip_address);
+		$Captcha = $this->create_captcha($ip_address);
 		$Captcha->set_code($Captcha_Generator->get());
 		$result = $Captcha->save();
 
 		if ($result) {
 			$this->get_logger()->info(
-				"handle_reload_captcha(): Neues Captcha erfolgreich generiert",
+				"handle_reload_captcha(): New captcha successfully generated",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'method'    => $method,
@@ -110,7 +103,7 @@ class CaptchaAjax extends BaseModul {
 			);
 		} else {
 			$this->get_logger()->error(
-				"handle_reload_captcha(): Fehler beim Speichern des Captchas",
+				"handle_reload_captcha(): Error saving captcha",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'method'    => $method,
@@ -127,63 +120,7 @@ class CaptchaAjax extends BaseModul {
 	}
 
 	/**
-	 * Handle the reload of the captcha
-	 *
-	 * @return void
-	 *
-	 * @throws RuntimeException if captcha is not initialized or captcha generator is not initialized
-	 */
-	public function wp_handle_reload_captcha(): void
-	{
-		$data = $this->handle_reload_captcha();
-
-		if (!isset($data['Captcha'])) {
-			$this->get_logger()->error(
-				"wp_handle_reload_captcha(): Captcha nicht initialisiert",
-				['plugin' => 'f12-cf7-captcha']
-			);
-			throw new \RuntimeException('Captcha not initialized');
-		}
-
-		/** @var Captcha $Captcha */
-		$Captcha = $data['Captcha'];
-
-		if (!isset($data['Generator'])) {
-			$this->get_logger()->error(
-				"wp_handle_reload_captcha(): Generator nicht initialisiert",
-				[
-					'plugin' => 'f12-cf7-captcha',
-					'id'     => $Captcha->get_id()
-				]
-			);
-			throw new \RuntimeException('Captcha Generator not initialized');
-		}
-
-		/** @var CaptchaGenerator $Generator */
-		$Generator = $data['Generator'];
-
-		$response = [
-			'hash'  => $Captcha->get_hash(),
-			'label' => $Generator->get_ajax_response(),
-		];
-
-		$this->get_logger()->info(
-			"wp_handle_reload_captcha(): Ajax-Response ausgegeben",
-			[
-				'plugin'    => 'f12-cf7-captcha',
-				'id'        => $Captcha->get_id(),
-				'generator' => get_class($Generator),
-				'hash'      => substr($response['hash'], 0, 6) . '...'
-			]
-		);
-
-		echo wp_json_encode($response);
-		wp_die();
-	}
-
-
-	/**
-	 * Returns a new Timer hash for Ajax
+	 * Returns a new Timer hash
 	 *
 	 * @return string The Timer hash
 	 * @throws \Exception
@@ -191,10 +128,10 @@ class CaptchaAjax extends BaseModul {
 	public function handle_reload_timer(): string
 	{
 		/** @var Timer_Controller $Timer */
-		$Timer = $this->Controller->get_modul('timer');
+		$Timer = $this->Controller->get_module('timer');
 
 		$this->get_logger()->debug(
-			"handle_reload_timer(): Timer-Reload angefordert",
+			"handle_reload_timer(): Timer reload requested",
 			['plugin' => 'f12-cf7-captcha']
 		);
 
@@ -202,7 +139,7 @@ class CaptchaAjax extends BaseModul {
 
 		if (!empty($result)) {
 			$this->get_logger()->info(
-				"handle_reload_timer(): Neuer Timer erfolgreich erstellt",
+				"handle_reload_timer(): New timer successfully created",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'timer'  => $result
@@ -210,40 +147,11 @@ class CaptchaAjax extends BaseModul {
 			);
 		} else {
 			$this->get_logger()->warning(
-				"handle_reload_timer(): Timer konnte nicht erstellt werden",
+				"handle_reload_timer(): Timer could not be created",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		}
 
 		return $result;
-	}
-
-	/**
-	 * Handle the reload timer for Ajax and output the timer hash.
-	 *
-	 * @return void
-	 * @throws \Exception
-	 */
-	public function wp_handle_reload_timer(): void
-	{
-		$hash = $this->handle_reload_timer();
-
-		if (empty($hash)) {
-			$this->get_logger()->warning(
-				"wp_handle_reload_timer(): Timer-Hash leer zurückgegeben",
-				['plugin' => 'f12-cf7-captcha']
-			);
-		} else {
-			$this->get_logger()->info(
-				"wp_handle_reload_timer(): Timer erfolgreich zurückgegeben",
-				[
-					'plugin' => 'f12-cf7-captcha',
-					'hash'   => substr($hash, 0, 6) . '...' // ⚠️ Maskieren!
-				]
-			);
-		}
-
-		echo wp_json_encode(['hash' => $hash]);
-		wp_die();
 	}
 }

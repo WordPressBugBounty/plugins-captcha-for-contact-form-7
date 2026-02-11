@@ -15,122 +15,126 @@ class ControllerJetForm extends BaseController
 {
 	protected string $name = 'JetFormBuilder';
 	protected string $id   = 'jetform';
+	protected string $settings_key = 'protection_jetform_enable';
 
 	/**
-	 * Check if the captcha is enabled for JetFormBuilder
+	 * Flag to prevent double injection when both hooks fire.
+	 *
+	 * @var bool
 	 */
-	public function is_enabled(): bool
-	{
-		$this->get_logger()->info('Starte Überprüfung, ob das JetForm-Modul aktiviert ist.');
+	private bool $captcha_injected = false;
 
-		$is_installed = $this->is_installed();
-		$this->get_logger()->debug('Installationsstatus des Moduls: ' . ($is_installed ? 'Installiert' : 'Nicht installiert'));
+	protected array $hooks = [
+		['type' => 'filter', 'hook' => 'jet-form-builder/before-start-form',     'method' => 'wp_reset_captcha_flag'],
+		['type' => 'action', 'hook' => 'jet-form-builder/before-start-form-row', 'method' => 'wp_add_spam_protection'],
+		['type' => 'filter', 'hook' => 'jet-form-builder/before-end-form',       'method' => 'wp_add_spam_protection_fallback'],
+		['type' => 'action', 'hook' => 'jet-form-builder/form-handler/before-send', 'method' => 'wp_validation'],
+	];
 
-		$setting_value = $this->Controller->get_settings('protection_jetform_enable', 'global');
-		$this->get_logger()->debug( 'Wert der Einstellung "protection_jetform_enable": ' . $setting_value );
-
-		if ($setting_value === '' || $setting_value === null) {
-			$setting_value = 1;
-			$this->get_logger()->debug( 'Wert der Einstellung "protection_jetform_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
-		}
-
-		$is_active = $is_installed && (int)$setting_value === 1;
-
-		$this->get_logger()->debug('Status vor Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));
-
-		$result = apply_filters('f12_cf7_captcha_is_installed_jetform', $is_active);
-
-		$this->get_logger()->info('Endgültiger Status: ' . ($result ? 'Aktiv' : 'Inaktiv'));
-
-		return $result;
-	}
-
-	/**
-	 * Check if JetFormBuilder is installed
-	 */
 	public function is_installed(): bool
 	{
-		$this->get_logger()->info('Starte Überprüfung, ob JetFormBuilder installiert ist.');
-
 		$is_installed = class_exists('\Jet_Form_Builder\Plugin');
-
-		if ($is_installed) {
-			$this->get_logger()->info('JetFormBuilder gefunden.');
-		} else {
-			$this->get_logger()->critical('JetFormBuilder nicht gefunden.');
-		}
-
+		$this->get_logger()->debug('JetFormBuilder installed: ' . ($is_installed ? 'Yes' : 'No'));
 		return $is_installed;
 	}
 
 	/**
-	 * Initialize JetForm integration
+	 * Reset the captcha injection flag at the start of each form.
+	 *
+	 * @param string $html Existing HTML from filter chain.
+	 * @return string
 	 */
-	public function on_init(): void
+	public function wp_reset_captcha_flag( $html = '' )
 	{
-		$this->name = __('JetFormBuilder', 'captcha-for-contact-form-7');
-
-		// Captcha ins Formular einfügen
-		add_action('jet-form-builder/before-start-form-row', [$this, 'wp_add_spam_protection'], 10, 1);
-
-		// Validierung
-		add_action('jet-form-builder/form-handler/before-send', [$this, 'wp_validation'], 10, 1);
-
-		$this->get_logger()->info('JetForm-Integration initialisiert.');
+		$this->captcha_injected = false;
+		return $html;
 	}
 
 	/**
-	 * Add captcha to JetForm (im Formular-HTML)
+	 * Add captcha to JetForm before submit button (legacy hook for older versions).
+	 * This hook fires inside ob_start()/ob_get_clean(), so echo works here.
+	 *
+	 * @param mixed ...$args First argument is the form element.
 	 */
-	public function wp_add_spam_protection( $formElement ) {
-		// Debug: prüfen, welche Klasse übergeben wird
-		$this->get_logger()->debug( 'Form-Element erkannt.', [
-			'class' => is_object( $formElement ) ? get_class( $formElement ) : gettype( $formElement ),
-		]);
+	public function wp_add_spam_protection( ...$args ) {
+		if ( $this->captcha_injected ) {
+			return;
+		}
 
-		// Nur auf Submit-Button reagieren
-		if ( $formElement instanceof \Jet_Form_Builder\Blocks\Types\Action_Button ) {
+		$formElement = $args[0] ?? null;
+
+		try {
+			if ( ! class_exists( '\Jet_Form_Builder\Blocks\Types\Action_Button' ) ) {
+				return;
+			}
+
+			if ( ! ( $formElement instanceof \Jet_Form_Builder\Blocks\Types\Action_Button ) ) {
+				return;
+			}
+
 			$block_attrs = $formElement->block_attrs ?? [];
 
-			// Nur wenn action_type = submit
-			if ( isset( $block_attrs['action_type'] ) && $block_attrs['action_type'] === 'submit' ) {
-				$this->get_logger()->info( 'Füge Captcha in JetForm vor Submit-Button ein.', [
-					'label'       => $block_attrs['label'] ?? '',
-					'action_type' => $block_attrs['action_type'],
-				] );
-
-				$captcha = $this->Controller->get_modul( 'protection' )->get_captcha();
-
-				if ( empty( $captcha ) ) {
-					$this->get_logger()->warning( 'Captcha leer, kein Einfügen.' );
-					return;
-				}
-
-				// Captcha direkt vor dem Button ausgeben
-				echo $captcha;
+			if ( ! isset( $block_attrs['action_type'] ) || $block_attrs['action_type'] !== 'submit' ) {
+				return;
 			}
+		} catch ( \Throwable $e ) {
+			$this->get_logger()->debug( 'Legacy hook check failed: ' . $e->getMessage() );
+			return;
 		}
+
+		$captcha = $this->Controller->get_module( 'protection' )->get_captcha();
+
+		if ( empty( $captcha ) ) {
+			return;
+		}
+
+		$this->captcha_injected = true;
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captcha HTML is generated internally
+		echo $captcha;
 	}
 
+	/**
+	 * Fallback: inject captcha before form end (fires reliably in all JetFormBuilder versions).
+	 * This is an apply_filters hook, so we must return the HTML string.
+	 *
+	 * @param string $html Existing HTML from filter chain.
+	 * @return string
+	 */
+	public function wp_add_spam_protection_fallback( $html = '' )
+	{
+		if ( $this->captcha_injected ) {
+			return $html;
+		}
+
+		$captcha = $this->Controller->get_module( 'protection' )->get_captcha();
+
+		if ( empty( $captcha ) ) {
+			return $html;
+		}
+
+		$this->captcha_injected = true;
+
+		return $html . '<div class="f12-jetform-captcha-wrapper">' . $captcha . '</div>';
+	}
 
 	/**
-	 * Validate form submission (bevor JetForm die Daten sendet)
+	 * Validate form submission
+	 *
+	 * @param mixed $handler
 	 */
 	public function wp_validation($handler)
 	{
-		$this->get_logger()->info('Starte JetForm-Validierung.', [
-			'form_id' => $handler->form_id ?? 'unknown',
-		]);
+		$this->get_logger()->info('Starting JetForm validation.');
 
-		$Protection = $this->Controller->get_modul('protection');
+		$Protection = $this->Controller->get_module('protection');
 
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by JetFormBuilder
 		if ($Protection->is_spam($_POST)) {
 			$message = $Protection->get_message() ?: __('Invalid input detected.', 'captcha-for-contact-form-7');
+			$this->get_logger()->warning('Spam detected, validation failed.');
 
-			$this->get_logger()->warning('Spam erkannt, Validierung fehlgeschlagen.', [
-				'form_id' => $handler->form_id ?? 'unknown'
-			]);
-
+			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
 			throw new \JFB_Modules\Security\Exceptions\Spam_Exception( $message );
 		}
 	}

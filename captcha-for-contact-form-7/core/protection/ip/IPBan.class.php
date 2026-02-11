@@ -10,8 +10,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once('IPBanCleaner.class.php');
-
 /**
  * Class IPBan
  *
@@ -42,7 +40,7 @@ class IPBan
     /**
      * The datetime until the user is blocked for submitting data
      *
-     * @var string, e.g.: 2024-05-27 22:13:00
+     * @var string e.g.: 2024-05-27 22:13:00
      */
     private $blockedtime = '';
 
@@ -56,15 +54,6 @@ class IPBan
 	{
 		$this->logger = $logger;
 		$this->set_params($params);
-
-		$this->logger->info(
-			"__construct(): Neue Instanz erstellt",
-			[
-				'plugin'  => 'f12-cf7-captcha',
-				'class'   => __CLASS__,
-				'params'  => !empty($params) ? array_keys($params) : []
-			]
-		);
 	}
 
 	private function get_logger(): LoggerInterface{
@@ -74,33 +63,21 @@ class IPBan
     /**
      * Sets the params of the object.
      *
+     * Only allows known database columns to be set.
+     *
      * @param array $params The params to set.
      *
      * @return void
      */
 	public function set_params(array $params): void
 	{
-		$applied = [];
-		$ignored = [];
+		$allowed = ['id', 'hash', 'createtime', 'blockedtime'];
 
 		foreach ($params as $key => $value) {
-			if (property_exists($this, $key)) {
+			if (in_array($key, $allowed, true)) {
 				$this->{$key} = $value;
-				$applied[$key] = is_scalar($value) ? $value : gettype($value);
-			} else {
-				$ignored[] = $key;
 			}
 		}
-
-		$this->get_logger()->debug(
-			"set_params(): Parameter verarbeitet",
-			[
-				'plugin'  => 'f12-cf7-captcha',
-				'class'   => __CLASS__,
-				'applied' => $applied,
-				'ignored' => $ignored
-			]
-		);
 	}
 
 
@@ -117,51 +94,37 @@ class IPBan
 	{
 		global $wpdb;
 
-		if (!$wpdb) {
-			$this->get_logger()->error('WPDB not defined in get_count.');
+		if (null === $wpdb) {
 			throw new \RuntimeException('WPDB not defined');
 		}
 
 		$table_name = $this->get_table_name();
-		$this->get_logger()->debug('Using table name in get_count.', ['table' => $table_name]);
 
 		if (!empty($hash) && !empty($previous_hash)) {
 			$dt = new \DateTime();
 			$block_time = $dt->format('Y-m-d H:i:s');
 
-			$prepare_stmt = sprintf(
-				'SELECT count(*) AS entries FROM %s WHERE (hash="%s" OR hash="%s") AND blockedtime > "%s"',
-				$table_name,
-				esc_sql($hash),
-				esc_sql($previous_hash),
-				esc_sql($block_time)
+			$prepare_stmt = $wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT count(*) AS entries FROM {$table_name} WHERE (hash=%s OR hash=%s) AND blockedtime > %s",
+				$hash,
+				$previous_hash,
+				$block_time
 			);
 
-			$this->get_logger()->debug('Executing get_count query with hash and previous_hash.', [
-				'hash'          => $hash,
-				'previous_hash' => $previous_hash,
-				'block_time'    => $block_time,
-				'query'         => $prepare_stmt,
-			]);
-
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$results = $wpdb->get_results($prepare_stmt);
 		} else {
-			$prepare_stmt = sprintf('SELECT count(*) AS entries FROM %s', $table_name);
+			$prepare_stmt = "SELECT count(*) AS entries FROM {$table_name}";
 
-			$this->get_logger()->debug('Executing get_count query without hashes.', [
-				'query' => $prepare_stmt,
-			]);
-
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
 			$results = $wpdb->get_results($prepare_stmt);
 		}
 
 		if (is_array($results) && isset($results[0])) {
-			$count = (int) $results[0]->entries;
-			$this->get_logger()->info('get_count query returned results.', ['count' => $count]);
-			return $count;
+			return (int) $results[0]->entries;
 		}
 
-		$this->get_logger()->warning('get_count query returned no results.', ['query' => $prepare_stmt]);
 		return 0;
 	}
 
@@ -174,33 +137,24 @@ class IPBan
 	public function create_table(): void
 	{
 		$table_name = $this->get_table_name();
-		$this->get_logger()->debug('Preparing to create table.', ['table' => $table_name]);
 
 		require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 
 		$sql = sprintf(
 			"CREATE TABLE %s (
-            id int(11) NOT NULL auto_increment, 
+            id int(11) NOT NULL auto_increment,
             hash varchar(255) NOT NULL,
             createtime varchar(255) DEFAULT '',
             blockedtime varchar(255) DEFAULT '',
-            PRIMARY KEY  (id)
+            PRIMARY KEY  (id),
+            KEY hash (hash),
+            KEY blockedtime (blockedtime),
+            KEY hash_blockedtime (hash, blockedtime)
         )",
 			$table_name
 		);
 
-		$this->get_logger()->debug('Executing CREATE TABLE statement.', ['sql' => $sql]);
-
-		try {
-			dbDelta($sql);
-			$this->get_logger()->info('Table created or updated successfully.', ['table' => $table_name]);
-		} catch (\Throwable $e) {
-			$this->get_logger()->error('Error creating table.', [
-				'table'   => $table_name,
-				'message' => $e->getMessage(),
-			]);
-			throw $e;
-		}
+		dbDelta($sql);
 	}
 
 
@@ -215,33 +169,18 @@ class IPBan
 	{
 		global $wpdb;
 
-		if (!$wpdb) {
-			$this->get_logger()->error('reset_table failed: $wpdb is not defined.');
+		if (null === $wpdb) {
 			return false;
 		}
 
 		$wp_table_name = $this->get_table_name();
-		$this->get_logger()->debug('Resetting table.', ['table' => $wp_table_name]);
 
 		try {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$rows = $wpdb->query(sprintf('DELETE FROM %s', $wp_table_name));
 
-			if ($rows === false) {
-				$this->get_logger()->error('reset_table query failed.', ['table' => $wp_table_name]);
-				return false;
-			}
-
-			$this->get_logger()->info('reset_table executed successfully.', [
-				'table' => $wp_table_name,
-				'rows'  => $rows,
-			]);
-
-			return true;
+			return $rows !== false;
 		} catch (\Throwable $e) {
-			$this->get_logger()->error('Exception in reset_table.', [
-				'table'   => $wp_table_name,
-				'message' => $e->getMessage(),
-			]);
 			return false;
 		}
 	}
@@ -261,33 +200,16 @@ class IPBan
 	{
 		global $wpdb;
 
-		if (!$wpdb) {
-			$this->get_logger()->error('delete_table failed: $wpdb is not defined.');
+		if (null === $wpdb) {
 			return;
 		}
 
 		$table_name = $this->get_table_name();
-		$prepare_stmt = sprintf("DROP TABLE IF EXISTS %s", $table_name);
 
-		$this->get_logger()->debug('Executing DROP TABLE statement.', [
-			'table' => $table_name,
-			'sql'   => $prepare_stmt,
-		]);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$wpdb->query(sprintf("DROP TABLE IF EXISTS %s", $table_name));
 
-		try {
-			$wpdb->query($prepare_stmt);
-			$this->get_logger()->info('Table deleted successfully (or did not exist).', ['table' => $table_name]);
-		} catch (\Throwable $e) {
-			$this->get_logger()->error('Error deleting table.', [
-				'table'   => $table_name,
-				'message' => $e->getMessage(),
-			]);
-			throw $e;
-		}
-
-		// Cron-Hook löschen
 		wp_clear_scheduled_hook('weeklyIPClear');
-		$this->get_logger()->info('Cleared scheduled hook.', ['hook' => 'weeklyIPClear']);
 	}
 
 
@@ -304,49 +226,24 @@ class IPBan
 		global $wpdb;
 
 		if (null === $wpdb) {
-			$this->get_logger()->error('delete_older_than failed: $wpdb is not defined.');
 			throw new \RuntimeException('WPDB not defined');
 		}
 
 		$table = $this->get_table_name();
-		$sql   = sprintf(
-			'DELETE FROM %s WHERE blockedtime < "%s"',
-			$table,
-			esc_sql($create_time)
+		$sql   = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			"DELETE FROM {$table} WHERE blockedtime < %s",
+			$create_time
 		);
 
-		$this->get_logger()->debug('Executing delete_older_than query.', [
-			'table'       => $table,
-			'create_time' => $create_time,
-			'sql'         => $sql,
-		]);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$rows = $wpdb->query($sql);
 
-		try {
-			$rows = $wpdb->query($sql);
-
-			if ($rows === false) {
-				$this->get_logger()->error('delete_older_than query failed.', [
-					'table'       => $table,
-					'create_time' => $create_time,
-				]);
-				return 0;
-			}
-
-			$this->get_logger()->info('delete_older_than executed successfully.', [
-				'table'       => $table,
-				'create_time' => $create_time,
-				'rows'        => $rows,
-			]);
-
-			return (int) $rows;
-		} catch (\Throwable $e) {
-			$this->get_logger()->error('Exception in delete_older_than.', [
-				'table'       => $table,
-				'create_time' => $create_time,
-				'message'     => $e->getMessage(),
-			]);
-			throw $e;
+		if ($rows === false) {
+			return 0;
 		}
+
+		return (int) $rows;
 	}
 
 
@@ -361,14 +258,10 @@ class IPBan
 		global $wpdb;
 
 		if (null === $wpdb) {
-			$this->get_logger()->error('get_table_name failed: $wpdb is not defined.');
 			throw new \RuntimeException('WPDB not found');
 		}
 
-		$table = $wpdb->prefix . 'f12_cf7_ip_ban';
-		$this->get_logger()->debug('Resolved table name.', ['table' => $table]);
-
-		return $table;
+		return $wpdb->prefix . 'f12_cf7_ip_ban';
 	}
 
     /**
@@ -378,7 +271,6 @@ class IPBan
      */
 	public function get_id(): int
 	{
-		$this->get_logger()->debug('get_id called.', ['id' => $this->id]);
 		return (int) $this->id;
 	}
 
@@ -391,15 +283,7 @@ class IPBan
      */
 	private function set_id(int $id): void
 	{
-		$oldId = $this->id ?? null;
 		$this->id = $id;
-
-		$this->get_logger()->info('ID wurde gesetzt', [
-			'old_id' => $oldId,
-			'new_id' => $id,
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		]);
 	}
 
     /**
@@ -409,13 +293,7 @@ class IPBan
      */
     public function get_hash(): string
     {
-		$hash = $this->hash;
-	    $this->get_logger()->debug('Hash wurde abgefragt', [
-		    'hash'   => $hash,
-		    'class'  => __CLASS__,
-		    'method' => __METHOD__,
-	    ]);
-		return $hash;
+		return $this->hash;
     }
 
     /**
@@ -430,19 +308,7 @@ class IPBan
 	public function get_blocked_time(): string
 	{
 		if (empty($this->blockedtime)) {
-			$this->get_logger()->warning('Blocked-Time war leer, Standardwert wird gesetzt', [
-				'default' => 3600,
-				'class'   => __CLASS__,
-				'method'  => __METHOD__,
-			]);
-
 			$this->set_blocked_time(3600);
-		} else {
-			$this->get_logger()->debug('Blocked-Time wurde abgefragt', [
-				'blocked_time' => $this->blockedtime,
-				'class'        => __CLASS__,
-				'method'       => __METHOD__,
-			]);
 		}
 
 		return $this->blockedtime;
@@ -451,24 +317,15 @@ class IPBan
     /**
      * Sets the blocked time.
      *
-     * @param string $seconds The number of seconds to block.
+     * @param int $seconds The number of seconds to block.
      *
      * @return void
      * @throws \Exception
      */
-	public function set_blocked_time(string $seconds): void
+	public function set_blocked_time(int $seconds): void
 	{
 		$dt = new \DateTime('+' . $seconds . ' seconds');
-		$oldValue = $this->blockedtime ?? null;
 		$this->blockedtime = $dt->format('Y-m-d H:i:s');
-
-		$this->get_logger()->info('Blocked-Time wurde gesetzt', [
-			'old_value' => $oldValue,
-			'new_value' => $this->blockedtime,
-			'seconds'   => $seconds,
-			'class'     => __CLASS__,
-			'method'    => __METHOD__,
-		]);
 	}
 
     /**
@@ -485,18 +342,6 @@ class IPBan
 		if (empty($this->createtime)) {
 			$dt = new \DateTime();
 			$this->createtime = $dt->format('Y-m-d H:i:s');
-
-			$this->get_logger()->warning('Create-Time war leer, neuer Wert wurde gesetzt', [
-				'new_value' => $this->createtime,
-				'class'     => __CLASS__,
-				'method'    => __METHOD__,
-			]);
-		} else {
-			$this->get_logger()->debug('Create-Time wurde abgefragt', [
-				'value'  => $this->createtime,
-				'class'  => __CLASS__,
-				'method' => __METHOD__,
-			]);
 		}
 
 		return $this->createtime;
@@ -509,16 +354,8 @@ class IPBan
      */
 	public function set_create_time(): void
 	{
-		$oldValue = $this->createtime ?? null;
 		$dt = new \DateTime();
 		$this->createtime = $dt->format('Y-m-d H:i:s');
-
-		$this->get_logger()->info('Create-Time wurde gesetzt', [
-			'old_value' => $oldValue,
-			'new_value' => $this->createtime,
-			'class'     => __CLASS__,
-			'method'    => __METHOD__,
-		]);
 	}
 
 
@@ -534,20 +371,11 @@ class IPBan
 	{
 		global $wpdb;
 
-		if (!$wpdb) {
-			$this->get_logger()->error('WPDB not defined', [
-				'class'  => __CLASS__,
-				'method' => __METHOD__,
-			]);
+		if (null === $wpdb) {
 			throw new \RuntimeException('WPDB not defined');
 		}
 
 		if ($this->id !== 0) {
-			$this->get_logger()->warning('Speichern übersprungen: ID bereits gesetzt', [
-				'id'     => $this->id,
-				'class'  => __CLASS__,
-				'method' => __METHOD__,
-			]);
 			return 0;
 		}
 
@@ -558,36 +386,22 @@ class IPBan
 			'blockedtime' => $this->get_blocked_time(),
 		];
 
-		$this->get_logger()->debug('Versuche Insert in Tabelle', [
-			'table'  => $table,
-			'data'   => $data,
-			'class'  => __CLASS__,
-			'method' => __METHOD__,
-		]);
-
 		$result = $wpdb->insert($table, $data);
 
 		if ($result === false) {
-			$this->get_logger()->error('Insert fehlgeschlagen', [
-				'table'           => $table,
-				'data'            => $data,
-				'wpdb_last_error' => $wpdb->last_error ?? null,
-				'class'           => __CLASS__,
-				'method'          => __METHOD__,
-			]);
+			$this->create_table();
+			$result = $wpdb->insert($table, $data);
 
-			throw new \RuntimeException('Database error occurred. Reactivate the plugin to create missing tables.');
+			if ($result === false) {
+				$this->get_logger()->error('Insert failed after table recreation', [
+					'table'           => $table,
+					'wpdb_last_error' => $wpdb->last_error ?? null,
+				]);
+				throw new \RuntimeException('Database error occurred.');
+			}
 		}
 
 		$this->id = (int) $wpdb->insert_id;
-
-		$this->get_logger()->info('Insert erfolgreich', [
-			'table'         => $table,
-			'insert_id'     => $this->id,
-			'affected_rows' => (int) $result,
-			'class'         => __CLASS__,
-			'method'        => __METHOD__,
-		]);
 
 		return (int) $result;
 	}

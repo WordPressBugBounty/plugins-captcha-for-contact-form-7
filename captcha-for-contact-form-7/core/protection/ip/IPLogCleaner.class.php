@@ -20,7 +20,7 @@ class IPLogCleaner extends BaseModul {
 
 		add_action('weeklyIPClear', [$this, 'clean']);
 
-		$this->get_logger()->info('Instanz erstellt und Hook registriert', [
+		$this->get_logger()->info('Instance created and hook registered', [
 			'hook'   => 'weeklyIPClear',
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
@@ -39,7 +39,7 @@ class IPLogCleaner extends BaseModul {
 		$date_time = new \DateTime('-3 Weeks');
 		$date_time_formatted = $date_time->format('Y-m-d H:i:s');
 
-		$this->get_logger()->info('Starte Cleanup älterer Logs', [
+		$this->get_logger()->info('Starting cleanup of older logs', [
 			'threshold' => $date_time_formatted,
 			'class'     => __CLASS__,
 			'method'    => __METHOD__,
@@ -48,7 +48,7 @@ class IPLogCleaner extends BaseModul {
 		$deleted = (new IPLog($this->Controller->get_logger()))
 			->delete_older_than($date_time_formatted);
 
-		$this->get_logger()->info('Cleanup abgeschlossen', [
+		$this->get_logger()->info('Cleanup completed', [
 			'threshold'     => $date_time_formatted,
 			'deleted_rows'  => $deleted,
 			'class'         => __CLASS__,
@@ -69,14 +69,14 @@ class IPLogCleaner extends BaseModul {
 	 */
 	public function reset_table(): int
 	{
-		$this->get_logger()->warning('Starte Reset der IPLog-Tabelle', [
+		$this->get_logger()->warning('Starting reset of IPLog table', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$result = (new IPLog($this->Controller->get_logger()))->reset_table();
 
-		$this->get_logger()->info('Reset der IPLog-Tabelle abgeschlossen', [
+		$this->get_logger()->info('Reset of IPLog table completed', [
 			'affected_rows' => $result,
 			'class'         => __CLASS__,
 			'method'        => __METHOD__,

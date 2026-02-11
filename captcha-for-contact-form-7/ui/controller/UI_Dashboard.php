@@ -23,32 +23,32 @@ namespace f12_cf7_captcha {
 	 */
 	class UI_Dashboard extends UI_Page_Form {
 		public function __construct( UI_Manager $UI_Manager ) {
-			// Rufe den Konstruktor der Elternklasse auf.
-			// Die Parameter sind:
-			// 1. $UI_Manager: Die Instanz des UI-Managers.
-			// 2. 'f12-cf7-captcha': Der eindeutige Domain-Name für diese UI-Seite.
-			// 3. 'Dashboard': Der angezeigte Name der Seite im UI-Menü.
-			// 4. 0: Die Priorität oder Reihenfolge im Menü (0 bedeutet ganz oben).
+			// Call the parent class constructor.
+			// The parameters are:
+			// 1. $UI_Manager: The UI Manager instance.
+			// 2. 'f12-cf7-captcha': The unique domain name for this UI page.
+			// 3. 'Dashboard': The displayed name of the page in the UI menu.
+			// 4. 0: The priority or order in the menu (0 means at the top).
 			parent::__construct( $UI_Manager, 'f12-cf7-captcha', 'Dashboard', 0 );
 
-			$this->get_logger()->info( 'Konstruktor gestartet.', [
+			$this->get_logger()->info( 'Constructor started.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 
-			// Füge einen Filter-Hook hinzu, der vor dem Speichern der UI-Einstellungen ausgelöst wird.
-			// Der Hook-Tag wird dynamisch aus dem UI-Manager-Domain-Namen und dem eigenen Domain-Namen erstellt.
+			// Add a filter hook that is triggered before saving the UI settings.
+			// The hook tag is dynamically created from the UI Manager domain name and the own domain name.
 			add_filter(
 				$UI_Manager->get_domain() . '_ui_f12-cf7-captcha_before_on_save',
-				array( $this, 'maybe_clean' ), // Rufe die Methode maybe_clean() dieser Klasse auf.
-				10, // Priorität des Filters (10 ist Standard).
-				1  // Anzahl der übergebenen Argumente (hier 1).
+				array( $this, 'maybe_clean' ), // Call the maybe_clean() method of this class.
+				10, // Filter priority (10 is standard).
+				1  // Number of passed arguments (here 1).
 			);
-			$this->get_logger()->debug( 'Filter "ui_f12-cf7-captcha_before_on_save" hinzugefügt.', [
+			$this->get_logger()->debug( 'Filter "ui_f12-cf7-captcha_before_on_save" added.', [
 				'hook' => $UI_Manager->get_domain() . '_ui_f12-cf7-captcha_before_on_save'
 			] );
 
-			$this->get_logger()->info( 'Konstruktor abgeschlossen.' );
+			$this->get_logger()->info( 'Constructor completed.' );
 		}
 
 		/**
@@ -57,14 +57,14 @@ namespace f12_cf7_captcha {
 		 * @return mixed
 		 */
 		public function get_settings( $settings ): array {
-			$this->get_logger()->info( 'Füge die globalen Standardeinstellungen hinzu.', [
+			$this->get_logger()->info( 'Adding global default settings.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 
-			// Definiere ein Array mit allen Standard-Schutzeinstellungen.
+			// Define an array with all default protection settings.
 			$default_global_settings = [
-				// Captcha-Schutz
+				// Captcha protection
 				'protection_captcha_enable'      => 1,
 				'protection_captcha_label'       => __( 'Captcha', 'captcha-for-contact-form-7' ),
 				'protection_captcha_placeholder' => __( 'Captcha', 'captcha-for-contact-form-7' ),
@@ -74,13 +74,13 @@ namespace f12_cf7_captcha {
 				'protection_captcha_field_name'  => 'f12_captcha',
 			];
 
-			// Füge die Standardeinstellungen unter dem Schlüssel 'global' zum übergebenen Array hinzu.
+			// Add the default settings under the 'global' key to the passed array.
 			if ( !isset($settings['global']) || ! is_array( $settings['global'] ) ) {
 				$settings['global'] = [];
 			}
 			$settings['global'] = array_merge($settings['global'], $default_global_settings);
 
-			$this->get_logger()->info( 'Globale Standardeinstellungen wurden dem Einstellungsarray hinzugefügt.' );
+			$this->get_logger()->info( 'Global default settings have been added to the settings array.' );
 
 			return $settings;
 		}
@@ -94,12 +94,12 @@ namespace f12_cf7_captcha {
 		 * @throws \Exception
 		 */
 		public function maybe_clean( array $settings ): array {
-			$this->get_logger()->info( 'Starte die Überprüfung, ob eine Bereinigungsaktion angefordert wurde.', [
+			$this->get_logger()->info( 'Starting check if a cleanup action was requested.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 
-			// Definiere die möglichen Bereinigungsaktionen und ihre zugehörigen Meldungen und Methoden.
+			// Define the possible cleanup actions and their associated messages and methods.
 			$clean_actions = [
 				'captcha-ip-log-clean-all'   => [
 					'module'         => 'protection',
@@ -163,46 +163,47 @@ namespace f12_cf7_captcha {
 			$error_message    = __( 'Something went wrong, please try again later or contact the plugin author.', 'captcha-for-contact-form-7' );
 
 			foreach ( $clean_actions as $post_key => $action_data ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
 				if ( isset( $_POST[ $post_key ] ) ) {
 					$action_triggered = true;
-					$this->get_logger()->info( "Bereinigungsaktion angefordert: '{$post_key}'" );
+					$this->get_logger()->info( "Cleanup action requested: '{$post_key}'" );
 
 					try {
-						// Zugriff auf die Haupt-Modul-Instanz.
-						$main_module = CF7Captcha::get_instance()->get_modul( $action_data['module'] );
+						// Access the main module instance.
+						$main_module = CF7Captcha::get_instance()->get_module( $action_data['module'] );
 
-						// Optional: Zugriff auf die Unter-Modul-Instanz, falls vorhanden.
+						// Optional: Access the sub-module instance if available.
 						$cleaner_instance = $main_module;
 						if ( $action_data['sub_module'] !== null ) {
-							$cleaner_instance = $main_module->get_modul( $action_data['sub_module'] );
+							$cleaner_instance = $main_module->get_module( $action_data['sub_module'] );
 						}
 
-						// Optional: Zugriff auf die Cleaner-Instanz, falls eine spezielle Methode dafür existiert.
+						// Optional: Access the cleaner instance if a special method exists for it.
 						if ( $action_data['cleaner_method'] !== null ) {
 							$cleaner_instance = call_user_func( [ $cleaner_instance, $action_data['cleaner_method'] ] );
 						}
 
-						// Führe die Datenbankbereinigungsmethode aus.
+						// Execute the database cleanup method.
 						$result = call_user_func( [ $cleaner_instance, $action_data['db_method'] ] );
 
-						// Überprüfe das Ergebnis und zeige die entsprechende Nachricht an.
+						// Check the result and display the appropriate message.
 						if ( $result !== null ) {
 							$ui_message->add( $action_data['message'], 'success' );
-							$this->get_logger()->info( "Aktion '{$post_key}' erfolgreich abgeschlossen." );
+							$this->get_logger()->info( "Action '{$post_key}' completed successfully." );
 						} else {
 							$ui_message->add( $error_message, 'error' );
-							$this->get_logger()->error( "Aktion '{$post_key}' fehlgeschlagen." );
+							$this->get_logger()->error( "Action '{$post_key}' failed." );
 						}
 					} catch ( \Exception $e ) {
 						$ui_message->add( $error_message, 'error' );
-						$this->get_logger()->critical( "Kritischer Fehler bei der Aktion '{$post_key}'.", [ 'exception' => $e->getMessage() ] );
+						$this->get_logger()->critical( "Critical error during action '{$post_key}'.", [ 'exception' => $e->getMessage() ] );
 					}
 				}
 			}
 
-			// Wenn eine Bereinigungsaktion ausgeführt wurde, unterdrücke das Speichern der UI-Einstellungen.
+			// If a cleanup action was performed, suppress saving the UI settings.
 			if ( $action_triggered ) {
-				$this->get_logger()->info( 'Bereinigungsaktion erkannt. Das Speichern der UI-Einstellungen wird unterdrückt.' );
+				$this->get_logger()->info( 'Cleanup action detected. UI settings saving is suppressed.' );
 				add_filter( $this->get_domain() . '_ui_do_save_settings', '__return_false' );
 			}
 
@@ -210,32 +211,34 @@ namespace f12_cf7_captcha {
 		}
 
 		public function on_save( $settings ): array {
-			$this->get_logger()->info( 'Starte den Speichervorgang für die globalen Einstellungen.', [
+			$this->get_logger()->info( 'Starting save process for global settings.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 
-			// Eine Liste der Optionen, deren Wert auf 0 gesetzt werden soll, wenn sie nicht im POST-Request vorhanden sind.
+			// A list of options whose value should be set to 0 if they are not present in the POST request.
 			$options_to_zero = [
 				'protection_captcha_enable',
 			];
 
-			$this->get_logger()->debug( 'Verarbeite alle POST-Werte und saniere sie.' );
+			$this->get_logger()->debug( 'Processing all POST values and sanitizing them.' );
 			foreach ( $settings['global'] as $key => $value ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
 				if ( isset( $_POST[ $key ] ) ) {
-					// Sanitize basierend auf dem Feldtyp
-					$settings['global'][ $key ] = sanitize_text_field( $_POST[ $key ] );
-					$this->get_logger()->debug( 'Textfeld saniert.', [ 'key' => $key ] );
+					// Sanitize based on the field type
+					// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
+					$settings['global'][ $key ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+					$this->get_logger()->debug( 'Text field sanitized.', [ 'key' => $key ] );
 				} else {
-					// Setze den Wert auf 0, wenn das Feld in $options_to_zero enthalten ist und nicht im POST-Request war.
+					// Set the value to 0 if the field is in $options_to_zero and was not in the POST request.
 					if ( in_array( $key, $options_to_zero, true ) ) {
 						$settings['global'][ $key ] = 0;
-						$this->get_logger()->debug( 'Feld nicht im POST-Request gefunden, auf 0 gesetzt.', [ 'key' => $key ] );
+						$this->get_logger()->debug( 'Field not found in POST request, set to 0.', [ 'key' => $key ] );
 					}
 				}
 			}
 
-			$this->get_logger()->info( 'Speichervorgang für die globalen Einstellungen abgeschlossen.' );
+			$this->get_logger()->info( 'Save process for global settings completed.' );
 
 			return $settings;
 		}
@@ -255,30 +258,30 @@ namespace f12_cf7_captcha {
                             <!-- Total Checks -->
                             <div style="background:#f1f5f9; border-radius:12px; padding:20px; text-align:center; ">
                                 <div style="font-size:48px; font-weight:700; color:#1e40af; margin-bottom:20px;">
-									<?php echo number_format_i18n( $stats['checks_total'] ); ?>
+									<?php echo esc_html( number_format_i18n( $stats['checks_total'] ) ); ?>
                                 </div>
                                 <div style="font-size:16px; color:#475569; margin-top:8px;">
-									<?php _e( 'Total Checks', 'captcha-for-contact-form-7' ); ?>
+									<?php esc_html_e( 'Total Checks', 'captcha-for-contact-form-7' ); ?>
                                 </div>
                             </div>
 
                             <!-- Spam Blocked -->
                             <div style="background:#fee2e2; border-radius:12px; padding:20px; text-align:center;">
                                 <div style="font-size:48px; font-weight:700; color:#b91c1c;margin-bottom:20px;">
-									<?php echo number_format_i18n( $stats['checks_spam'] ); ?>
+									<?php echo esc_html( number_format_i18n( $stats['checks_spam'] ) ); ?>
                                 </div>
                                 <div style="font-size:16px; color:#991b1b; margin-top:8px;">
-									<?php _e( 'Spam Blocked', 'captcha-for-contact-form-7' ); ?>
+									<?php esc_html_e( 'Spam Blocked', 'captcha-for-contact-form-7' ); ?>
                                 </div>
                             </div>
 
                             <!-- Clean Submissions -->
                             <div style="background:#dcfce7; border-radius:12px; padding:20px; text-align:center;">
                                 <div style="font-size:48px; font-weight:700; color:#166534;margin-bottom:20px;">
-									<?php echo number_format_i18n( $stats['checks_clean'] ); ?>
+									<?php echo esc_html( number_format_i18n( $stats['checks_clean'] ) ); ?>
                                 </div>
                                 <div style="font-size:16px; color:#14532d; margin-top:8px;">
-									<?php _e( 'Clean Submissions', 'captcha-for-contact-form-7' ); ?>
+									<?php esc_html_e( 'Clean Submissions', 'captcha-for-contact-form-7' ); ?>
                                 </div>
                             </div>
                         </div>
@@ -286,10 +289,10 @@ namespace f12_cf7_captcha {
                     <div class="section-sidebar">
                         <div class="section">
                             <h2>
-								<?php _e( 'Notice', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'Notice', 'captcha-for-contact-form-7' ); ?>
                             </h2>
                             <p style="margin-top:20px;">
-		                        <?php _e( 'These counters show the overall protection activity since the plugin has been activated.', 'captcha-for-contact-form-7' ); ?>
+		                        <?php esc_html_e( 'These counters show the overall protection activity since the plugin has been activated.', 'captcha-for-contact-form-7' ); ?>
                             </p>
                         </div>
                     </div>
@@ -309,14 +312,14 @@ namespace f12_cf7_captcha {
 			?>
             <div class="section-container">
                 <h2>
-					<?php _e( 'Captcha Protection', 'captcha-for-contact-form-7' ); ?>
+					<?php esc_html_e( 'Captcha Protection', 'captcha-for-contact-form-7' ); ?>
                 </h2>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for=""><strong><?php _e( 'Enable/Disable', 'captcha-for-contact-form-7' ); ?></strong></label>
-                                <p style="padding-right:20px;"><?php _e( 'If activated, a captcha will automatically added to all enabled protection serivces. You can select the type of the captcha below.', 'captcha-for-contact-form-7' ); ?></p>
+                                <label for=""><strong><?php esc_html_e( 'Enable/Disable', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php esc_html_e( 'If activated, a captcha will automatically added to all enabled protection serivces. You can select the type of the captcha below.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
                                 <div class="toggle-item-wrapper">
@@ -327,23 +330,23 @@ namespace f12_cf7_captcha {
 											$field_name = 'protection_captcha_enable';
 											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
 											$name       = __( 'Captcha Protection', 'captcha-for-contact-form-7' );
-											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked );
+											echo wp_kses( sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), $is_checked ), array( 'input' => array( 'name' => array(), 'type' => array(), 'value' => array(), 'id' => array(), 'class' => array(), 'checked' => array() ) ) );
 											?>
-                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                            <label for="<?php echo esc_attr( $field_name ); ?>"
                                                    class="toggle-label"></label>
                                         </div>
-                                        <label for="<?php esc_attr_e( $field_name ); ?>">
-											<?php esc_attr_e( $name ); ?>
-                                            <p><?php _e( 'Check if you want to add a captcha for the activated protection serivces.', 'captcha-for-contact-form-7' ); ?></p>
+                                        <label for="<?php echo esc_attr( $field_name ); ?>">
+											<?php echo esc_html( $name ); ?>
+                                            <p><?php esc_html_e( 'Check if you want to add a captcha for the activated protection serivces.', 'captcha-for-contact-form-7' ); ?></p>
                                         </label>
-                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                        <label class="overlay" for="<?php echo esc_attr( $field_name ); ?>"></label>
                                     </div>
                                 </div>
                                 <div class="grid">
                                     <div class="option" style="padding:0px 10px;">
                                         <div class="label">
-                                            <label for="protection_captcha_label"><strong><?php _e( 'Label for Captcha:', 'captcha-for-contact-form-7' ); ?></strong></label>
-                                            <p><?php _e( 'Defines the label for the captcha. You can also change the label using WPML or LocoTranslate Plugins.', 'captcha-for-contact-form-7' ); ?></p>
+                                            <label for="protection_captcha_label"><strong><?php esc_html_e( 'Label for Captcha:', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                            <p><?php esc_html_e( 'Defines the label for the captcha. You can also change the label using WPML or LocoTranslate Plugins.', 'captcha-for-contact-form-7' ); ?></p>
                                         </div>
 
                                         <div class="input">
@@ -353,21 +356,21 @@ namespace f12_cf7_captcha {
                                                     id="protection_captcha_label"
                                                     name="protection_captcha_label"
                                             ><?php
-												echo stripslashes( esc_textarea( $settings['protection_captcha_label'] ?? __( 'Captcha', 'captcha-for-contact-form-7' ) ) );
+												echo esc_textarea( stripslashes( $settings['protection_captcha_label'] ?? __( 'Captcha', 'captcha-for-contact-form-7' ) ) );
 												?></textarea>
                                         </div>
                                     </div>
                                     <div class="option" style="padding:0px 10px;">
                                         <div class="label">
-                                            <label for="protection_captcha_placeholder"><strong><?php _e( 'Placeholder for Captcha:', 'captcha-for-contact-form-7' ); ?></strong></label>
-                                            <p><?php _e( 'Defines the placeholder for the captcha field. you can also change the label using WPML or LocoTranslate Plugins.', 'captcha-for-contact-form-7' ); ?></p>
+                                            <label for="protection_captcha_placeholder"><strong><?php esc_html_e( 'Placeholder for Captcha:', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                            <p><?php esc_html_e( 'Defines the placeholder for the captcha field. you can also change the label using WPML or LocoTranslate Plugins.', 'captcha-for-contact-form-7' ); ?></p>
                                         </div>
                                         <div class="input">
                                             <!-- SEPARATOR -->
                                             <input
                                                     id="protection_captcha_placeholder"
                                                     type="text"
-                                                    value="<?php echo $settings['protection_captcha_placeholder'] ?? __( 'Captcha', 'captcha-for-contact-form-7' ); ?>"
+                                                    value="<?php echo esc_attr( $settings['protection_captcha_placeholder'] ?? __( 'Captcha', 'captcha-for-contact-form-7' ) ); ?>"
                                                     name="protection_captcha_placeholder"
                                             />
                                         </div>
@@ -375,7 +378,7 @@ namespace f12_cf7_captcha {
                                     <div class="option" style="padding:0px 10px;">
                                         <div class="label">
                                             <label
-                                                    for="protection_method_honey"><strong><?php _e( 'Protection Method', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                                    for="protection_method_honey"><strong><?php esc_html_e( 'Protection Method', 'captcha-for-contact-form-7' ); ?></strong></label>
                                         </div>
                                         <div class="input">
                                             <!-- SEPARATOR -->
@@ -384,10 +387,10 @@ namespace f12_cf7_captcha {
                                                     type="radio"
                                                     value="honey"
                                                     name="protection_captcha_method"
-												<?php echo isset( $settings['protection_captcha_method'] ) && $settings['protection_captcha_method'] === 'honey' ? 'checked="checked"' : ''; ?>
+												<?php echo isset( $settings['protection_captcha_method'] ) && $settings['protection_captcha_method'] === 'honey' ? 'checked="checked"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static string ?>
                                             />
                                             <span>
-                        <label for="protection_method_honey"><?php _e( 'Honeypot', 'captcha-for-contact-form-7' ); ?></label>
+                        <label for="protection_method_honey"><?php esc_html_e( 'Honeypot', 'captcha-for-contact-form-7' ); ?></label>
                     </span><br><br>
 
                                             <input
@@ -395,10 +398,10 @@ namespace f12_cf7_captcha {
                                                     type="radio"
                                                     value="math"
                                                     name="protection_captcha_method"
-												<?php echo isset( $settings['protection_captcha_method'] ) && $settings['protection_captcha_method'] === 'math' ? 'checked="checked"' : ''; ?>
+												<?php echo isset( $settings['protection_captcha_method'] ) && $settings['protection_captcha_method'] === 'math' ? 'checked="checked"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static string ?>
                                             />
                                             <span>
-                        <label for="protection_method_math"><?php _e( 'Arithmetic', 'captcha-for-contact-form-7' ); ?></label>
+                        <label for="protection_method_math"><?php esc_html_e( 'Arithmetic', 'captcha-for-contact-form-7' ); ?></label>
                     </span><br><br>
 
                                             <input
@@ -406,10 +409,10 @@ namespace f12_cf7_captcha {
                                                     type="radio"
                                                     value="image"
                                                     name="protection_captcha_method"
-												<?php echo isset( $settings['protection_captcha_method'] ) && $settings['protection_captcha_method'] === 'image' ? 'checked="checked"' : ''; ?>
+												<?php echo isset( $settings['protection_captcha_method'] ) && $settings['protection_captcha_method'] === 'image' ? 'checked="checked"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static string ?>
                                             />
                                             <span>
-                        <label for="protection_method_image"><?php _e( 'Image', 'captcha-for-contact-form-7' ); ?></label>
+                        <label for="protection_method_image"><?php esc_html_e( 'Image', 'captcha-for-contact-form-7' ); ?></label>
                     </span>
                                         </div>
                                     </div>
@@ -420,46 +423,46 @@ namespace f12_cf7_captcha {
                     <div class="section-sidebar">
                         <div class="section">
                             <h2>
-								<?php _e( 'Captcha Protection', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'Captcha Protection', 'captcha-for-contact-form-7' ); ?>
                             </h2>
                             <p>
-								<?php _e( 'Captcha Protection allows you to add a specific protection to your forms. You can also use the minor protection methods without the captcha and vice versa.', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'Captcha Protection allows you to add a specific protection to your forms. You can also use the minor protection methods without the captcha and vice versa.', 'captcha-for-contact-form-7' ); ?>
                             </p>
                             <p>
-								<?php _e( 'The <strong>Label</strong> will be displayed for your website visitors.', 'captcha-for-contact-form-7' ); ?>
+								<?php echo wp_kses( __( 'The <strong>Label</strong> will be displayed for your website visitors.', 'captcha-for-contact-form-7' ), array( 'strong' => array() ) ); ?>
                             </p>
                             <p>
-								<?php _e( 'The <strong>placeholder</strong> will be displayed within the captcha input field.', 'captcha-for-contact-form-7' ); ?>
+								<?php echo wp_kses( __( 'The <strong>placeholder</strong> will be displayed within the captcha input field.', 'captcha-for-contact-form-7' ), array( 'strong' => array() ) ); ?>
                             </p>
                             <p>
-								<?php _e( 'If you use multiple languages use WPML String Translation or LocoTranslate to translate the label and placeholder', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'If you use multiple languages use WPML String Translation or LocoTranslate to translate the label and placeholder', 'captcha-for-contact-form-7' ); ?>
                             </p>
                             <h2 style="margin-top:40px;">
-								<?php _e( 'Protection Method', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'Protection Method', 'captcha-for-contact-form-7' ); ?>
                             </h2>
                             <p>
                                 <strong>
-									<?php _e( 'Honeypot', 'captcha-for-contact-form-7' ); ?>
+									<?php esc_html_e( 'Honeypot', 'captcha-for-contact-form-7' ); ?>
                                 </strong>
                             </p>
                             <p>
-								<?php _e( 'This is a hidden field that is not visible to humans, but visible for bots. It is used as a trap to catch spam bots.', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'This is a hidden field that is not visible to humans, but visible for bots. It is used as a trap to catch spam bots.', 'captcha-for-contact-form-7' ); ?>
                             </p>
                             <p>
                                 <strong>
-									<?php _e( 'Arithmetic', 'captcha-for-contact-form-7' ); ?>
+									<?php esc_html_e( 'Arithmetic', 'captcha-for-contact-form-7' ); ?>
                                 </strong>
                             </p>
                             <p>
-								<?php _e( 'In this method, website visitors are required to solve a simple arithmetic problem before they can submit the form.', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'In this method, website visitors are required to solve a simple arithmetic problem before they can submit the form.', 'captcha-for-contact-form-7' ); ?>
                             </p>
                             <p>
                                 <strong>
-									<?php _e( 'Image', 'captcha-for-contact-form-7' ); ?>
+									<?php esc_html_e( 'Image', 'captcha-for-contact-form-7' ); ?>
                                 </strong>
                             </p>
                             <p>
-								<?php _e( 'In this method, the user is presented with an image containing distorted text they must identify. The User is then required to enter the characters visible in the image to submit the form.', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'In this method, the user is presented with an image containing distorted text they must identify. The User is then required to enter the characters visible in the image to submit the form.', 'captcha-for-contact-form-7' ); ?>
                             </p>
                         </div>
                     </div>
@@ -475,10 +478,10 @@ namespace f12_cf7_captcha {
             <div class="box">
                 <div class="section">
                     <h2>
-						<?php _e( 'Need help?', 'captcha-for-contact-form-7' ); ?>
+						<?php esc_html_e( 'Need help?', 'captcha-for-contact-form-7' ); ?>
                     </h2>
                     <p>
-						<?php printf( __( "Take a look at our <a href='%s' target='_blank'>Documentation</a>.", 'captcha-for-contact-form-7' ), 'https://www.forge12.com/blog/so-verwendest-du-das-wordpress-captcha-um-deine-webseite-zu-schuetzen/' ); ?>
+						<?php printf( wp_kses( __( "Take a look at our <a href='%s' target='_blank'>Documentation</a>.", 'captcha-for-contact-form-7' ), array( 'a' => array( 'href' => array(), 'target' => array() ) ) ), esc_url( 'https://www.forge12.com/blog/so-verwendest-du-das-wordpress-captcha-um-deine-webseite-zu-schuetzen/' ) ); ?>
                     </p>
                 </div>
             </div>
@@ -486,10 +489,10 @@ namespace f12_cf7_captcha {
             <div class="box">
                 <div class="section">
                     <h2>
-						<?php _e( 'Hooks:', 'captcha-for-contact-form-7' ); ?>
+						<?php esc_html_e( 'Hooks:', 'captcha-for-contact-form-7' ); ?>
                     </h2>
                     <p>
-                        <strong><?php _e( "This hook can be used to skip specific protection methods for forms:", 'captcha-for-contact-form-7' ); ?></strong>
+                        <strong><?php esc_html_e( 'This hook can be used to skip specific protection methods for forms:', 'captcha-for-contact-form-7' ); ?></strong>
                     </p>
                     <div class="option">
                         <div class="input">
@@ -500,10 +503,10 @@ namespace f12_cf7_captcha {
                         </div>
                     </div>
                     <p>
-                        <strong><?php _e( "This hook can be used to disable the protection for a plugin:", 'captcha-for-contact-form-7' ); ?></strong>
+                        <strong><?php esc_html_e( 'This hook can be used to disable the protection for a plugin:', 'captcha-for-contact-form-7' ); ?></strong>
                     </p>
                     <p>
-						<?php _e( "Supported ids: avada, fluentform, elementor, cf7, wpforms, ultimatemember, gravityforms, wordpress_comments, wordpress, woocommerce.", 'captcha-for-contact-form-7' ); ?>
+						<?php esc_html_e( 'Supported ids: avada, fluentform, elementor, cf7, wpforms, ultimatemember, gravityforms, wordpress_comments, wordpress, woocommerce.', 'captcha-for-contact-form-7' ); ?>
                     </p>
                     <div class="option">
                         <div class="input">
@@ -515,7 +518,7 @@ namespace f12_cf7_captcha {
                     </div>
 
                     <p>
-                        <strong><?php _e( "This hook can be used to manipulate the layout of the captcha field:", 'captcha-for-contact-form-7' ); ?></strong>
+                        <strong><?php esc_html_e( 'This hook can be used to manipulate the layout of the captcha field:', 'captcha-for-contact-form-7' ); ?></strong>
                     </p>
                     <div class="option">
                         <div class="input">
@@ -527,7 +530,7 @@ namespace f12_cf7_captcha {
                         </div>
                     </div>
                     <p>
-                        <strong><?php _e( "This hook can be used to load a custom the reload icon:", 'captcha-for-contact-form-7' ); ?></strong>
+                        <strong><?php esc_html_e( 'This hook can be used to load a custom the reload icon:', 'captcha-for-contact-form-7' ); ?></strong>
                     </p>
                     <div class="option">
                         <div class="input">

@@ -5,6 +5,10 @@ namespace f12_cf7_captcha\core\protection\ip_blacklist;
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class IP_Blacklist_Validator extends BaseProtection
 {
 	/**
@@ -17,12 +21,12 @@ class IP_Blacklist_Validator extends BaseProtection
 	{
 		parent::__construct($Controller);
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.', [
+		$this->get_logger()->info('Constructor completed.', [
 			'class' => __CLASS__,
 		]);
 	}
@@ -32,12 +36,12 @@ class IP_Blacklist_Validator extends BaseProtection
 		$is_enabled = true;
 
 		if ($is_enabled) {
-			$this->get_logger()->info('IP-Blacklist ist aktiviert.', [
+			$this->get_logger()->info('IP blacklist is enabled.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
 		} else {
-			$this->get_logger()->warning('IP-Blacklist ist deaktiviert.', [
+			$this->get_logger()->warning('IP blacklist is disabled.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
@@ -46,7 +50,7 @@ class IP_Blacklist_Validator extends BaseProtection
 		$result = apply_filters('f12-cf7-captcha-skip-validation-ip-blacklist', $is_enabled);
 
 		if ($is_enabled && !$result) {
-			$this->get_logger()->debug('IP-Blacklist wird durch Filter übersprungen.', [
+			$this->get_logger()->debug('IP blacklist skipped by filter.', [
 				'filter' => 'f12-cf7-captcha-skip-validation-ip-blacklist',
 				'original_state' => $is_enabled,
 			]);
@@ -64,30 +68,30 @@ class IP_Blacklist_Validator extends BaseProtection
 	 */
 	public function is_spam(): bool
 	{
-		$this->get_logger()->info('Führe Spam-Überprüfung durch.', [
+		$this->get_logger()->info('Performing spam check.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Wenn Modul deaktiviert ist → kein Spam
+		// If module is disabled → not spam
 		if (!$this->is_enabled()) {
-			$this->get_logger()->debug('Spam-Check übersprungen: IP-Blacklist-Schutz ist deaktiviert.', [
+			$this->get_logger()->debug('Spam check skipped: IP blacklist protection is disabled.', [
 				'class' => __CLASS__,
 			]);
 			return false;
 		}
 
-		// Hole die User-IP
-		$user_ip = $_SERVER['REMOTE_ADDR'] ?? '';
+		// Get user IP
+		$user_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
-		// Lade Blacklist-Einträge aus den Settings
+		// Load blacklist entries from settings
 		$settings          = get_option('f12-cf7-captcha-settings', []);
 		$blacklist_raw     = $settings['global']['protection_blacklist_ips'] ?? '';
 		$blacklisted_ips   = array_filter(array_map('trim', explode("\n", $blacklist_raw)));
 
-		// Prüfe, ob User-IP auf der Blacklist steht
+		// Check if user IP is on blacklist
 		if (!empty($user_ip) && in_array($user_ip, $blacklisted_ips, true)) {
-			$this->get_logger()->warning('Formular als Spam eingestuft: IP auf Blacklist.', [
+			$this->get_logger()->warning('Form classified as spam: IP on blacklist.', [
 				'class'   => __CLASS__,
 				'user_ip' => $user_ip,
 			]);
@@ -95,7 +99,7 @@ class IP_Blacklist_Validator extends BaseProtection
 			return true;
 		}
 
-		$this->get_logger()->info('Formular als nicht-Spam eingestuft.', [
+		$this->get_logger()->info('Form classified as not spam.', [
 			'ip' => $user_ip,
 		]);
 
@@ -105,18 +109,18 @@ class IP_Blacklist_Validator extends BaseProtection
 
 	public function success(): void
 	{
-		$this->get_logger()->info('Erfolgreiche Formularübermittlung erkannt.', [
+		$this->get_logger()->info('Successful form submission detected.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Hier kann zusätzliche Logik implementiert werden,
-		// die bei einer erfolgreichen Validierung ausgeführt werden soll.
-		// Zum Beispiel:
-		// - Löschen temporärer Daten
-		// - Senden einer Benachrichtigung
-		// - Aktualisieren von Zählern
+		// Additional logic can be implemented here
+		// to be executed on successful validation.
+		// For example:
+		// - Delete temporary data
+		// - Send a notification
+		// - Update counters
 
-		// TODO: Implementieren Sie die Erfolg-Logik hier.
+		// TODO: Implement success logic here.
 	}
 }

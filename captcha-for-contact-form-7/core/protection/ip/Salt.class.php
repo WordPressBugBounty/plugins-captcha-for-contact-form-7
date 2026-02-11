@@ -48,7 +48,7 @@ class Salt {
 		$this->logger = $logger;
 		$this->set_params( $params );
 
-		$this->logger->info('Die Klasse wurde initialisiert.', [
+		$this->logger->info('The class has been initialized.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 			'params' => $params,
@@ -72,32 +72,32 @@ class Salt {
 	 */
 	public function set_params(array $params): void
 	{
-		$this->logger->info('Setze Parameter...', [
+		$this->logger->info('Setting parameters...', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		foreach ($params as $key => $value) {
-			$this->logger->debug("Verarbeite Parameter: '{$key}'", [
+			$this->logger->debug("Processing parameter: '{$key}'", [
 				'class' => __CLASS__,
 			]);
 
 			if (isset($this->{$key})) {
 				if ($key === 'salt') {
-					$this->logger->debug('Dekodiere "salt" von Base64.', [
+					$this->logger->debug('Decoding "salt" from Base64.', [
 						'class' => __CLASS__,
 					]);
 					$value = base64_decode($value);
 				}
 				$this->{$key} = $value;
 			} else {
-				$this->logger->warning("Parameter '{$key}' konnte nicht gesetzt werden, da er nicht existiert.", [
+				$this->logger->warning("Parameter '{$key}' could not be set because it does not exist.", [
 					'class' => __CLASS__,
 				]);
 			}
 		}
 
-		$this->logger->info('Parameter-Setzung abgeschlossen.', [
+		$this->logger->info('Parameter setting completed.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -115,18 +115,18 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Global $wpdb object not available.');
 			return 0;
 		}
 
-		$this->logger->info("Lösche Einträge, die älter als '{$period}' sind.", [
+		$this->logger->info("Deleting entries older than '{$period}'.", [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$timestamp = strtotime($period);
 		if ($timestamp === false) {
-			$this->logger->error('Ungültiges Periodenformat.', ['period' => $period]);
+			$this->logger->error('Invalid period format.', ['period' => $period]);
 			return 0;
 		}
 
@@ -136,22 +136,24 @@ class Salt {
 		$dt->setTimestamp($timestamp);
 		$dt_formatted = $dt->format('Y-m-d H:i:s');
 
-		$this->logger->debug("Generiere SQL-Abfrage zum Löschen.", [
+		$this->logger->debug("Generating SQL query for deletion.", [
 			'table' => $wp_table_name,
 			'cutoff_date' => $dt_formatted,
 		]);
 
 		$query = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			"DELETE FROM {$wp_table_name} WHERE createtime < %s",
 			$dt_formatted
 		);
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$rows_deleted = $wpdb->query($query);
 
 		if ($rows_deleted === false) {
-			$this->logger->error('Fehler bei der Datenbankabfrage.', ['db_error' => $wpdb->last_error]);
+			$this->logger->error('Error during database query.', ['db_error' => $wpdb->last_error]);
 		} else {
-			$this->logger->info("Erfolgreich {$rows_deleted} Einträge gelöscht.", [
+			$this->logger->info("Successfully deleted {$rows_deleted} entries.", [
 				'rows_deleted' => $rows_deleted,
 			]);
 		}
@@ -171,27 +173,26 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Global $wpdb object not available.');
 			return false;
 		}
 
-		$this->logger->warning('Tabelle wird zurückgesetzt! Alle Daten werden gelöscht.', [
+		$this->logger->warning('Table is being reset! All data will be deleted.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		$wp_table_name = $this->get_table_name();
 
-		$query = $wpdb->prepare("DELETE FROM {$wp_table_name}");
-
-		$result = $wpdb->query($query);
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+		$result = $wpdb->query("DELETE FROM `{$wp_table_name}`");
 
 		if ($result === false) {
-			$this->logger->error('Fehler beim Zurücksetzen der Tabelle.', ['db_error' => $wpdb->last_error]);
+			$this->logger->error('Error resetting the table.', ['db_error' => $wpdb->last_error]);
 			return false;
 		}
 
-		$this->logger->info('Tabelle erfolgreich zurückgesetzt.', ['rows_deleted' => $result]);
+		$this->logger->info('Table successfully reset.', ['rows_deleted' => $result]);
 
 		return true;
 	}
@@ -208,7 +209,7 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Global $wpdb object not available.');
 			return 0;
 		}
 
@@ -216,29 +217,31 @@ class Salt {
 		$prepare_stmt = 'SELECT count(*) AS entries FROM ' . $wp_table_name;
 
 		if ($validated !== -1) {
-			$this->logger->info("Zähle Einträge mit dem Validierungsstatus '{$validated}'.", [
+			$this->logger->info("Counting entries with validation status '{$validated}'.", [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
 			$prepare_stmt .= ' WHERE validated = %d';
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$results = $wpdb->get_results($wpdb->prepare($prepare_stmt, $validated));
 		} else {
-			$this->logger->info("Zähle alle Einträge in der Tabelle.", [
+			$this->logger->info("Counting all entries in the table.", [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
 			]);
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$results = $wpdb->get_results($prepare_stmt);
 		}
 
 		if (is_array($results) && isset($results[0])) {
 			$count = (int)$results[0]->entries;
-			$this->logger->debug("Anzahl der Einträge: {$count}", [
+			$this->logger->debug("Number of entries: {$count}", [
 				'count' => $count,
 			]);
 			return $count;
 		}
 
-		$this->logger->error('Fehler beim Abrufen der Zählergebnisse aus der Datenbank.', ['db_error' => $wpdb->last_error]);
+		$this->logger->error('Error retrieving count results from the database.', ['db_error' => $wpdb->last_error]);
 		return 0;
 	}
 
@@ -249,7 +252,7 @@ class Salt {
 	 */
 	public function create_table(): void
 	{
-		$this->logger->info('Versuche, die Datenbanktabelle zu erstellen.', [
+		$this->logger->info('Attempting to create the database table.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -258,7 +261,7 @@ class Salt {
 
 		if (!function_exists('dbDelta')) {
 			require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-			$this->logger->debug('dbDelta-Funktion geladen.');
+			$this->logger->debug('dbDelta function loaded.');
 		}
 
 		$sql = sprintf(
@@ -273,19 +276,20 @@ class Salt {
 
 		dbDelta($sql);
 
-		$this->logger->info('dbDelta-Abfrage ausgeführt. Überprüfe, ob die Tabelle erstellt wurde.', [
+		$this->logger->info('dbDelta query executed. Checking if the table was created.', [
 			'table' => $wp_table_name,
 		]);
 
-		// Optional: Überprüfe den Status der Tabelle nach dbDelta, um sicherzugehen.
+		// Optional: Check the table status after dbDelta to make sure.
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
 		$table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wp_table_name}'") === $wp_table_name;
 		if ($table_exists) {
-			$this->logger->info('Tabelle erfolgreich erstellt oder aktualisiert.', [
+			$this->logger->info('Table successfully created or updated.', [
 				'table' => $wp_table_name,
 			]);
 		} else {
-			$this->logger->error('Fehler beim Erstellen der Tabelle. Überprüfen Sie die SQL-Syntax oder Datenbankberechtigungen.', [
+			$this->logger->error('Error creating the table. Check the SQL syntax or database permissions.', [
 				'table' => $wp_table_name,
 				'sql' => $sql,
 				'last_error' => $wpdb->last_error,
@@ -302,40 +306,41 @@ class Salt {
 	{
 		global $wpdb;
 
-		$this->logger->warning('Versuche, die Datenbanktabelle und den zugehörigen Cron-Job zu löschen.', [
+		$this->logger->warning('Attempting to delete the database table and associated cron job.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar. Löschvorgang abgebrochen.');
+			$this->logger->error('Global $wpdb object not available. Deletion process aborted.');
 			return;
 		}
 
 		$wp_table_name = $this->get_table_name();
 
-		// SQL-Abfrage zum Löschen der Tabelle
+		// SQL query to delete the table
 		$sql = "DROP TABLE IF EXISTS " . $wp_table_name;
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$result = $wpdb->query($sql);
 
 		if ($result === false) {
-			$this->logger->error('Fehler beim Löschen der Tabelle.', ['db_error' => $wpdb->last_error]);
+			$this->logger->error('Error deleting the table.', ['db_error' => $wpdb->last_error]);
 		} else {
-			$this->logger->info("Tabelle '{$wp_table_name}' erfolgreich gelöscht.");
+			$this->logger->info("Table '{$wp_table_name}' successfully deleted.");
 		}
 
-		// Löschen des Cron-Jobs
+		// Delete the cron job
 		$hook = 'weeklyIPClear';
 		$scheduled = wp_next_scheduled($hook);
 
 		if ($scheduled) {
 			wp_clear_scheduled_hook($hook);
-			$this->logger->info("Der geplante Cron-Job '{$hook}' wurde erfolgreich gelöscht.");
+			$this->logger->info("The scheduled cron job '{$hook}' was successfully deleted.");
 		} else {
-			$this->logger->info("Der Cron-Job '{$hook}' war nicht geplant und musste nicht gelöscht werden.");
+			$this->logger->info("The cron job '{$hook}' was not scheduled and did not need to be deleted.");
 		}
 
-		$this->logger->info('Löschvorgang der Tabelle und des Cron-Jobs abgeschlossen.');
+		$this->logger->info('Deletion of table and cron job completed.');
 	}
 
 	/**
@@ -349,13 +354,13 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar. Kann Tabellennamen nicht ermitteln.');
+			$this->logger->error('Global $wpdb object not available. Cannot determine table name.');
 			return '';
 		}
 
 		$table_name = $wpdb->prefix . 'f12_cf7_salt';
 
-		$this->logger->debug('Tabellenname ermittelt.', [
+		$this->logger->debug('Table name determined.', [
 			'table_name' => $table_name,
 		]);
 
@@ -369,7 +374,7 @@ class Salt {
 	 */
 	public function get_id(): int
 	{
-		$this->logger->debug('Rufe die ID ab.', [
+		$this->logger->debug('Retrieving the ID.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'id' => $this->id,
@@ -387,7 +392,7 @@ class Salt {
 	 */
 	private function set_id(int $id)
 	{
-		$this->logger->debug('Setze die ID.', [
+		$this->logger->debug('Setting the ID.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 			'old_id' => $this->id,
@@ -404,7 +409,7 @@ class Salt {
 	 */
 	private function get_salt(): string
 	{
-		$this->logger->debug('Rufe den Salt-Wert ab.', [
+		$this->logger->debug('Retrieving the salt value.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -421,25 +426,25 @@ class Salt {
 	 */
 	public function get_create_time(): string
 	{
-		$this->logger->debug('Rufe die Erstellungszeit ab.', [
+		$this->logger->debug('Retrieving the creation time.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (empty($this->createtime)) {
-			$this->logger->info('Erstellungszeit ist leer, generiere neuen Zeitstempel.', [
+			$this->logger->info('Creation time is empty, generating new timestamp.', [
 				'class' => __CLASS__,
 			]);
 
 			$dt = new DateTime();
 			$this->createtime = $dt->format('Y-m-d H:i:s');
 
-			$this->logger->debug('Neuer Zeitstempel generiert.', [
+			$this->logger->debug('New timestamp generated.', [
 				'createtime' => $this->createtime,
 			]);
 		}
 
-		$this->logger->debug('Erstellungszeit zurückgegeben.', [
+		$this->logger->debug('Creation time returned.', [
 			'createtime' => $this->createtime,
 		]);
 
@@ -453,7 +458,7 @@ class Salt {
 	 */
 	public function set_create_time(): void
 	{
-		$this->logger->info('Setze die Erstellungszeit.', [
+		$this->logger->info('Setting the creation time.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -461,7 +466,7 @@ class Salt {
 		$dt = new DateTime();
 		$this->createtime = $dt->format('Y-m-d H:i:s');
 
-		$this->logger->debug('Erstellungszeit auf ' . $this->createtime . ' gesetzt.', [
+		$this->logger->debug('Creation time set to ' . $this->createtime . '.', [
 			'createtime' => $this->createtime,
 		]);
 	}
@@ -475,14 +480,14 @@ class Salt {
 	 */
 	private function create_salt(): Salt
 	{
-		$this->logger->info('Erstelle einen neuen Salt-Datensatz.', [
+		$this->logger->info('Creating a new salt record.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		// Erstelle ein neues Salt-Objekt, wenn noch keines existiert
+		// Create a new salt object if one does not exist yet
 		$generated_salt = $this->generate_salt();
-		$this->logger->debug('Neuer Salt-Wert generiert.', [
+		$this->logger->debug('New salt value generated.', [
 			'generated_salt_length' => strlen($generated_salt),
 		]);
 
@@ -492,15 +497,15 @@ class Salt {
 		$Salt->save();
 
 		if ($Salt->get_id() === 0) {
-			$this->logger->error('Fehler: Salt-Datensatz konnte nicht erstellt werden.', [
+			$this->logger->error('Error: Salt record could not be created.', [
 				'class' => __CLASS__,
 				'method' => __METHOD__,
-				'error_message' => 'Die Datenbankabfrage zum Speichern des Salts ist fehlgeschlagen.',
+				'error_message' => 'The database query to save the salt failed.',
 			]);
 			throw new RuntimeException("Salt could not be created. Please check the Database");
 		}
 
-		$this->logger->info('Neuer Salt-Datensatz erfolgreich erstellt.', [
+		$this->logger->info('New salt record successfully created.', [
 			'salt_id' => $Salt->get_id(),
 		]);
 
@@ -519,51 +524,52 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Global $wpdb object not available.');
 			throw new \RuntimeException('WPDB not found');
 		}
 
 		$table = $this->get_table_name();
-		$this->logger->info('Suche nach dem letzten Salt-Datensatz in der Datenbank.');
+		$this->logger->info('Searching for the last salt record in the database.');
 
 		$prepare_stmt = sprintf("SELECT * FROM %s ORDER BY createtime DESC LIMIT 1", $table);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$results = $wpdb->get_results($prepare_stmt, ARRAY_A);
 
 		$Salt = null;
 
 		if (is_array($results) && isset($results[0])) {
-			$this->logger->debug('Letzter Salt-Datensatz gefunden.', ['salt_id' => $results[0]['id']]);
+			$this->logger->debug('Last salt record found.', ['salt_id' => $results[0]['id']]);
 			$Salt = new Salt($this->get_logger(), $results[0]);
 		} else {
-			$this->logger->info('Kein Salt-Datensatz gefunden. Erstelle einen neuen.');
+			$this->logger->info('No salt record found. Creating a new one.');
 		}
 
 		/*
-		 * Erstelle einen Salt, falls keiner existiert
+		 * Create a salt if none exists
 		 */
 		if (null === $Salt) {
 			try {
 				$Salt = $this->create_salt();
 			} catch (\RuntimeException $e) {
-				$this->logger->error('Fehler beim Erstellen eines neuen Salt-Datensatzes.', ['error' => $e->getMessage()]);
+				$this->logger->error('Error creating a new salt record.', ['error' => $e->getMessage()]);
 				return null;
 			}
 		}
 
 		/*
-		 * Erstelle einen neuen Salt, falls der existierende älter als 30 Tage ist
+		 * Create a new salt if the existing one is older than 30 days
 		 */
 		if ($this->is_older_than($Salt->get_create_time())) {
-			$this->logger->info('Der bestehende Salt ist älter als 30 Tage. Erstelle einen neuen.');
+			$this->logger->info('The existing salt is older than 30 days. Creating a new one.');
 			try {
 				$Salt = $this->create_salt();
 			} catch (\RuntimeException $e) {
-				$this->logger->error('Fehler beim Erstellen eines neuen, zeitbasierten Salt-Datensatzes.', ['error' => $e->getMessage()]);
+				$this->logger->error('Error creating a new time-based salt record.', ['error' => $e->getMessage()]);
 				return null;
 			}
 		}
 
-		$this->logger->debug('Gibt den aktuellen Salt-Datensatz zurück.', ['salt_id' => $Salt->get_id()]);
+		$this->logger->debug('Returning the current salt record.', ['salt_id' => $Salt->get_id()]);
 		return $Salt;
 	}
 
@@ -578,7 +584,7 @@ class Salt {
 	 */
 	public function is_older_than(string $date, string $days = '+30 Days'): bool
 	{
-		$this->logger->debug("Überprüfe, ob das Datum '{$date}' älter ist als '{$days}'.", [
+		$this->logger->debug("Checking if the date '{$date}' is older than '{$days}'.", [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
@@ -588,7 +594,7 @@ class Salt {
 			$d1->modify($days);
 			$d2 = new DateTime();
 		} catch (\Exception $e) {
-			$this->logger->error('Fehler bei der Datumsverarbeitung.', [
+			$this->logger->error('Error during date processing.', [
 				'error' => $e->getMessage(),
 				'input_date' => $date,
 				'days_to_add' => $days,
@@ -598,7 +604,7 @@ class Salt {
 
 		$is_older = $d2 > $d1;
 
-		$this->logger->debug('Vergleichsergebnis.', [
+		$this->logger->debug('Comparison result.', [
 			'is_older' => $is_older,
 			'given_date' => $d1->format('Y-m-d H:i:s'),
 			'current_date' => $d2->format('Y-m-d H:i:s'),
@@ -615,22 +621,22 @@ class Salt {
 	 */
 	public function generate_salt(): string
 	{
-		$this->logger->info('Generiere einen neuen Salt-Wert.', [
+		$this->logger->info('Generating a new salt value.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		try {
 			$salt = random_bytes(512);
-			$this->logger->debug('Neuer Salt erfolgreich generiert.', [
+			$this->logger->debug('New salt successfully generated.', [
 				'length' => strlen($salt),
 			]);
 			return $salt;
 		} catch (\Exception $e) {
-			$this->logger->error('Fehler beim Generieren des Salt-Wertes.', [
+			$this->logger->error('Error generating the salt value.', [
 				'error_message' => $e->getMessage(),
 			]);
-			throw $e; // Oder ein anderer geeigneter Fehler-Handler
+			throw $e; // Or another suitable error handler
 		}
 	}
 
@@ -643,29 +649,29 @@ class Salt {
 	 */
 	public function get_salted(string $value): string
 	{
-		$this->logger->info('Erzeuge einen gesalzenen Hash-Wert.', [
+		$this->logger->info('Creating a salted hash value.', [
 			"plugin" => "f12-cf7-captcha",
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (empty($this->salt)) {
-			$this->logger->error('Fehler: Der Salt-Wert fehlt.', [
+			$this->logger->error('Error: The salt value is missing.', [
 				"plugin" => "f12-cf7-captcha",
 				'class' => __CLASS__,
 			]);
 
 			$salt = $this->create_salt();
 			if(!empty($salt)) {
-				$this->logger->debug( 'Salt-Wert erfolgreich generiert.', ["plugin" => "f12-cf7-captcha","salt" => $salt ] );
+				$this->logger->debug( 'Salt value successfully generated.', ["plugin" => "f12-cf7-captcha","salt" => $salt ] );
 			}else{
-				$this->logger->critical( 'Salt-Wert konnte nicht generiert werden.', ["plugin" => "f12-cf7-captcha"] );
+				$this->logger->critical( 'Salt value could not be generated.', ["plugin" => "f12-cf7-captcha"] );
 			}
 		}
 
-		$hash = hash_pbkdf2('sha512', $value, $this->salt, 10);
+		$hash = hash_hmac('sha512', $value, $this->salt);
 
-		$this->logger->debug('Hash erfolgreich generiert.', [
+		$this->logger->debug('Hash successfully generated.', [
 			"plugin" => "f12-cf7-captcha",
 			'hash_length' => strlen($hash),
 		]);
@@ -688,16 +694,16 @@ class Salt {
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.', ["plugin" => "f12-cf7-captcha"]);
+			$this->logger->error('Global $wpdb object not available.', ["plugin" => "f12-cf7-captcha"]);
 			return null;
 		}
 
-		$this->logger->info("Versuche, einen Salt-Datensatz mit dem Offset '{$offset}' abzurufen.", ["plugin" => "f12-cf7-captcha"]);
+		$this->logger->info("Attempting to retrieve a salt record with offset '{$offset}'.", ["plugin" => "f12-cf7-captcha"]);
 
 		$table = $this->get_table_name();
 
 		if (!is_numeric($offset) || $offset < 0) {
-			$this->logger->error('Ungültiger Offset-Wert. Erwartet wurde eine nicht-negative Ganzzahl.', [
+			$this->logger->error('Invalid offset value. Expected a non-negative integer.', [
 				"plugin" => "f12-cf7-captcha",
 				'offset' => $offset,
 			]);
@@ -705,24 +711,26 @@ class Salt {
 		}
 
 		$query = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			"SELECT * FROM {$table} ORDER BY createtime DESC LIMIT 1 OFFSET %d",
 			$offset
 		);
 
-		$this->logger->debug('Führe Datenbankabfrage aus.', [
+		$this->logger->debug('Executing database query.', [
 			"plugin" => "f12-cf7-captcha",
 			'query' => $query,
 		]);
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$results = $wpdb->get_results($query, ARRAY_A);
 
 		$Salt = null;
 
 		if (is_array($results) && isset($results[0])) {
-			$this->logger->info('Salt-Datensatz gefunden.', ['id' => $results[0]['id']]);
+			$this->logger->info('Salt record found.', ['id' => $results[0]['id']]);
 			$Salt = new Salt($this->get_logger(), $results[0]);
 		} else {
-			$this->logger->warning('Kein Salt-Datensatz für den gegebenen Offset gefunden.', [
+			$this->logger->warning('No salt record found for the given offset.', [
 				"plugin" => "f12-cf7-captcha",
 				'offset' => $offset,
 			]);
@@ -744,44 +752,46 @@ class Salt {
 	{
 		global $wpdb;
 
-		$this->logger->info('Versuche, alte Datenbankeinträge zu bereinigen.', ["plugin" => "f12-cf7-captcha"]);
+		$this->logger->info('Attempting to clean up old database entries.', ["plugin" => "f12-cf7-captcha"]);
 
 		if (!$wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.', ["plugin" => "f12-cf7-captcha"]);
+			$this->logger->error('Global $wpdb object not available.', ["plugin" => "f12-cf7-captcha"]);
 			throw new \RuntimeException('WPDB not found');
 		}
 
 		$table = $this->get_table_name();
 
-		// Datumsintervall: 3 Wochen
+		// Date interval: 3 weeks
 		try {
 			$date_time = new DateTime('-3 Weeks');
 			$date_time_formatted = $date_time->format('Y-m-d H:i:s');
-			$this->logger->debug("Datums-Grenze für die Löschung berechnet.", [
+			$this->logger->debug("Date boundary for deletion calculated.", [
 				"plugin" => "f12-cf7-captcha",
 				'cutoff_date' => $date_time_formatted,
 			]);
 		} catch (\Exception $e) {
-			$this->logger->error('Fehler bei der Datumsberechnung.', ['error' => $e->getMessage()]);
+			$this->logger->error('Error during date calculation.', ['error' => $e->getMessage()]);
 			return;
 		}
 
-		// Führe die Abfrage aus, um alle Einträge zu löschen, die älter als 3 Wochen sind
+		// Execute the query to delete all entries older than 3 weeks
 		$query = $wpdb->prepare(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			"DELETE FROM {$table} WHERE createtime < %s",
 			$date_time_formatted
 		);
 
-		$this->logger->info('Führe Bereinigungsabfrage aus.', [
+		$this->logger->info('Executing cleanup query.', [
 			'query' => $query,
 		]);
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$result = $wpdb->query($query);
 
 		if ($result === false) {
-			$this->logger->error('Fehler bei der Datenbankbereinigung.', ['db_error' => $wpdb->last_error]);
+			$this->logger->error('Error during database cleanup.', ['db_error' => $wpdb->last_error]);
 		} else {
-			$this->logger->info("Erfolgreich {$result} alte Einträge gelöscht.", [
+			$this->logger->info("Successfully deleted {$result} old entries.", [
 				'rows_deleted' => $result,
 			]);
 		}
@@ -798,15 +808,15 @@ class Salt {
 	{
 		global $wpdb;
 
-		$this->logger->info('Versuche, den Salt-Datensatz in der Datenbank zu speichern.');
+		$this->logger->info('Attempting to save the salt record to the database.');
 
 		if (null === $wpdb) {
-			$this->logger->error('Globales $wpdb-Objekt nicht verfügbar.');
+			$this->logger->error('Global $wpdb object not available.');
 			throw new RuntimeException('WPDB not found');
 		}
 
 		if ($this->id !== 0) {
-			$this->logger->warning('Datensatz existiert bereits und kann nicht erneut gespeichert werden.', [
+			$this->logger->warning('Record already exists and cannot be saved again.', [
 				'id' => $this->id,
 			]);
 			return 0;
@@ -814,7 +824,7 @@ class Salt {
 
 		$table = $this->get_table_name();
 
-		$this->logger->debug('Führe wpdb->insert() aus.', [
+		$this->logger->debug('Executing wpdb->insert().', [
 			'table' => $table,
 			'salt_length' => strlen($this->salt),
 			'createtime' => $this->get_create_time(),
@@ -829,22 +839,41 @@ class Salt {
 		);
 
 		if ($result === false) {
-			$this->logger->error('Fehler beim Einfügen in die Datenbank.', [
+			$this->logger->warning('Insert failed, attempting to recreate table', [
 				'db_error' => $wpdb->last_error,
+				'class'    => __CLASS__,
+				'method'   => __METHOD__,
 			]);
-			throw new RuntimeException('Database error occurred. Reactivate the plugin to create missing tables.');
+
+			$this->create_table();
+			$result = $wpdb->insert(
+				$table,
+				[
+					'salt'       => base64_encode($this->salt),
+					'createtime' => $this->get_create_time()
+				]
+			);
+
+			if ($result === false) {
+				$this->logger->error('Insert failed again after table creation', [
+					'db_error' => $wpdb->last_error,
+					'class'    => __CLASS__,
+					'method'   => __METHOD__,
+				]);
+				throw new RuntimeException('Database error occurred.');
+			}
 		}
 
 		$this->set_id($wpdb->insert_id);
-		$this->logger->info('Datensatz erfolgreich gespeichert. Neue ID: ' . $this->id, [
+		$this->logger->info('Record successfully saved. New ID: ' . $this->id, [
 			'id' => $this->id,
 		]);
 
-		// Bereinige ältere Einträge nach dem Speichern
+		// Clean up older entries after saving
 		try {
 			$this->maybe_clean();
 		} catch (\RuntimeException $e) {
-			$this->logger->error('Fehler bei der Bereinigung der Datenbank.', ['error' => $e->getMessage()]);
+			$this->logger->error('Error during database cleanup.', ['error' => $e->getMessage()]);
 		}
 
 		return $result;

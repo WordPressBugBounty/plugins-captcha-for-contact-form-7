@@ -20,38 +20,38 @@ class TemplateController extends BaseModul {
 	 */
 	public function load_plugin_template(string $filename, array $params = []): void
 	{
-		$this->get_logger()->info('Versuche, eine Plugin-Template-Datei zu laden.', [
+		$this->get_logger()->info('Attempting to load a plugin template file.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'filename' => $filename,
 		]);
 
-		// Definiere den vollständigen Pfad zur Template-Datei.
-		// Die Funktion dirname( __FILE__ ) gibt den übergeordneten Ordner des aktuellen Skripts zurück.
+		// Define the full path to the template file.
+		// The function dirname( __FILE__ ) returns the parent directory of the current script.
 		$template_path = plugin_dir_path(dirname(__FILE__)) . "templates/$filename.php";
 
-		$this->get_logger()->debug('Template-Pfad ermittelt.', ['path' => $template_path]);
+		$this->get_logger()->debug('Template path determined.', ['path' => $template_path]);
 
-		// Überprüfe, ob die Template-Datei existiert.
+		// Check if the template file exists.
 		if (file_exists($template_path)) {
-			// Extrahiere die übergebenen Parameter in lokale Variablen.
-			// Warnung: 'extract()' kann Sicherheitsrisiken bergen, wenn die Daten
-			// von einer unsicheren Quelle stammen, da Variablen überschrieben werden könnten.
-			// Da die Funktion als 'private' oder 'protected' angenommen wird, ist das Risiko gering.
+			// Extract the passed parameters into local variables.
+			// Warning: 'extract()' can pose security risks if the data
+			// comes from an untrusted source, as variables could be overwritten.
+			// Since the function is assumed to be 'private' or 'protected', the risk is low.
 			extract($params);
 
-			$this->get_logger()->info('Template-Datei gefunden. Lade die Datei.');
+			$this->get_logger()->info('Template file found. Loading file.');
 
-			// Binde die Template-Datei ein.
+			// Include the template file.
 			include($template_path);
 
-			$this->get_logger()->debug('Template-Datei erfolgreich geladen.');
+			$this->get_logger()->debug('Template file successfully loaded.');
 		} else {
-			// Protokolliere einen Fehler, falls die Template-Datei nicht existiert.
-			$error_message = sprintf('Template-Datei nicht gefunden: %s', $template_path);
+			// Log an error if the template file does not exist.
+			$error_message = sprintf('Template file not found: %s', $template_path);
 			$this->get_logger()->error($error_message);
 
-			// Verwende 'error_log' für direkte Fehlerprotokollierung, was in WordPress gängig ist.
+			// Use 'error_log' for direct error logging, which is common in WordPress.
 			error_log($error_message);
 		}
 	}
@@ -67,38 +67,38 @@ class TemplateController extends BaseModul {
 	 */
 	public function get_plugin_template(string $filename, array $params = []): string
 	{
-		$this->get_logger()->info('Starte den Pufferungsprozess, um eine Plugin-Template-Datei zu laden und ihren Inhalt zurückzugeben.', [
+		$this->get_logger()->info('Starting buffering process to load a plugin template file and return its content.', [
 			'class'    => __CLASS__,
 			'method'   => __METHOD__,
 			'filename' => $filename,
 		]);
 
-		// Starte die Ausgabe-Pufferung. Alle nachfolgenden 'echo'- oder 'print'-Aufrufe
-		// werden nicht direkt ausgegeben, sondern in einen internen Puffer geschrieben.
+		// Start output buffering. All subsequent 'echo' or 'print' calls
+		// will not be output directly, but written to an internal buffer.
 		ob_start();
 
-		// Lade die Template-Datei, was dazu führt, dass ihr Inhalt in den Puffer geschrieben wird.
-		// Die load_plugin_template()-Methode wird die Datei suchen, die Parameter extrahieren
-		// und sie dann über 'include' einbinden.
+		// Load the template file, which causes its content to be written to the buffer.
+		// The load_plugin_template() method will find the file, extract the parameters,
+		// and then include it via 'include'.
 		try {
 			$this->load_plugin_template($filename, $params);
-			$this->get_logger()->debug('Template-Inhalt erfolgreich in den Puffer geladen.');
+			$this->get_logger()->debug('Template content successfully loaded into buffer.');
 		} catch (\Throwable $e) {
-			$this->get_logger()->error('Fehler beim Laden der Template-Datei.', [
+			$this->get_logger()->error('Error loading template file.', [
 				'error' => $e->getMessage(),
 				'file' => $e->getFile(),
 				'line' => $e->getLine(),
 			]);
-			// Leere den Puffer und beende die Pufferung, ohne den Inhalt zurückzugeben.
+			// Clear the buffer and end buffering without returning the content.
 			ob_end_clean();
 			return '';
 		}
 
-		// Holen Sie sich den Inhalt des Puffers und beenden Sie die Pufferung.
-		// Der Puffer wird geleert und sein Inhalt als String zurückgegeben.
+		// Get the buffer content and end buffering.
+		// The buffer is cleared and its content is returned as a string.
 		$template_content = ob_get_clean();
 
-		$this->get_logger()->info('Template-Inhalt erfolgreich aus dem Puffer abgerufen und zurückgegeben.');
+		$this->get_logger()->info('Template content successfully retrieved from buffer and returned.');
 
 		return $template_content;
 	}

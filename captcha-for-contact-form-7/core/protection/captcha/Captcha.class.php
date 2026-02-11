@@ -76,7 +76,7 @@ class Captcha
 
 		$this->set_params($params);
 
-		$this->logger->debug("Neue Instanz erstellt", [
+		$this->logger->debug("New instance created", [
 			'plugin'    => 'f12-cf7-captcha',
 			'ip'        => $ip_address,
 			'paramKeys' => is_array($params) ? implode(',', array_keys($params)) : 'none'
@@ -98,15 +98,15 @@ class Captcha
 	private function set_params(array $params): void
 	{
 		foreach ($params as $key => $value) {
-			if (isset($this->{$key})) {
+			if (property_exists($this, $key)) {
 				$this->{$key} = $value;
-				$this->logger->debug("Parameter gesetzt", [
+				$this->logger->debug("Parameter set", [
 					'plugin' => 'f12-cf7-captcha',
 					'key'    => $key,
 					'value'  => is_scalar($value) ? (string)$value : gettype($value)
 				]);
 			} else {
-				$this->logger->debug("Unbekannter Parameter ignoriert", [
+				$this->logger->debug("Unknown parameter ignored", [
 					'plugin' => 'f12-cf7-captcha',
 					'key'    => $key
 				]);
@@ -131,7 +131,7 @@ class Captcha
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->logger->error("WPDB nicht verfügbar", [
+			$this->logger->error("WPDB not available", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			return 0;
@@ -140,14 +140,18 @@ class Captcha
 		$wp_table_name = $this->get_table_name();
 
 		if ($validated == -1) {
-			$sql = 'SELECT count(*) AS entries FROM ' . $wp_table_name;
-		} else if ($validated == 0) {
-			$sql = 'SELECT count(*) AS entries FROM ' . $wp_table_name . ' WHERE validated=0';
+			$sql = "SELECT count(*) AS entries FROM {$wp_table_name}";
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared
+			$results = $wpdb->get_results($sql);
 		} else {
-			$sql = 'SELECT count(*) AS entries FROM ' . $wp_table_name . ' WHERE validated=1';
+			$sql = $wpdb->prepare(
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				"SELECT count(*) AS entries FROM {$wp_table_name} WHERE validated=%d",
+				$validated
+			);
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+			$results = $wpdb->get_results($sql);
 		}
-
-		$results = $wpdb->get_results($sql);
 
 		$count = 0;
 		if (is_array($results) && isset($results[0])) {
@@ -155,7 +159,7 @@ class Captcha
 		}
 
 		// Logging
-		$this->logger->debug("Logeinträge gezählt", [
+		$this->logger->debug("Log entries counted", [
 			'plugin'   => 'f12-cf7-captcha',
 			'validated'=> $validated,
 			'sql'      => $sql,
@@ -177,7 +181,7 @@ class Captcha
 	{
 		$logger = \Forge12\Shared\Logger::getInstance();
 
-		$logger->info("Starte Tabellenerstellung", [
+		$logger->info("Starting table creation", [
 			'plugin' => 'f12-cf7-captcha',
 			'class'  => __CLASS__
 		]);
@@ -186,12 +190,12 @@ class Captcha
 			$Captcha = new Captcha($logger, '');
 			$Captcha->create_table();
 
-			$logger->info("Tabellenerstellung erfolgreich", [
+			$logger->info("Table creation successful", [
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
 			]);
 		} catch (\Throwable $e) {
-			$logger->error("Tabellenerstellung fehlgeschlagen", [
+			$logger->error("Table creation failed", [
 				'plugin'   => 'f12-cf7-captcha',
 				'class'    => __CLASS__,
 				'errorMsg' => $e->getMessage()
@@ -216,12 +220,13 @@ class Captcha
                 hash varchar(255) NOT NULL, 
                 code varchar(255) NOT NULL, 
                 validated int(1) DEFAULT 0,
-                createtime varchar(255) DEFAULT '', 
+                createtime varchar(255) DEFAULT '',
                 updatetime varchar(255) DEFAULT '',
-                PRIMARY KEY  (id)
+                PRIMARY KEY  (id),
+                KEY hash (hash)
             )";
 
-		$this->get_logger()->info("Tabellenerstellung gestartet", [
+		$this->get_logger()->info("Table creation started", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $wp_table_name,
 			'sql'    => $sql
@@ -229,12 +234,12 @@ class Captcha
 
 		try {
 			dbDelta($sql);
-			$this->get_logger()->info("Tabellenerstellung abgeschlossen", [
+			$this->get_logger()->info("Table creation completed", [
 				'plugin' => 'f12-cf7-captcha',
 				'table'  => $wp_table_name
 			]);
 		} catch (\Throwable $e) {
-			$this->get_logger()->error("Fehler bei Tabellenerstellung", [
+			$this->get_logger()->error("Error during table creation", [
 				'plugin'   => 'f12-cf7-captcha',
 				'table'    => $wp_table_name,
 				'errorMsg' => $e->getMessage()
@@ -251,7 +256,7 @@ class Captcha
 	{
 		$logger = \Forge12\Shared\Logger::getInstance();
 
-		$logger->warning("Starte Tabellenlöschung", [
+		$logger->warning("Starting table deletion", [
 			'plugin' => 'f12-cf7-captcha',
 			'class'  => __CLASS__
 		]);
@@ -260,12 +265,12 @@ class Captcha
 			$Captcha = new Captcha($logger, '');
 			$Captcha->delete_table();
 
-			$logger->info("Tabellenlöschung erfolgreich", [
+			$logger->info("Table deletion successful", [
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => __CLASS__
 			]);
 		} catch (\Throwable $e) {
-			$logger->error("Tabellenlöschung fehlgeschlagen", [
+			$logger->error("Table deletion failed", [
 				'plugin'   => 'f12-cf7-captcha',
 				'class'    => __CLASS__,
 				'errorMsg' => $e->getMessage()
@@ -286,7 +291,7 @@ class Captcha
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->get_logger()->error("Tabellenlöschung fehlgeschlagen: WPDB nicht definiert", [
+			$this->get_logger()->error("Table deletion failed: WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB not defined.');
@@ -294,32 +299,33 @@ class Captcha
 
 		$table_name = $this->get_table_name();
 
-		$this->get_logger()->warning("Starte Tabellenlöschung", [
+		$this->get_logger()->warning("Starting table deletion", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $table_name
 		]);
 
 		try {
-			$wpdb->query(sprintf("DROP TABLE IF EXISTS %s", $table_name));
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+		$wpdb->query(sprintf("DROP TABLE IF EXISTS %s", $table_name));
 
-			$this->get_logger()->info("Tabelle gelöscht (falls vorhanden)", [
+			$this->get_logger()->info("Table deleted (if existed)", [
 				'plugin' => 'f12-cf7-captcha',
 				'table'  => $table_name
 			]);
 
 			// Clear Cronjobs
 			wp_clear_scheduled_hook('dailyCaptchaClear');
-			$this->get_logger()->debug("Cronjob 'dailyCaptchaClear' entfernt", [
+			$this->get_logger()->debug("Cronjob 'dailyCaptchaClear' removed", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 
 		} catch (\Throwable $e) {
-			$this->get_logger()->error("Fehler bei Tabellenlöschung", [
+			$this->get_logger()->error("Error during table deletion", [
 				'plugin'   => 'f12-cf7-captcha',
 				'table'    => $table_name,
 				'errorMsg' => $e->getMessage()
 			]);
-			throw $e; // Fehler weiterreichen, damit er nicht verschluckt wird
+			throw $e; // Re-throw error so it is not swallowed
 		}
 	}
 
@@ -336,7 +342,7 @@ class Captcha
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->get_logger()->error("Tabellen-Reset fehlgeschlagen: WPDB nicht definiert", [
+			$this->get_logger()->error("Table reset failed: WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB not defined.');
@@ -344,15 +350,16 @@ class Captcha
 
 		$table_name = $this->get_table_name();
 
-		$this->get_logger()->warning("Starte Tabellen-Reset", [
+		$this->get_logger()->warning("Starting table reset", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $table_name
 		]);
 
 		try {
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$deleted = (int) $wpdb->query(sprintf("DELETE FROM %s", $table_name));
 
-			$this->get_logger()->info("Tabellen-Reset abgeschlossen", [
+			$this->get_logger()->info("Table reset completed", [
 				'plugin'  => 'f12-cf7-captcha',
 				'table'   => $table_name,
 				'deleted' => $deleted
@@ -360,7 +367,7 @@ class Captcha
 
 			return $deleted;
 		} catch (\Throwable $e) {
-			$this->get_logger()->error("Fehler beim Tabellen-Reset", [
+			$this->get_logger()->error("Error during table reset", [
 				'plugin'   => 'f12-cf7-captcha',
 				'table'    => $table_name,
 				'errorMsg' => $e->getMessage()
@@ -384,7 +391,7 @@ class Captcha
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->get_logger()->error("Löschung nach Validierungsstatus fehlgeschlagen: WPDB nicht definiert", [
+			$this->get_logger()->error("Deletion by validation status failed: WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha',
 				'status' => $validated
 			]);
@@ -393,7 +400,7 @@ class Captcha
 
 		$table_name = $this->get_table_name();
 
-		$this->get_logger()->warning("Starte Löschung nach Validierungsstatus", [
+		$this->get_logger()->warning("Starting deletion by validation status", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $table_name,
 			'status' => $validated
@@ -401,10 +408,11 @@ class Captcha
 
 		try {
 			$deleted = (int) $wpdb->query(
-				sprintf('DELETE FROM %s WHERE validated="%d"', $table_name, $validated)
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->prepare("DELETE FROM {$table_name} WHERE validated=%d", $validated)
 			);
 
-			$this->get_logger()->info("Löschung nach Validierungsstatus abgeschlossen", [
+			$this->get_logger()->info("Deletion by validation status completed", [
 				'plugin'  => 'f12-cf7-captcha',
 				'table'   => $table_name,
 				'status'  => $validated,
@@ -413,7 +421,7 @@ class Captcha
 
 			return $deleted;
 		} catch (\Throwable $e) {
-			$this->get_logger()->error("Fehler bei Löschung nach Validierungsstatus", [
+			$this->get_logger()->error("Error during deletion by validation status", [
 				'plugin'   => 'f12-cf7-captcha',
 				'table'    => $table_name,
 				'status'   => $validated,
@@ -438,7 +446,7 @@ class Captcha
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->get_logger()->error("Löschung älterer Einträge fehlgeschlagen: WPDB nicht definiert", [
+			$this->get_logger()->error("Deletion of older entries failed: WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha',
 				'before' => $create_time
 			]);
@@ -447,7 +455,7 @@ class Captcha
 
 		$table_name = $this->get_table_name();
 
-		$this->get_logger()->warning("Starte Löschung älterer Einträge", [
+		$this->get_logger()->warning("Starting deletion of older entries", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $table_name,
 			'before' => $create_time
@@ -455,10 +463,11 @@ class Captcha
 
 		try {
 			$deleted = (int) $wpdb->query(
-				sprintf('DELETE FROM %s WHERE createtime < "%s"', $table_name, esc_sql($create_time))
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->prepare("DELETE FROM {$table_name} WHERE createtime < %s", $create_time)
 			);
 
-			$this->get_logger()->info("Löschung älterer Einträge abgeschlossen", [
+			$this->get_logger()->info("Deletion of older entries completed", [
 				'plugin'  => 'f12-cf7-captcha',
 				'table'   => $table_name,
 				'before'  => $create_time,
@@ -467,7 +476,7 @@ class Captcha
 
 			return $deleted;
 		} catch (\Throwable $e) {
-			$this->get_logger()->error("Fehler bei Löschung älterer Einträge", [
+			$this->get_logger()->error("Error during deletion of older entries", [
 				'plugin'   => 'f12-cf7-captcha',
 				'table'    => $table_name,
 				'before'   => $create_time,
@@ -488,7 +497,7 @@ class Captcha
 		global $wpdb;
 
 		if (!$wpdb) {
-			$this->get_logger()->error("Tabellenname konnte nicht ermittelt werden: WPDB nicht definiert", [
+			$this->get_logger()->error("Table name could not be determined: WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB not defined.');
@@ -496,7 +505,7 @@ class Captcha
 
 		$table_name = $wpdb->prefix . 'f12_cf7_captcha';
 
-		$this->get_logger()->debug("Tabellenname ermittelt", [
+		$this->get_logger()->debug("Table name determined", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $table_name
 		]);
@@ -515,12 +524,12 @@ class Captcha
 
 		if ($id === 0) {
 			$this->get_logger()->warning(
-				"get_id(): ID ist 0 oder nicht gesetzt",
+				"get_id(): ID is 0 or not set",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		} else {
 			$this->get_logger()->debug(
-				"get_id(): ID erfolgreich ermittelt",
+				"get_id(): ID successfully retrieved",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $id
@@ -544,12 +553,12 @@ class Captcha
 
 		if ($id === 0) {
 			$this->get_logger()->warning(
-				"set_id(): ID wurde auf 0 gesetzt",
+				"set_id(): ID was set to 0",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		} else {
 			$this->get_logger()->info(
-				"set_id(): ID erfolgreich gesetzt",
+				"set_id(): ID successfully set",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $id
@@ -570,7 +579,7 @@ class Captcha
 	{
 		if (empty($this->hash)) {
 			$this->get_logger()->info(
-				"get_hash(): Neuer Hash wird generiert",
+				"get_hash(): Generating new hash",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'ip_address' => $this->ip_address
@@ -580,7 +589,7 @@ class Captcha
 			$this->hash = $this->generate_hash($this->ip_address);
 
 			$this->get_logger()->debug(
-				"get_hash(): Hash erfolgreich generiert",
+				"get_hash(): Hash successfully generated",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'hash'   => $this->hash
@@ -588,7 +597,7 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->debug(
-				"get_hash(): Vorhandener Hash zurückgegeben",
+				"get_hash(): Existing hash returned",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'hash'   => $this->hash
@@ -609,7 +618,7 @@ class Captcha
 	{
 		if (empty($ip_address)) {
 			$this->get_logger()->warning(
-				"generate_hash(): IP-Adresse ist leer – kein Hash generiert",
+				"generate_hash(): IP address is empty - no hash generated",
 				['plugin' => 'f12-cf7-captcha']
 			);
 			return '';
@@ -618,11 +627,11 @@ class Captcha
 		$hash = \password_hash(time() . $ip_address, PASSWORD_DEFAULT);
 
 		$this->get_logger()->info(
-			"generate_hash(): Neuer Hash generiert",
+			"generate_hash(): New hash generated",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'ip_address' => $ip_address,
-				// ⚠️ besser NICHT den Hash loggen → Sicherheitsrisiko / DSGVO
+				// Better NOT to log the hash -> security risk / GDPR
 			]
 		);
 
@@ -641,12 +650,12 @@ class Captcha
 
 		if ($valid) {
 			$this->get_logger()->debug(
-				"is_valid_hash(): Hash ist gültig",
+				"is_valid_hash(): Hash is valid",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		} else {
 			$this->get_logger()->warning(
-				"is_valid_hash(): Kein gültiger Hash vorhanden",
+				"is_valid_hash(): No valid hash present",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		}
@@ -665,12 +674,12 @@ class Captcha
 
 	    if (empty($code)) {
 		    $this->get_logger()->warning(
-			    "getCode(): Code ist leer oder nicht gesetzt",
+			    "getCode(): Code is empty or not set",
 			    ['plugin' => 'f12-cf7-captcha']
 		    );
 	    } else {
 		    $this->get_logger()->debug(
-			    "getCode(): Code erfolgreich ermittelt",
+			    "getCode(): Code successfully retrieved",
 			    [
 				    'plugin' => 'f12-cf7-captcha',
 				    'code'   => $code
@@ -694,12 +703,12 @@ class Captcha
 
 	    if (empty($code)) {
 		    $this->get_logger()->warning(
-			    "setCode(): Code ist leer gesetzt worden",
+			    "setCode(): Code has been set to empty",
 			    ['plugin' => 'f12-cf7-captcha']
 		    );
 	    } else {
 		    $this->get_logger()->info(
-			    "setCode(): Neuer Code gesetzt",
+			    "setCode(): New code set",
 			    [
 				    'plugin' => 'f12-cf7-captcha',
 				    'code'   => $code
@@ -719,7 +728,7 @@ class Captcha
 
 		if ($validated === 1) {
 			$this->get_logger()->debug(
-				"get_validated(): Eintrag ist validiert",
+				"get_validated(): Entry is validated",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'validated' => $validated
@@ -727,7 +736,7 @@ class Captcha
 			);
 		} elseif ($validated === 0) {
 			$this->get_logger()->info(
-				"get_validated(): Eintrag ist nicht validiert",
+				"get_validated(): Entry is not validated",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'validated' => $validated
@@ -735,7 +744,7 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->warning(
-				"get_validated(): Unerwarteter Wert für 'validated'",
+				"get_validated(): Unexpected value for 'validated'",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'validated' => $validated
@@ -760,7 +769,7 @@ class Captcha
 
 		if ($validated === 1) {
 			$this->get_logger()->info(
-				"set_validated(): Eintrag wurde auf 'validiert' gesetzt",
+				"set_validated(): Entry set to 'validated'",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'validated' => $validated
@@ -768,7 +777,7 @@ class Captcha
 			);
 		} elseif ($validated === 0) {
 			$this->get_logger()->info(
-				"set_validated(): Eintrag wurde auf 'nicht validiert' gesetzt",
+				"set_validated(): Entry set to 'not validated'",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'validated' => $validated
@@ -776,7 +785,7 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->warning(
-				"set_validated(): Unerwarteter Wert für 'validated' gesetzt",
+				"set_validated(): Unexpected value for 'validated' set",
 				[
 					'plugin'    => 'f12-cf7-captcha',
 					'validated' => $validated
@@ -799,7 +808,7 @@ class Captcha
 			$this->createtime = $dt->format('Y-m-d H:i:s');
 
 			$this->get_logger()->info(
-				"get_create_time(): Neuer Zeitstempel generiert",
+				"get_create_time(): New timestamp generated",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'createtime' => $this->createtime
@@ -807,7 +816,7 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->debug(
-				"get_create_time(): Vorhandener Zeitstempel zurückgegeben",
+				"get_create_time(): Existing timestamp returned",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'createtime' => $this->createtime
@@ -832,7 +841,7 @@ class Captcha
 		$this->createtime = $dt->format('Y-m-d H:i:s');
 
 		$this->get_logger()->info(
-			"set_create_time(): Neuer Zeitstempel gesetzt",
+			"set_create_time(): New timestamp set",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'createtime' => $this->createtime
@@ -854,7 +863,7 @@ class Captcha
 			$this->updatetime = $dt->format('Y-m-d H:i:s');
 
 			$this->get_logger()->info(
-				"get_update_time(): Neuer Update-Zeitstempel generiert",
+				"get_update_time(): New update timestamp generated",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'updatetime' => $this->updatetime
@@ -862,7 +871,7 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->debug(
-				"get_update_time(): Vorhandener Update-Zeitstempel zurückgegeben",
+				"get_update_time(): Existing update timestamp returned",
 				[
 					'plugin'     => 'f12-cf7-captcha',
 					'updatetime' => $this->updatetime
@@ -885,7 +894,7 @@ class Captcha
 		$this->updatetime = $dt->format('Y-m-d H:i:s');
 
 		$this->get_logger()->info(
-			"set_update_time(): Neuer Update-Zeitstempel gesetzt",
+			"set_update_time(): New update timestamp set",
 			[
 				'plugin'     => 'f12-cf7-captcha',
 				'updatetime' => $this->updatetime
@@ -906,7 +915,7 @@ class Captcha
 
 		if ($result) {
 			$this->get_logger()->debug(
-				"is_update(): Datensatz wird als Update behandelt",
+				"is_update(): Record will be treated as update",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $this->id
@@ -914,11 +923,11 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->debug(
-				"is_update(): Datensatz wird als Neuerstellung (Insert) behandelt",
+				"is_update(): Record will be treated as new insert",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $this->id,
-					'hash'   => empty($this->hash) ? 'leer' : 'gesetzt'
+					'hash'   => empty($this->hash) ? 'empty' : 'set'
 				]
 			);
 		}
@@ -941,7 +950,7 @@ class Captcha
 
 		if (!$wpdb) {
 			$this->get_logger()->error(
-				"get_by_id(): WPDB nicht definiert",
+				"get_by_id(): WPDB not defined",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $id
@@ -953,7 +962,7 @@ class Captcha
 		$table = $this->get_table_name();
 
 		$this->get_logger()->debug(
-			"get_by_id(): Starte Datenbankabfrage",
+			"get_by_id(): Starting database query",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'table'  => $table,
@@ -962,13 +971,14 @@ class Captcha
 		);
 
 		$results = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->prepare("SELECT * FROM {$table} WHERE id=%d", $id),
 			ARRAY_A
 		);
 
 		if (!empty($results)) {
 			$this->get_logger()->info(
-				"get_by_id(): Datensatz gefunden",
+				"get_by_id(): Record found",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $id
@@ -979,7 +989,7 @@ class Captcha
 		}
 
 		$this->get_logger()->warning(
-			"get_by_id(): Kein Datensatz gefunden",
+			"get_by_id(): No record found",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'id'     => $id
@@ -1002,7 +1012,7 @@ class Captcha
 
 		if (!$wpdb) {
 			$this->get_logger()->error(
-				"get_by_hash(): WPDB nicht definiert",
+				"get_by_hash(): WPDB not defined",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'hash'   => '***'
@@ -1013,11 +1023,11 @@ class Captcha
 
 		$table = $this->get_table_name();
 
-		// Hash im Log maskieren (z. B. erste und letzte 4 Zeichen anzeigen)
+		// Mask hash in log (e.g. show first and last 4 characters)
 		$masked = substr($hash, 0, 4) . '...' . substr($hash, -4);
 
 		$this->get_logger()->debug(
-			"get_by_hash(): Starte Datenbankabfrage",
+			"get_by_hash(): Starting database query",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'table'  => $table,
@@ -1026,13 +1036,14 @@ class Captcha
 		);
 
 		$results = $wpdb->get_results(
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->prepare("SELECT * FROM {$table} WHERE hash=%s", $hash),
 			ARRAY_A
 		);
 
 		if (isset($results[0])) {
 			$this->get_logger()->info(
-				"get_by_hash(): Datensatz gefunden",
+				"get_by_hash(): Record found",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'hash'   => $masked
@@ -1043,7 +1054,7 @@ class Captcha
 		}
 
 		$this->get_logger()->warning(
-			"get_by_hash(): Kein Datensatz gefunden",
+			"get_by_hash(): No record found",
 			[
 				'plugin' => 'f12-cf7-captcha',
 				'hash'   => $masked
@@ -1062,7 +1073,7 @@ class Captcha
 
 		if (!$wpdb) {
 			$this->get_logger()->error(
-				"save(): WPDB nicht definiert",
+				"save(): WPDB not defined",
 				['plugin' => 'f12-cf7-captcha']
 			);
 			throw new \RuntimeException('WPDB not defined.');
@@ -1072,7 +1083,7 @@ class Captcha
 
 		if ($this->is_update()) {
 			$this->get_logger()->debug(
-				"save(): Starte Update",
+				"save(): Starting update",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $this->get_id()
@@ -1093,7 +1104,7 @@ class Captcha
 
 			if ($result !== false) {
 				$this->get_logger()->info(
-					"save(): Datensatz erfolgreich aktualisiert",
+					"save(): Record successfully updated",
 					[
 						'plugin' => 'f12-cf7-captcha',
 						'id'     => $this->get_id(),
@@ -1102,7 +1113,7 @@ class Captcha
 				);
 			} else {
 				$this->get_logger()->error(
-					"save(): Fehler beim Aktualisieren des Datensatzes",
+					"save(): Error updating record",
 					[
 						'plugin' => 'f12-cf7-captcha',
 						'id'     => $this->get_id()
@@ -1115,7 +1126,7 @@ class Captcha
 
 		// --- INSERT ---
 		$this->get_logger()->debug(
-			"save(): Starte Insert",
+			"save(): Starting insert",
 			['plugin' => 'f12-cf7-captcha']
 		);
 
@@ -1130,11 +1141,33 @@ class Captcha
 			]
 		);
 
+		if ($result === false) {
+			$this->get_logger()->warning(
+				"save(): Insert failed, attempting to recreate table",
+				[
+					'plugin'          => 'f12-cf7-captcha',
+					'wpdb_last_error' => $wpdb->last_error ?? null
+				]
+			);
+
+			$this->create_table();
+			$result = $wpdb->insert(
+				$table,
+				[
+					'hash'      => $this->get_hash(),
+					'code'      => $this->get_code(),
+					'updatetime'=> $this->get_update_time(),
+					'createtime'=> $this->get_create_time(),
+					'validated' => $this->get_validated()
+				]
+			);
+		}
+
 		if ($result) {
 			$this->set_id($wpdb->insert_id);
 
 			$this->get_logger()->info(
-				"save(): Neuer Datensatz erfolgreich eingefügt",
+				"save(): New record successfully inserted",
 				[
 					'plugin' => 'f12-cf7-captcha',
 					'id'     => $this->get_id(),
@@ -1143,7 +1176,7 @@ class Captcha
 			);
 		} else {
 			$this->get_logger()->error(
-				"save(): Fehler beim Einfügen des Datensatzes",
+				"save(): Error inserting record",
 				['plugin' => 'f12-cf7-captcha']
 			);
 		}

@@ -34,12 +34,12 @@ abstract class Rule {
 	{
 		$this->logger = $logger;
 
-		$this->get_logger()->info('Konstruktor gestartet.', [
+		$this->get_logger()->info('Constructor started.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
-		$this->get_logger()->info('Konstruktor abgeschlossen.', [
+		$this->get_logger()->info('Constructor completed.', [
 			'class' => __CLASS__,
 		]);
 	}
@@ -58,7 +58,7 @@ abstract class Rule {
 	 */
 	public function add_message(string $message): void
 	{
-		$this->get_logger()->info('Füge eine neue Nachricht zum Nachrichten-Stack hinzu.', [
+		$this->get_logger()->info('Adding a new message to the message stack.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'message_content' => $message,
@@ -66,7 +66,7 @@ abstract class Rule {
 
 		$this->messages[] = $message;
 
-		$this->get_logger()->debug('Nachricht erfolgreich hinzugefügt.', [
+		$this->get_logger()->debug('Message added successfully.', [
 			'total_messages' => count($this->messages),
 		]);
 	}
@@ -78,20 +78,20 @@ abstract class Rule {
 	 */
 	public function get_messages(): string
 	{
-		$this->get_logger()->info('Rufe alle gesammelten Nachrichten ab und formatiere sie für die Ausgabe.', [
+		$this->get_logger()->info('Retrieving all collected messages and formatting for output.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 			'total_messages' => count($this->messages),
 		]);
 
 		if (empty($this->messages)) {
-			$this->get_logger()->warning('Keine Nachrichten zum Abrufen vorhanden.');
+			$this->get_logger()->warning('No messages available to retrieve.');
 			return '';
 		}
 
 		$formatted_messages = implode("<br/>", $this->messages);
 
-		$this->get_logger()->debug('Nachrichten erfolgreich zu einer HTML-Zeichenkette zusammengefügt.', [
+		$this->get_logger()->debug('Messages successfully joined into HTML string.', [
 			'formatted_string_length' => strlen($formatted_messages),
 		]);
 
@@ -107,15 +107,15 @@ abstract class Rule {
 	 */
 	public function get_error_message(): string
 	{
-		$this->get_logger()->info('Rufe die aktuelle Fehlermeldung ab.', [
+		$this->get_logger()->info('Retrieving current error message.', [
 			'class' => __CLASS__,
 			'method' => __METHOD__,
 		]);
 
 		if (empty($this->error_message)) {
-			$this->get_logger()->warning('Die Fehlermeldung ist leer.');
+			$this->get_logger()->warning('Error message is empty.');
 		} else {
-			$this->get_logger()->debug('Fehlermeldung erfolgreich abgerufen.', [
+			$this->get_logger()->debug('Error message retrieved successfully.', [
 				'message' => $this->error_message,
 			]);
 		}

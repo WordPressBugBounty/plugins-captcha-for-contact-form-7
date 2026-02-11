@@ -9,199 +9,60 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Class ControllerFluentForm
+ * Class ControllerFluentform
  */
 class ControllerFluentform extends BaseController
 {
-    /**
-     * @var string
-     */
-    protected string $name = 'Fluentform';
-
-    /**
-     * @var string $id  The unique identifier for the entity.
-     *                  This should be a string value.
-     */
+    protected string $name = 'Fluent Forms';
     protected string $id = 'fluentform';
+    protected string $settings_key = 'protection_fluentform_enable';
+
+    protected array $hooks = [
+        ['type' => 'action', 'hook' => 'fluentform/render_item_submit_button', 'method' => 'wp_add_spam_protection', 'priority' => 5, 'args' => 2],
+        ['type' => 'filter', 'hook' => 'fluentform/validation_errors', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 4],
+    ];
+
+    public function is_installed(): bool
+    {
+        $is_installed = defined('FLUENTFORM');
+        $this->get_logger()->debug('FluentForm installed: ' . ($is_installed ? 'Yes' : 'No'));
+        return $is_installed;
+    }
 
     /**
-     * Check if the captcha is enabled for Fluent Forms
-     *
-     * @return bool True if the captcha is enabled, false otherwise
+     * @param mixed ...$args
+     * @return mixed
      */
-	public function is_enabled(): bool
-	{
-		// Log the start of the check.
-		$this->get_logger()->info('Starte Überprüfung, ob das FluentForm-Modul aktiviert ist.');
+    public function wp_is_spam(...$args)
+    {
+        $this->get_logger()->info('Starting spam validation for a FluentForm form.');
 
-		// Check if the FluentForm plugin is installed.
-		$is_installed = $this->is_installed();
-		$this->get_logger()->debug('Installationsstatus des Moduls: ' . ($is_installed ? 'Installiert' : 'Nicht installiert'));
+        $errors = $args[0];
 
-		// Get the global setting for FluentForm protection.
-		$setting_value = $this->Controller->get_settings('protection_fluentform_enable', 'global');
-		$this->get_logger()->debug('Wert der Einstellung "protection_fluentform_enable": ' . $setting_value);
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by Fluent Forms; sanitized after parse_str()
+        $formData = isset( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : '';
 
-		// Determine if the module should be active.
-		if ($setting_value === '' || $setting_value === null) {
-			// Default: aktiv, wenn nicht explizit gesetzt
-			$setting_value = 1;
-			$this->get_logger()->debug( 'Wert der Einstellung "protection_fluentform_enable" wurde nicht gesetzt. Verwende Standardwert: ' . $setting_value );
-		}
-		$is_active = $is_installed && (int)$setting_value === 1;
+        $decodedFormData = urldecode($formData);
+        parse_str($decodedFormData, $array_post_data);
 
-		// Log the status before applying any filters.
-		$this->get_logger()->debug('Modulstatus vor dem Filter: ' . ($is_active ? 'Aktiv' : 'Inaktiv'));
+        $Protection = $this->Controller->get_module('protection');
 
-		// Apply a filter to allow other plugins to modify the status.
-		$result = apply_filters('f12_cf7_captcha_is_installed_fluentform', $is_active);
+        if ($Protection->is_spam($array_post_data)) {
+            $message = $Protection->get_message();
+            $this->get_logger()->warning('Spam detected. Sending JSON error message.');
 
-		// Log the final result after the filter.
-		$this->get_logger()->info('Endgültiger Status nach dem Filter: ' . ($result ? 'Aktiv' : 'Inaktiv'));
+            wp_send_json(
+                [
+                    'errors' => [
+                        'captcha-response' => [
+                            sprintf(__('Captcha verification failed: %s', 'captcha-for-contact-form-7'), $message),
+                        ],
+                    ],
+                ],
+                422
+            );
+        }
 
-		return $result;
-	}
-
-    /**
-     * Check if the Fluent Forms plugin is installed
-     *
-     * @return bool Returns true if the Fluent Forms plugin is installed, false otherwise
-     */
-	public function is_installed(): bool
-	{
-		// Logge den Beginn der Überprüfung, ob das Plugin installiert ist.
-		$this->get_logger()->info('Starte Überprüfung, ob FluentForm installiert ist.');
-
-		// Prüfe, ob die Konstante 'FLUENTFORM' existiert.
-		$is_installed = defined('FLUENTFORM');
-
-		// Logge das Ergebnis der Überprüfung.
-		if ($is_installed) {
-			$this->get_logger()->info('FluentForm wurde gefunden. Das Modul kann gestartet werden.');
-		} else {
-			$this->get_logger()->critical('FluentForm wurde nicht gefunden. Dieses Modul kann nicht korrekt funktionieren.');
-		}
-
-		// Gib das Ergebnis zurück.
-		return $is_installed;
-	}
-
-    /**
-     * @private WordPress Hook
-     */
-	public function on_init(): void
-	{
-		// Log the start of the initialization process for the Fluent Forms module.
-		$this->get_logger()->info('Starte die Initialisierung des Fluent Forms-Moduls.');
-
-		// Set the module name.
-		$this->name = __('Fluent Forms', 'captcha-for-contact-form-7');
-		$this->get_logger()->debug('Modulname wurde gesetzt.', ['name' => $this->name]);
-
-		// Add the action to insert the captcha before the submit button.
-		$this->get_logger()->debug('Füge die Aktion "fluentform/render_item_submit_button" hinzu, um den Spamschutz vor dem Senden-Button anzuzeigen.');
-		add_action('fluentform/render_item_submit_button', array($this, 'wp_add_spam_protection'), 5, 2);
-
-		// Add the filter for spam validation.
-		$this->get_logger()->debug('Füge den Filter "fluentform/validation_errors" hinzu, um das Formular auf Spam zu prüfen.');
-		add_filter('fluentform/validation_errors', array($this, 'wp_is_spam'), 10, 4);
-
-
-		// Log the successful completion of the initialization.
-		$this->get_logger()->info('Initialisierung abgeschlossen.');
-	}
-
-    /**
-     * Add spam protection to the given content.
-     *
-     * This method adds spam protection to the given content by injecting a captcha field based on the specified
-     * validation method.
-     *
-     * @param mixed ...$args Any number of arguments.
-     *
-     * @return void The content with spam protection added.
-     *
-     * @throws \Exception
-     * @since 1.12.2
-     *
-     */
-	public function wp_add_spam_protection(...$args)
-	{
-		// Log the beginning of the process.
-		$this->get_logger()->info('Starte die Ausgabe des Captcha-Codes für Fluent Forms.');
-
-		// Get the captcha code from the protection module.
-		$captcha = $this->Controller->get_modul('protection')->get_captcha();
-
-		// Log the size of the retrieved captcha code for debugging.
-		$this->get_logger()->debug('Captcha-Code wurde abgerufen. Größe: ' . strlen($captcha) . ' Zeichen.');
-
-		// Check if the captcha code is empty.
-		if (empty($captcha)) {
-			// Log a warning if the code is empty.
-			$this->get_logger()->warning('Der Captcha-Code ist leer. Es wird kein HTML ausgegeben.');
-		} else {
-			// Log the successful output of the captcha.
-			$this->get_logger()->info('Captcha-Code wird ausgegeben.');
-		}
-
-		// Echo the captcha code.
-		echo $captcha;
-	}
-
-	/**
-	 * Check if a post is considered as spam
-	 *
-	 * @param bool  $is_spam         Whether the post is considered as spam initially.
-	 * @param array $array_post_data The array containing the POST data.
-	 *
-	 * @return bool Whether the post is considered as spam.
-	 * @throws \Exception
-	 */
-	public function wp_is_spam(...$args)
-	{
-		// Logge den Beginn der Spam-Überprüfung für Fluent Forms.
-		$this->get_logger()->info('Starte Spam-Validierung für ein FluentForm-Formular.');
-
-		$errors = $args[0];
-
-		// Hole die Formulardaten aus dem Ajax-Aufruf.
-		$formData = $_POST['data'];
-		$this->get_logger()->debug('Empfangene Rohdaten des Formulars.', ['data_length' => strlen($formData)]);
-
-		// Dekodiere die Daten und konvertiere sie in ein Array.
-		$decodedFormData = urldecode($formData);
-		parse_str($decodedFormData, $array_post_data);
-		$this->get_logger()->debug('Formulardaten erfolgreich in ein Array konvertiert.', ['keys' => array_keys($array_post_data)]);
-
-		// Hole das Schutz-Modul.
-		$Protection = $this->Controller->get_modul('protection');
-
-		// Führe die Spam-Überprüfung durch.
-		if ($Protection->is_spam($array_post_data)) {
-			// Logge eine Warnung, wenn Spam erkannt wird.
-			$message = $Protection->get_message();
-			$this->get_logger()->warning('Spam erkannt. Sende JSON-Fehlermeldung.', ['spam_message' => $message]);
-
-			// Sende eine JSON-Antwort mit einer Fehlermeldung und einem 422-Statuscode.
-			wp_send_json(
-				[
-					'errors' => [
-						'captcha-response' => [
-							sprintf(__('Captcha verification failed: %s', 'captcha-for-contact-form-7'), $message),
-						],
-					],
-				],
-				422
-			);
-
-			// Da wp_send_json die Ausführung beendet, wird hier kein Code mehr ausgeführt.
-		}
-
-		// Logge, dass kein Spam erkannt wurde und die Übermittlung fortgesetzt wird.
-		$this->get_logger()->info('Kein Spam erkannt. Die Validierung wird fortgesetzt.');
-
-		// Gib die ursprünglichen Fehler zurück.
-		return $errors;
-	}
+        return $errors;
+    }
 }

@@ -11,18 +11,6 @@ namespace f12_cf7_captcha\ui {
 
 	if ( ! class_exists( 'forge12\ui\UI_Manager' ) ) {
 		/**
-		 * Load dependencies
-		 */
-		require_once( 'core/UI_Message.php' );
-		require_once( 'core/UI_Asset_Handler.php' );
-		require_once( 'core/UI_Page_Plugin_Loader.php' );;
-		require_once( 'core/UI_Page_Manager.php' );
-		require_once( 'core/UI_Menu.class.php' );
-		require_once( 'core/UI_Page.php' );
-		require_once( 'core/UI_Page_Form.php' );
-		require_once( 'core/UI_WordPress.php' );
-
-		/**
 		 * UI Manager
 		 */
 		class UI_Manager {

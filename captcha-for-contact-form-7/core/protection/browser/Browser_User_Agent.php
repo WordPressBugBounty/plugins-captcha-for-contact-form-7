@@ -1,4 +1,9 @@
 <?php
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 // Desktop and mobile browser patterns
 $browser_names   = array(
 	'Opera',

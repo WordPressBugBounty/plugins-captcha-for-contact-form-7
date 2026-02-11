@@ -5,6 +5,10 @@ namespace f12_cf7_captcha\core\protection\whitelist;
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class Whitelist_Validator extends BaseProtection {
 	/**
 	 * Private constructor for the class.
@@ -15,12 +19,12 @@ class Whitelist_Validator extends BaseProtection {
 	public function __construct( CF7Captcha $Controller ) {
 		parent::__construct( $Controller );
 
-		$this->get_logger()->info( 'Konstruktor gestartet.', [
+		$this->get_logger()->info( 'Constructor started.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		] );
 
-		$this->get_logger()->info( 'Konstruktor abgeschlossen.', [
+		$this->get_logger()->info( 'Constructor completed.', [
 			'class' => __CLASS__,
 		] );
 	}
@@ -29,12 +33,12 @@ class Whitelist_Validator extends BaseProtection {
 		$is_enabled = true;
 
 		if ( $is_enabled ) {
-			$this->get_logger()->info( 'Whitelist ist aktiviert.', [
+			$this->get_logger()->info( 'Whitelist is enabled.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
 		} else {
-			$this->get_logger()->warning( 'Whitelist ist deaktiviert.', [
+			$this->get_logger()->warning( 'Whitelist is disabled.', [
 				'class'  => __CLASS__,
 				'method' => __METHOD__,
 			] );
@@ -43,7 +47,7 @@ class Whitelist_Validator extends BaseProtection {
 		$result = apply_filters( 'f12-cf7-captcha-skip-validation-whitelist', $is_enabled );
 
 		if ( $is_enabled && ! $result ) {
-			$this->get_logger()->debug( 'Whitelist wird durch Filter übersprungen.', [
+			$this->get_logger()->debug( 'Whitelist skipped by filter.', [
 				'filter'         => 'f12-cf7-captcha-skip-validation-whitelist',
 				'original_state' => $is_enabled,
 			] );
@@ -53,7 +57,7 @@ class Whitelist_Validator extends BaseProtection {
 	}
 
 	/**
-	 * Immer false zurückgeben da es hier um whitelist geht.
+	 * Always return false since this is about whitelist.
 	 * @return bool
 	 */
 	public function is_spam():bool{
@@ -73,7 +77,7 @@ class Whitelist_Validator extends BaseProtection {
 	 */
 	private function is_whitelisted_email( $arg, $whitelisted_emails = [] ): bool {
 		if ( empty( $whitelisted_emails ) ) {
-			$this->get_logger()->debug( "Whitelist-Check: keine Whitelist-E-Mails konfiguriert", [
+			$this->get_logger()->debug( "Whitelist check: no whitelist emails configured", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 
@@ -87,18 +91,18 @@ class Whitelist_Validator extends BaseProtection {
 				}
 			}
 
-			$this->get_logger()->debug( "Whitelist-Check: Array geprüft, keine Übereinstimmung gefunden", [
+			$this->get_logger()->debug( "Whitelist check: array checked, no match found", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 
-			return false; // Wenn keine der E-Mail-Adressen in der Whitelist ist
+			return false; // If none of the email addresses are in the whitelist
 		}
 
 		// Sanitize and trim the current POST value
 		$value = sanitize_text_field( trim( $arg ) );
 
 		if ( empty( $value ) ) {
-			$this->get_logger()->debug( "Whitelist-Check: Wert leer oder ungültig", [
+			$this->get_logger()->debug( "Whitelist check: value empty or invalid", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 
@@ -107,14 +111,14 @@ class Whitelist_Validator extends BaseProtection {
 
 		// If any $_POST value matches a whitelisted email, skip protection
 		if ( in_array( $value, $whitelisted_emails ) ) {
-			$this->get_logger()->info( "Validation übersprungen: E-Mail ist auf Whitelist", [
+			$this->get_logger()->info( "Validation skipped: email is on whitelist", [
 				'plugin' => 'f12-cf7-captcha',
 				'email'  => $value
 			] );
 		}
 
 
-		$this->get_logger()->debug( "Whitelist-Check: E-Mail nicht in Whitelist", [
+		$this->get_logger()->debug( "Whitelist check: email not in whitelist", [
 			'plugin' => 'f12-cf7-captcha',
 			'email'  => $value
 		] );
@@ -123,15 +127,16 @@ class Whitelist_Validator extends BaseProtection {
 	}
 
 	/**
-	 * Prüft, ob der aktuelle Request ein bekannter AJAX- oder REST-Endpunkt ist,
-	 * der vom Captcha-Schutz ausgenommen werden soll.
+	 * Checks if the current request is a known AJAX or REST endpoint
+	 * that should be excluded from captcha protection.
 	 *
-	 * @return bool True, wenn die Anfrage übersprungen werden soll.
+	 * @return bool True if the request should be skipped.
 	 */
 	private function is_whitelisted_ajax_or_rest(): bool {
 		// WooCommerce / PayPal AJAX
 		$is_ajax_request = defined('DOING_AJAX') && DOING_AJAX;
-		$wc_ajax_action  = isset($_REQUEST['wc-ajax']) ? sanitize_text_field($_REQUEST['wc-ajax']) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified by the form plugin
+		$wc_ajax_action  = isset($_REQUEST['wc-ajax']) ? sanitize_text_field( wp_unslash( $_REQUEST['wc-ajax'] ) ) : '';
 
 		$ajax_whitelist = [
 			// PayPal Payments (WooCommerce PayPal Payments)
@@ -170,7 +175,7 @@ class Whitelist_Validator extends BaseProtection {
 			'amazon_pay_create_checkout_session',
 
 			// WooCommerce Standard Requests
-			//'checkout', -> FINALER SUBMIT
+			//'checkout', -> FINAL SUBMIT
 			'update_order_review',
 			'apply_coupon',
 			'remove_coupon',
@@ -238,11 +243,11 @@ class Whitelist_Validator extends BaseProtection {
 			'billpay_process_payment',
 		];
 
-		// Ermögliche Erweiterung durch Filter
+		// Allow extension through filter
 		$ajax_whitelist = apply_filters('f12_cf7_captcha_ajax_whitelist', $ajax_whitelist);
 
 		if ($is_ajax_request && in_array($wc_ajax_action, $ajax_whitelist, true)) {
-			$this->get_logger()->info('Whitelist: WooCommerce/PayPal-AJAX erkannt.', [
+			$this->get_logger()->info('Whitelist: WooCommerce/PayPal-AJAX detected.', [
 				'wc-ajax' => $wc_ajax_action,
 			]);
 			return true;
@@ -250,16 +255,16 @@ class Whitelist_Validator extends BaseProtection {
 
 		// WooCommerce Store API / REST API
 		if (defined('REST_REQUEST') && REST_REQUEST) {
-			$route = $_SERVER['REQUEST_URI'] ?? '';
+			$route = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 			if (strpos($route, '/wc/store/') !== false || strpos($route, '/wc/v3/') !== false) {
-				$this->get_logger()->info('Whitelist: WooCommerce REST-API erkannt.', [
+				$this->get_logger()->info('Whitelist: WooCommerce REST-API detected.', [
 					'route' => $route,
 				]);
 				return true;
 			}
 		}
 
-		// Kein Treffer → kein Whitelist-Treffer
+		// No match -> no whitelist match
 		return false;
 	}
 
@@ -271,20 +276,20 @@ class Whitelist_Validator extends BaseProtection {
 	 * @return bool Returns true if the form is considered spam, false otherwise.
 	 */
 	public function is_whitelisted($args): bool {
-		$this->get_logger()->info( 'Führe Whitelist-Überprüfung durch.', [
+		$this->get_logger()->info( 'Performing whitelist check.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		] );
 
-		// 1. Globale Whitelist für AJAX/REST-Requests prüfen
+		// 1. Check global whitelist for AJAX/REST requests
 		if ($this->is_whitelisted_ajax_or_rest()) {
-			$this->get_logger()->info('Whitelist: AJAX/REST-Request erkannt – Captcha-Schutz global übersprungen.');
+			$this->get_logger()->info('Whitelist: AJAX/REST request detected - captcha protection globally skipped.');
 			return true;
 		}
 
-		// Wenn Modul deaktiviert ist → kein Spam
+		// If module is disabled -> no spam
 		if ( ! $this->is_enabled() ) {
-			$this->get_logger()->debug( 'Whitelist-Check übersprungen: Whitelist-Schutz ist deaktiviert.', [
+			$this->get_logger()->debug( 'Whitelist check skipped: whitelist protection is disabled.', [
 				'class' => __CLASS__,
 			] );
 
@@ -298,29 +303,30 @@ class Whitelist_Validator extends BaseProtection {
 		$whitelisted_admin_role = isset( $settings['global']['protection_whitelist_role_admin'] ) ? (int) $settings['global']['protection_whitelist_role_admin'] : 0;
 		$whitelisted_logged_in  = isset( $settings['global']['protection_whitelist_role_logged_in'] ) ? (int) $settings['global']['protection_whitelist_role_logged_in'] : 0;
 
-		$user_id = wp_validate_auth_cookie( $_COOKIE[ LOGGED_IN_COOKIE ] ?? '', 'logged_in' );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Raw cookie value required for wp_validate_auth_cookie() HMAC verification
+		$user_id = wp_validate_auth_cookie( isset( $_COOKIE[ LOGGED_IN_COOKIE ] ) ? wp_unslash( $_COOKIE[ LOGGED_IN_COOKIE ] ) : '', 'logged_in' );
 		if ( $user_id ) {
-			wp_set_current_user( $user_id ); // User-Kontext herstellen
+			wp_set_current_user( $user_id ); // Establish user context
 		}
 
 		$current_user = wp_get_current_user();
 
 
-		$this->get_logger()->debug( "REST-Request erkannt", [
+		$this->get_logger()->debug( "REST request detected", [
 			'is_logged_in' => is_user_logged_in() ? 'yes' : 'no',
 			'user'         => wp_get_current_user()->user_login ?: 'guest',
-			'has_nonce'    => wp_verify_nonce( $_SERVER['HTTP_X_WP_NONCE'] ?? '', 'wp_rest' ) ? 'valid' : 'missing/invalid',
+			'has_nonce'    => wp_verify_nonce( isset( $_SERVER['HTTP_X_WP_NONCE'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_WP_NONCE'] ) ) : '', 'wp_rest' ) ? 'valid' : 'missing/invalid',
 		] );
 
 		if ( $current_user->exists() && $whitelisted_logged_in ) {
-			$this->get_logger()->info( "Validation übersprungen: Benutzer ist eingeloggt", [
+			$this->get_logger()->info( "Validation skipped: user is logged in", [
 				'plugin' => 'f12-cf7-captcha',
 				'user'   => wp_get_current_user()->user_login ?? 'unknown'
 			] );
 
 			return true;
 		}else {
-			$this->get_logger()->info( "Validation nicht übersprungen: Benutzer nicht eingeloggt oder nicht auf Whitelist", [
+			$this->get_logger()->info( "Validation not skipped: user not logged in or not on whitelist", [
 				'plugin' => 'f12-cf7-captcha',
 				'user'   => is_user_logged_in() ? ( wp_get_current_user()->user_login ?? 'unknown' ) : 'guest',
 				'whitelisted_logged_in' => $whitelisted_logged_in ? 'yes' : 'no',
@@ -331,14 +337,14 @@ class Whitelist_Validator extends BaseProtection {
 
 			// Check if the user has the 'administrator' role
 			if ( in_array( 'administrator', (array)$current_user->roles ) ) {
-				$this->get_logger()->info( "Validation übersprungen: Benutzer ist Administrator", [
+				$this->get_logger()->info( "Validation skipped: user is administrator", [
 					'plugin' => 'f12-cf7-captcha',
 					'user'   => $current_user->user_login
 				] );
 
 				return true;
 			} else {
-				$this->get_logger()->debug( "Benutzer eingeloggt, aber kein Admin → keine Ausnahme", [
+				$this->get_logger()->debug( "User logged in but not admin - no exception", [
 					'plugin' => 'f12-cf7-captcha',
 					'user'   => $current_user->user_login
 				] );
@@ -346,7 +352,7 @@ class Whitelist_Validator extends BaseProtection {
 				return false;
 			}
 		} else {
-			$this->get_logger()->info( "Validation nicht übersprungen: Kein Benutzer eingeloggt oder Admin-Whitelist deaktiviert", [
+			$this->get_logger()->info( "Validation not skipped: no user logged in or admin whitelist disabled", [
 				'plugin'                => 'f12-cf7-captcha',
 				'user'                  => is_user_logged_in() ? ( wp_get_current_user()->user_login ?? 'unknown' ) : 'guest',
 				'whitelisted_admin_role' => $whitelisted_admin_role ? 'yes' : 'no',
@@ -355,7 +361,7 @@ class Whitelist_Validator extends BaseProtection {
 
 
 		// Get the current user's IP address
-		$user_ip = $_SERVER['REMOTE_ADDR'];
+		$user_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
 		// Trim and clean whitelist values for comparison
 		$whitelisted_emails = array_map( 'trim', $whitelisted_emails );
@@ -365,14 +371,14 @@ class Whitelist_Validator extends BaseProtection {
 
 		// Check if the user's IP is in the whitelist
 		if ( in_array( $user_ip, $whitelisted_ips ) ) {
-			$this->get_logger()->info( "Validation übersprungen: IP ist auf Whitelist", [
+			$this->get_logger()->info( "Validation skipped: IP is on whitelist", [
 				'plugin' => 'f12-cf7-captcha',
 				'ip'     => $user_ip
 			] );
 
 			return true;
 		} else {
-			$this->get_logger()->info( "Validation nicht übersprungen: IP nicht auf Whitelist", [
+			$this->get_logger()->info( "Validation not skipped: IP not on whitelist", [
 				'plugin' => 'f12-cf7-captcha',
 				'ip'     => $user_ip,
 			] );
@@ -382,7 +388,7 @@ class Whitelist_Validator extends BaseProtection {
 		// Iterate through each $_POST variable to check if any match a whitelisted email
 		foreach ( $args as $value ) {
 			if ( $this->is_whitelisted_email( $value, $whitelisted_emails ) ) {
-				$this->get_logger()->info( "Validation übersprungen: Email ist auf Whitelist", [
+				$this->get_logger()->info( "Validation skipped: email is on whitelist", [
 					'plugin' => 'f12-cf7-captcha',
 					'email'  => $value
 				] );
@@ -391,7 +397,7 @@ class Whitelist_Validator extends BaseProtection {
 			}
 		}
 
-		$this->get_logger()->debug( "Validation nicht übersprungen", [
+		$this->get_logger()->debug( "Validation not skipped", [
 			'plugin' => 'f12-cf7-captcha',
 			'ip'     => $user_ip,
 			'args'   => $args
@@ -402,18 +408,18 @@ class Whitelist_Validator extends BaseProtection {
 
 
 	public function success(): void {
-		$this->get_logger()->info( 'Erfolgreiche Formularübermittlung erkannt.', [
+		$this->get_logger()->info( 'Successful form submission detected.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
 		] );
 
-		// Hier kann zusätzliche Logik implementiert werden,
-		// die bei einer erfolgreichen Validierung ausgeführt werden soll.
-		// Zum Beispiel:
-		// - Löschen temporärer Daten
-		// - Senden einer Benachrichtigung
-		// - Aktualisieren von Zählern
+		// Additional logic can be implemented here
+		// that should be executed on successful validation.
+		// For example:
+		// - Deleting temporary data
+		// - Sending a notification
+		// - Updating counters
 
-		// TODO: Implementieren Sie die Erfolg-Logik hier.
+		// TODO: Implement the success logic here.
 	}
 }

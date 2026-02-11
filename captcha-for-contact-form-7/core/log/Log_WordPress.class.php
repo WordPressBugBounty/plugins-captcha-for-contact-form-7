@@ -15,11 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 
-require_once( plugin_dir_path( dirname(dirname(__FILE__) )) . '/logger/logger.php' );
-
-require_once( 'Array_Formatter.class.php' );
-
-class Log_WordPress {
+class Log_WordPress implements Log_WordPress_Interface {
 	/**
 	 * @var LoggerInterface
 	 */
@@ -69,7 +65,7 @@ class Log_WordPress {
 			 * Load Taxonomy
 			 */
 			add_action( 'init', [ $this, 'wp_register_taxonomy' ] );
-			$this->logger->debug( "Hook registriert: init -> wp_register_taxonomy", [
+			$this->logger->debug( "Hook registered: init -> wp_register_taxonomy", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 
@@ -77,7 +73,7 @@ class Log_WordPress {
 			 * Load Post Type
 			 */
 			add_action( 'init', [ $this, 'wp_register_post_type' ] );
-			$this->logger->debug( "Hook registriert: init -> wp_register_post_type", [
+			$this->logger->debug( "Hook registered: init -> wp_register_post_type", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 
@@ -85,24 +81,24 @@ class Log_WordPress {
 			 * Add Menu Entries for Logger
 			 */
 			add_action( 'admin_menu', [ $this, 'wp_set_admin_submenu_page' ] );
-			$this->logger->debug( "Hook registriert: admin_menu -> wp_set_admin_submenu_page", [
+			$this->logger->debug( "Hook registered: admin_menu -> wp_set_admin_submenu_page", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 
 			add_filter( 'parent_file', [ $this, 'wp_set_admin_menu_active' ] );
-			$this->logger->debug( "Hook registriert: parent_file -> wp_set_admin_menu_active", [
+			$this->logger->debug( "Hook registered: parent_file -> wp_set_admin_menu_active", [
 				'plugin' => 'f12-cf7-captcha'
 			] );
 		} catch ( \Throwable $e ) {
-			// Fehler sofort im Log dokumentieren
+			// Document error immediately in log
 			if ( isset( $this->logger ) ) {
-				$this->logger->error( "Fehler beim Initialisieren des Logger-Moduls", [
+				$this->logger->error( "Error initializing logger module", [
 					'plugin' => 'f12-cf7-captcha',
 					'class'  => static::class,
 					'error'  => $e->getMessage()
 				] );
 			}
-			throw $e; // wichtig: Fehler nicht verschlucken
+			throw $e; // important: do not swallow errors
 		}
 	}
 
@@ -121,7 +117,7 @@ class Log_WordPress {
 			'edit.php?post_type=f12_captcha_log'
 		);
 
-		$this->get_logger()->debug("Admin-Submenu für Logs registriert", [
+		$this->get_logger()->debug("Admin submenu for logs registered", [
 			'plugin'     => 'f12-cf7-captcha',
 			'menu_slug'  => 'f12-cf7-captcha',
 			'page_title' => 'Log Entries',
@@ -146,7 +142,7 @@ class Log_WordPress {
 		global $submenu_file, $current_screen;
 
 		if ( ! $current_screen ) {
-			$this->get_logger()->error("Admin-Menü konnte nicht gesetzt werden: current_screen fehlt", [
+			$this->get_logger()->error("Admin menu could not be set: current_screen missing", [
 				'plugin' => 'f12-cf7-captcha',
 				'class'  => static::class
 			]);
@@ -157,14 +153,14 @@ class Log_WordPress {
 			$submenu_file = 'edit.php?post_type=f12_captcha_log';
 			$parent_file  = 'f12-cf7-captcha';
 
-			$this->get_logger()->debug("Admin-Menü aktiv gesetzt", [
+			$this->get_logger()->debug("Admin menu set to active", [
 				'plugin'    => 'f12-cf7-captcha',
 				'post_type' => $current_screen->post_type,
 				'submenu'   => $submenu_file,
 				'parent'    => $parent_file
 			]);
 		} else {
-			$this->get_logger()->debug("Admin-Menü nicht geändert", [
+			$this->get_logger()->debug("Admin menu not changed", [
 				'plugin'    => 'f12-cf7-captcha',
 				'post_type' => $current_screen->post_type,
 				'parent'    => $parent_file
@@ -235,13 +231,13 @@ class Log_WordPress {
 				'public'            => false,
 			) );
 
-			$this->get_logger()->info("Taxonomie registriert", [
+			$this->get_logger()->info("Taxonomy registered", [
 				'plugin'     => 'f12-cf7-captcha',
 				'taxonomy'   => 'log_status',
 				'post_types' => ['deals']
 			]);
 		} catch (\Throwable $e) {
-			$this->get_logger()->error("Fehler beim Registrieren der Taxonomie", [
+			$this->get_logger()->error("Error registering taxonomy", [
 				'plugin'   => 'f12-cf7-captcha',
 				'taxonomy' => 'log_status',
 				'error'    => $e->getMessage()
@@ -264,7 +260,7 @@ class Log_WordPress {
 		}
 
 		if (empty($defaultTerms)) {
-			$this->get_logger()->debug("Alle Default-Terme bereits vorhanden", [
+			$this->get_logger()->debug("All default terms already exist", [
 				'plugin'   => 'f12-cf7-captcha',
 				'taxonomy' => 'log_status'
 			]);
@@ -278,14 +274,14 @@ class Log_WordPress {
 			$result = wp_insert_term($l10n, 'log_status', ['slug' => $slug]);
 
 			if (is_wp_error($result)) {
-				$this->get_logger()->error("Fehler beim Anlegen des Default-Terms", [
+				$this->get_logger()->error("Error creating default term", [
 					'plugin'   => 'f12-cf7-captcha',
 					'taxonomy' => 'log_status',
 					'term'     => $slug,
 					'error'    => $result->get_error_message()
 				]);
 			} else {
-				$this->get_logger()->info("Default-Term angelegt", [
+				$this->get_logger()->info("Default term created", [
 					'plugin'   => 'f12-cf7-captcha',
 					'taxonomy' => 'log_status',
 					'term'     => $slug,
@@ -307,7 +303,7 @@ class Log_WordPress {
 		$enabled = (int) CF7Captcha::get_instance()->get_settings('protection_log_enable', 'global') === 1;
 
 		// Optional Debug-Log
-		$this->get_logger()->debug("Logging Status geprüft", [
+		$this->get_logger()->debug("Logging status checked", [
 			'plugin'  => 'f12-cf7-captcha',
 			'enabled' => $enabled
 		]);
@@ -318,7 +314,7 @@ class Log_WordPress {
 	/**
 	 * Returns the current timezone of the server
 	 *
-	 * @return string, default: Europe/Berlin
+	 * @return string Default: Europe/Berlin.
 	 *
 	 * @since 1.12.3
 	 */
@@ -327,12 +323,12 @@ class Log_WordPress {
 
 		if (empty($timezone_id)) {
 			$timezone_id = 'Europe/Berlin';
-			$this->get_logger()->debug("Keine Zeitzone in WP konfiguriert, Fallback gesetzt", [
+			$this->get_logger()->debug("No timezone configured in WP, fallback set", [
 				'plugin'   => 'f12-cf7-captcha',
 				'timezone' => $timezone_id
 			]);
 		} else {
-			$this->get_logger()->debug("Zeitzone geladen", [
+			$this->get_logger()->debug("Timezone loaded", [
 				'plugin'   => 'f12-cf7-captcha',
 				'timezone' => $timezone_id
 			]);
@@ -355,12 +351,12 @@ class Log_WordPress {
 	 *
 	 * @since 1.0.0
 	 */
-	public function maybe_log( string $type, array $form_data, bool $is_spam = true, string $message = '' ) {
+	public function maybe_log( string $type, array $form_data, bool $is_spam = true, string $message = '' ): bool {
 		/*
 		 * Skip if logging is disabled
 		 */
 		if ( ! $this->is_logging_enabled() ) {
-			$this->get_logger()->debug("Logging übersprungen – deaktiviert", [
+			$this->get_logger()->debug("Logging skipped - disabled", [
 				'plugin' => 'f12-cf7-captcha',
 				'type'   => $type
 			]);
@@ -477,7 +473,7 @@ class Log_WordPress {
 		if ( ! is_numeric( $post_id ) || 0 === $post_id ) {
 			$this->last_insert_id = 0;
 
-			$this->get_logger()->error("Log konnte nicht gespeichert werden", [
+			$this->get_logger()->error("Log could not be saved", [
 				'plugin'   => 'f12-cf7-captcha',
 				'type'     => $type,
 				'title'    => $log_title
@@ -501,7 +497,7 @@ class Log_WordPress {
 		/*
 		 * Write to technical log
 		 */
-		$this->get_logger()->info("Logeintrag erstellt", [
+		$this->get_logger()->info("Log entry created", [
 			'plugin'   => 'f12-cf7-captcha',
 			'type'     => $type,
 			'post_id'  => $post_id,
@@ -519,7 +515,7 @@ class Log_WordPress {
 	 */
 	public function get_last_entry(): ?WP_Post {
 		if ( $this->last_insert_id == 0 ) {
-			$this->get_logger()->debug("Kein letzter Log-Eintrag vorhanden", [
+			$this->get_logger()->debug("No last log entry available", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			return null;
@@ -528,7 +524,7 @@ class Log_WordPress {
 		$post = get_post( $this->last_insert_id );
 
 		if ( $post instanceof \WP_Post ) {
-			$this->get_logger()->debug("Letzter Log-Eintrag geladen", [
+			$this->get_logger()->debug("Last log entry loaded", [
 				'plugin' => 'f12-cf7-captcha',
 				'post_id'=> $this->last_insert_id,
 				'title'  => $post->post_title ?? 'unknown'
@@ -536,7 +532,7 @@ class Log_WordPress {
 			return $post;
 		}
 
-		$this->get_logger()->error("Fehler: Letzter Log-Eintrag konnte nicht geladen werden", [
+		$this->get_logger()->error("Error: Last log entry could not be loaded", [
 			'plugin' => 'f12-cf7-captcha',
 			'post_id'=> $this->last_insert_id
 		]);
@@ -549,7 +545,7 @@ class Log_WordPress {
 	 *
 	 * @return void
 	 * @deprecated
-	 * @use Log_WordPress::maybe_log()
+	 * @see Log_WordPress::maybe_log()
 	 *
 	 */
 	public static function store( $Log_Item ) {
@@ -557,7 +553,7 @@ class Log_WordPress {
 		$log_wp = Log_WordPress::get_instance();
 
 		if ( ! $log_wp->is_logging_enabled() ) {
-			$logger->debug("Logging übersprungen – deaktiviert", [
+			$logger->debug("Logging skipped - disabled", [
 				'plugin'   => 'f12-cf7-captcha',
 				'log_item' => method_exists($Log_Item, 'get_name') ? $Log_Item->get_name() : 'unknown'
 			]);
@@ -566,7 +562,7 @@ class Log_WordPress {
 
 		$is_spam = $Log_Item->get_log_status_slug() === 'spam';
 
-		$logger->info("Log Item wird gespeichert", [
+		$logger->info("Log item being saved", [
 			'plugin'   => 'f12-cf7-captcha',
 			'name'     => $Log_Item->get_name(),
 			'status'   => $is_spam ? 'spam' : 'verified'
@@ -591,7 +587,7 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			$this->get_logger()->error("WPDB nicht definiert", [
+			$this->get_logger()->error("WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB is not defined');
@@ -599,7 +595,7 @@ class Log_WordPress {
 
 		$table = $wpdb->prefix . 'posts';
 
-		$this->get_logger()->debug("Tabellenname ermittelt", [
+		$this->get_logger()->debug("Table name determined", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => $table
 		]);
@@ -621,7 +617,7 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			$this->get_logger()->error("WPDB nicht definiert", [
+			$this->get_logger()->error("WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB is not defined');
@@ -635,17 +631,18 @@ class Log_WordPress {
 			'f12_captcha_log'
 		);
 
-		$this->get_logger()->debug("Zähle Log-Einträge", [
+		$this->get_logger()->debug("Counting log entries", [
 			'plugin' => 'f12-cf7-captcha',
 			'query'  => $sql
 		]);
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$result = $wpdb->get_results($sql);
 
 		if ( isset( $result[0] ) ) {
 			$count = (int) $result[0]->counting;
 
-			$this->get_logger()->info("Log-Einträge gezählt", [
+			$this->get_logger()->info("Log entries counted", [
 				'plugin' => 'f12-cf7-captcha',
 				'count'  => $count
 			]);
@@ -653,7 +650,7 @@ class Log_WordPress {
 			return $count;
 		}
 
-		$this->get_logger()->warning("Keine Log-Einträge gefunden", [
+		$this->get_logger()->warning("No log entries found", [
 			'plugin' => 'f12-cf7-captcha'
 		]);
 
@@ -671,7 +668,7 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			$this->get_logger()->error("WPDB nicht definiert", [
+			$this->get_logger()->error("WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB is not defined');
@@ -685,14 +682,15 @@ class Log_WordPress {
 			'f12_captcha_log'
 		);
 
-		$this->get_logger()->warning("Alle Logs werden gelöscht", [
+		$this->get_logger()->warning("Deleting all logs", [
 			'plugin' => 'f12-cf7-captcha',
 			'query'  => $sql
 		]);
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$deleted = (int) $wpdb->query($sql);
 
-		$this->get_logger()->info("Logs gelöscht", [
+		$this->get_logger()->info("Logs deleted", [
 			'plugin'  => 'f12-cf7-captcha',
 			'deleted' => $deleted
 		]);
@@ -713,7 +711,7 @@ class Log_WordPress {
 		global $wpdb;
 
 		if ( ! $wpdb ) {
-			$this->get_logger()->error("WPDB nicht definiert", [
+			$this->get_logger()->error("WPDB not defined", [
 				'plugin' => 'f12-cf7-captcha'
 			]);
 			throw new \RuntimeException('WPDB is not defined');
@@ -728,15 +726,16 @@ class Log_WordPress {
 			esc_sql($create_time)
 		);
 
-		$this->get_logger()->warning("Lösche alte Logs", [
+		$this->get_logger()->warning("Deleting old logs", [
 			'plugin' => 'f12-cf7-captcha',
 			'before' => $create_time,
 			'query'  => $sql
 		]);
 
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$deleted = (int) $wpdb->query($sql);
 
-		$this->get_logger()->info("Alte Logs gelöscht", [
+		$this->get_logger()->info("Old logs deleted", [
 			'plugin'  => 'f12-cf7-captcha',
 			'deleted' => $deleted,
 			'before'  => $create_time
