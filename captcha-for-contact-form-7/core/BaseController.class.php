@@ -83,7 +83,7 @@ abstract class BaseController {
 	 */
 	public function get_name(): string
 	{
-		return $this->name;
+		return __($this->name, 'captcha-for-contact-form-7');
 	}
 
 	/**
@@ -159,8 +159,6 @@ abstract class BaseController {
 	 */
 	protected function on_init(): void
 	{
-		$this->name = __($this->name, 'captcha-for-contact-form-7');
-
 		foreach ($this->hooks as $hook) {
 			$type     = $hook['type'] ?? 'action';
 			$name     = $hook['hook'];
@@ -203,21 +201,30 @@ abstract class BaseController {
 	/**
 	 * Get the captcha HTML from the Protection module.
 	 *
+	 * @param string|null $form_id Optional form ID for per-form settings resolution.
+	 *
 	 * @return string
 	 */
-	protected function get_captcha_html(): string
+	protected function get_captcha_html( ?string $form_id = null ): string
 	{
-		return $this->get_protection()->get_captcha();
+		$protection = $this->get_protection();
+
+		$protection->set_context( $this->id, $form_id );
+		$html = $protection->get_captcha();
+		$protection->clear_context();
+
+		return $html;
 	}
 
 	/**
 	 * Check if the submitted POST data is spam.
 	 *
-	 * @param array|null $post_data POST data to check. Defaults to $_POST.
+	 * @param array|null  $post_data POST data to check. Defaults to $_POST.
+	 * @param string|null $form_id   Optional form ID for per-form settings resolution.
 	 *
 	 * @return string|null Error message if spam detected, null otherwise.
 	 */
-	protected function check_spam( ?array $post_data = null ): ?string
+	protected function check_spam( ?array $post_data = null, ?string $form_id = null ): ?string
 	{
 		if ( $post_data === null ) {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling compatibility controller
@@ -226,11 +233,12 @@ abstract class BaseController {
 
 		$protection = $this->get_protection();
 
-		if ( $protection->is_spam( $post_data ) ) {
-			return $protection->get_message();
-		}
+		$protection->set_context( $this->id, $form_id );
+		$is_spam = $protection->is_spam( $post_data );
+		$message = $is_spam ? $protection->get_message() : null;
+		$protection->clear_context();
 
-		return null;
+		return $message;
 	}
 
 	/**

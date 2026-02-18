@@ -38,10 +38,13 @@ class ControllerGravityForms extends BaseController {
 
 	public function wp_validation( $validation_result ) {
 		$form       = $validation_result['form'];
+		$form_id    = isset( $form['id'] ) ? (string) $form['id'] : null;
 		$Protection = $this->Controller->get_module( 'protection' );
 
+		$Protection->set_context( $this->id, $form_id );
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Gravity Forms
 		$this->spam_result = $Protection->is_spam( $_POST );
+		$Protection->clear_context();
 
 		if ( $this->spam_result ) {
 			$this->get_logger()->warning( 'Spam detected in wp_validation - form will be blocked.' );
@@ -71,8 +74,13 @@ class ControllerGravityForms extends BaseController {
 		$this->get_logger()->info( 'Starting captcha code insertion into Gravity Forms form.' );
 
 		$form_string = $args[0];
+		$form        = $args[1] ?? null;
+		$form_id     = is_array( $form ) && isset( $form['id'] ) ? (string) $form['id'] : null;
 
-		$captcha = $this->Controller->get_module( 'protection' )->get_captcha();
+		$Protection = $this->Controller->get_module( 'protection' );
+		$Protection->set_context( $this->id, $form_id );
+		$captcha = $Protection->get_captcha();
+		$Protection->clear_context();
 
 		if ( empty( $captcha ) ) {
 			return $form_string;

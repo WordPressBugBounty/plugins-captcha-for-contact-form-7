@@ -30,6 +30,19 @@ class ControllerWPForms extends BaseController {
 	 * @param mixed ...$args
 	 * @return mixed
 	 */
+	public function wp_add_spam_protection(...$args)
+	{
+		$form_data = $args[0] ?? null;
+		$form_id   = is_array( $form_data ) && isset( $form_data['id'] ) ? (string) $form_data['id'] : null;
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captcha HTML is generated internally
+		echo $this->get_captcha_html( $form_id );
+	}
+
+	/**
+	 * @param mixed ...$args
+	 * @return mixed
+	 */
 	public function wp_is_spam(...$args)
 	{
 		$errors = $args[0];
@@ -39,12 +52,12 @@ class ControllerWPForms extends BaseController {
 			return $errors;
 		}
 
-		$form_id = $form_data['id'];
+		$form_id = (string) $form_data['id'];
 
-		$spam_message = $this->check_spam();
+		$spam_message = $this->check_spam( null, $form_id );
 
 		if ($spam_message !== null) {
-			$errors[$form_id]['footer'] = $this->format_spam_message($spam_message);
+			$errors[$form_data['id']]['footer'] = $this->format_spam_message($spam_message);
 		}
 
 		return $errors;

@@ -1380,6 +1380,243 @@ msgstr "Forge12 Interactive GmbH"
 msgid "https://www.forge12.com"
 msgstr "https://www.forge12.com"
 
+#: core/settings/Override_Panel_Renderer.php
+msgid "Captcha Enabled"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Captcha Template"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Captcha Label"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Captcha Placeholder"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Icon Style"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Timer"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Minimum Time (ms)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Validators"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "IP Rate Limiting"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Max Retries"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Max Retries Period (s)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Period Between Submits (s)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Block Time (s)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Content Rules"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "URL Limit"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Blacklist Filter"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Blacklist Greedy Mode"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Whitelist"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Skip for Admins"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Skip for Logged-In"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Logging"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Inherit from parent"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Template 0"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Template 1"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Template 2"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Enabled"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Disabled"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+#, php-format
+msgid "Inherit (%s)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Enable individual settings for this integration"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Enable individual settings for this form"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+#, php-format
+msgid "%1$s (%2$s #%3$s)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Global"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Integration"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "This Form"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Cancel"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Forms"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Form Settings"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Override protection settings per integration or per individual form. Unset values are inherited from the parent level (Global > Integration > Form)."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+#, php-format
+msgid "All %s Forms"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Configure"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Global Settings"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+#, php-format
+msgid "%d Override"
+msgid_plural "%d Overrides"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ui/controller/UI_Forms.php
+msgid "Inherited"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "No installed integrations with forms found."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+#, php-format
+msgid "%d form found"
+msgid_plural "%d forms found"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ui/controller/UI_Forms.php
+msgid "No Forms"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "This page allows you to override protection settings for specific integrations or individual forms."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Inheritance"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Settings are inherited from the parent level. The hierarchy is: Global > Integration > Form. You only need to set values where you want to deviate from the parent."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "How to use"
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Click \"Configure\" next to an integration or form to open the override panel. Enable individual settings and change the values you want to override."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Saving..."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Settings saved."
+msgstr ""
+
+#: ui/controller/UI_Forms.php
+msgid "Error saving settings."
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Error: Compatibility module could not be loaded."
+msgstr ""
+
+#: core/rest/RestController.class.php
+msgid "You do not have permission to access this endpoint."
+msgstr ""
+
+#: core/rest/RestController.class.php
+msgid "Invalid or missing security token."
+msgstr ""
+
 #~ msgid "WooCommerce Login & Registration"
 #~ msgstr "Accesso e Registrazione WooCommerce"
 

@@ -121,9 +121,9 @@ function on_update() {
 			'protection_rules_blacklist_value'         => '',
 			'protection_rules_blacklist_greedy'        => 0,
 			'protection_rules_bbcode_enable'           => 0,
-			'protection_rules_error_message_url'       => __( 'The Limit %d has been reached. Remove the %s to continue.', 'captcha-for-contact-form-7' ),
-			'protection_rules_error_message_bbcode'    => __( 'BBCode is not allowed.', 'captcha-for-contact-form-7' ),
-			'protection_rules_error_message_blacklist' => __( 'The word %s is blacklisted.', 'captcha-for-contact-form-7' ),
+			'protection_rules_error_message_url'       => 'The Limit %d has been reached. Remove the %s to continue.',
+			'protection_rules_error_message_bbcode'    => 'BBCode is not allowed.',
+			'protection_rules_error_message_blacklist' => 'The word %s is blacklisted.',
 			'protection_browser_enable'                => 1,
 			'protection_javascript_enable'             => 1,
 		];
@@ -148,6 +148,24 @@ function on_update() {
 			'from'     => $currentVersion,
 			'to'       => '2.0.0',
 			'mappings' => array_keys( $settings_defaults )
+		] );
+	}
+
+	// 🔹 Upgrade auf 2.4.0 (Per-Form-Overrides Option initialisieren)
+	if ( version_compare( $currentVersion, '2.4.0', '<' ) ) {
+		if ( false === get_option( 'f12-cf7-captcha-form-overrides' ) ) {
+			add_option( 'f12-cf7-captcha-form-overrides', [
+				'integration' => [],
+				'form'        => [],
+			], '', 'no' );
+		}
+
+		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );
+
+		$logger->info( "Upgrade performed: Per-form overrides option initialized", [
+			'plugin' => 'f12-cf7-captcha',
+			'from'   => $currentVersion ?: 'none',
+			'to'     => '2.4.0',
 		] );
 	}
 

@@ -113,7 +113,7 @@ class IPValidator extends BaseProtection {
 	 */
 	protected function is_enabled(): bool
 	{
-		$is_enabled = (int) $this->Controller->get_settings('protection_ip_enable', 'global') === 1;
+		$is_enabled = (int) $this->get_protection_setting('protection_ip_enable') === 1;
 
 		$this->get_logger()->debug('Checking if IP protection is enabled', [
 			'is_enabled_raw' => $is_enabled,
@@ -258,20 +258,11 @@ class IPValidator extends BaseProtection {
 	 */
 	public function validate(): bool
 	{
-		// Load settings
-		$settings = $this->Controller->get_settings();
-
-		// Measure the period of time between those timestamps
-		$allowed_time_between = (int) $settings['global']['protection_ip_period_between_submits'];
-
-		// Max retries period
-		$max_retry_period = time() - (int) $settings['global']['protection_ip_max_retries_period'];
-
-		// Max retries
-		$max_retries = (int) $settings['global']['protection_ip_max_retries'];
-
-		// Block Time
-		$block_time = (int) $settings['global']['protection_ip_block_time'];
+		// Load settings via resolved context
+		$allowed_time_between = (int) $this->get_protection_setting('protection_ip_period_between_submits');
+		$max_retry_period     = time() - (int) $this->get_protection_setting('protection_ip_max_retries_period');
+		$max_retries          = (int) $this->get_protection_setting('protection_ip_max_retries');
+		$block_time           = (int) $this->get_protection_setting('protection_ip_block_time');
 
 		// Get User IP
 		/** @var UserData $User_Data */

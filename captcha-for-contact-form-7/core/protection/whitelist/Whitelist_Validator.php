@@ -296,12 +296,12 @@ class Whitelist_Validator extends BaseProtection {
 			return false;
 		}
 
-		// Get the whitelist settings from the plugin options
+		// Get the whitelist settings - emails/IPs from global, roles via resolved context
 		$settings               = get_option( 'f12-cf7-captcha-settings', [] );
 		$whitelisted_emails     = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", trim( $settings['global']['protection_whitelist_emails'] ) ) : [];
 		$whitelisted_ips        = isset( $settings['global']['protection_whitelist_ips'] ) ? explode( "\n", $settings['global']['protection_whitelist_ips'] ) : [];
-		$whitelisted_admin_role = isset( $settings['global']['protection_whitelist_role_admin'] ) ? (int) $settings['global']['protection_whitelist_role_admin'] : 0;
-		$whitelisted_logged_in  = isset( $settings['global']['protection_whitelist_role_logged_in'] ) ? (int) $settings['global']['protection_whitelist_role_logged_in'] : 0;
+		$whitelisted_admin_role = (int) $this->get_protection_setting( 'protection_whitelist_role_admin' );
+		$whitelisted_logged_in  = (int) $this->get_protection_setting( 'protection_whitelist_role_logged_in' );
 
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Raw cookie value required for wp_validate_auth_cookie() HMAC verification
 		$user_id = wp_validate_auth_cookie( isset( $_COOKIE[ LOGGED_IN_COOKIE ] ) ? wp_unslash( $_COOKIE[ LOGGED_IN_COOKIE ] ) : '', 'logged_in' );

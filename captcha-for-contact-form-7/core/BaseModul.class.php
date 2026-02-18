@@ -78,4 +78,24 @@ abstract class BaseModul {
 			$this->get_logger()->debug('Message set successfully.');
 		}
 	}
+
+	/**
+	 * Get a protection setting resolved through the current context hierarchy.
+	 *
+	 * Falls back to reading from global settings if no context is set on Protection.
+	 *
+	 * @param string $key The setting key.
+	 *
+	 * @return mixed
+	 */
+	protected function get_protection_setting( string $key ) {
+		try {
+			/** @var \f12_cf7_captcha\core\protection\Protection $protection */
+			$protection = $this->Controller->get_module( 'protection' );
+			return $protection->get_setting( $key );
+		} catch ( \Throwable $e ) {
+			// Fallback to direct global read if Protection module not yet available
+			return $this->Controller->get_settings( $key, 'global' );
+		}
+	}
 }

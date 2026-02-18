@@ -219,7 +219,7 @@ class RulesHandler extends BaseProtection {
 			'method' => __METHOD__,
 		]);
 
-		$rule_enabled = (int)$this->Controller->get_settings('protection_rules_blacklist_enable', 'global');
+		$rule_enabled = (int)$this->get_protection_setting('protection_rules_blacklist_enable');
 
 		if ($rule_enabled !== 1) {
 			$this->get_logger()->warning('Blacklist rule is disabled. Skipping addition.');
@@ -240,13 +240,13 @@ class RulesHandler extends BaseProtection {
 			return;
 		}
 
-		$error_message = $this->Controller->get_settings('protection_rules_error_message_blacklist', 'global');
+		$error_message = $this->get_protection_setting('protection_rules_error_message_blacklist');
 		if (empty($error_message)) {
 			$error_message = __('The word %s is blacklisted. Please remove it to continue.', 'captcha-for-contact-form-7');
 			$this->get_logger()->debug('Default error message for blacklist used.');
 		}
 
-		$rule_greedy = $this->Controller->get_settings('protection_rules_blacklist_greedy', 'global');
+		$rule_greedy = $this->get_protection_setting('protection_rules_blacklist_greedy');
 		if (!is_numeric($rule_greedy)) {
 			$rule_greedy = 0;
 			$this->get_logger()->debug('Greedy setting is not a number. Default value 0 used.');
@@ -286,7 +286,7 @@ class RulesHandler extends BaseProtection {
 			'method' => __METHOD__,
 		]);
 
-		$rule_enabled = (int)$this->Controller->get_settings('protection_rules_bbcode_enable', 'global');
+		$rule_enabled = (int)$this->get_protection_setting('protection_rules_bbcode_enable');
 
 		if ($rule_enabled !== 1) {
 			$this->get_logger()->warning('BBCode rule is disabled. Skipping addition.');
@@ -299,7 +299,7 @@ class RulesHandler extends BaseProtection {
 			return;
 		}
 
-		$error_message = $this->Controller->get_settings('protection_rules_error_message_bbcode', 'global');
+		$error_message = $this->get_protection_setting('protection_rules_error_message_bbcode');
 
 		if (empty($error_message)) {
 			$error_message = __('BBCode is not allowed.', 'captcha-for-contact-form-7');
@@ -335,7 +335,7 @@ class RulesHandler extends BaseProtection {
 			'method' => __METHOD__,
 		]);
 
-		$rule_enabled = (int)$this->Controller->get_settings('protection_rules_url_enable', 'global');
+		$rule_enabled = (int)$this->get_protection_setting('protection_rules_url_enable');
 
 		if ($rule_enabled !== 1) {
 			$this->get_logger()->warning('URL rule is disabled. Skipping addition.');
@@ -348,14 +348,14 @@ class RulesHandler extends BaseProtection {
 			return;
 		}
 
-		$rule_limit = $this->Controller->get_settings('protection_rules_url_limit', 'global');
+		$rule_limit = $this->get_protection_setting('protection_rules_url_limit');
 
 		if (!is_numeric($rule_limit)) {
 			$rule_limit = 0;
 			$this->get_logger()->debug('Limit setting is not a number. Default value 0 used.');
 		}
 
-		$error_message = $this->Controller->get_settings('protection_rules_error_message_url', 'global');
+		$error_message = $this->get_protection_setting('protection_rules_error_message_url');
 
 		if (empty($error_message)) {
 			$error_message = __('The Limit %d for URLs has been reached. Remove the %s to continue.', 'captcha-for-contact-form-7');

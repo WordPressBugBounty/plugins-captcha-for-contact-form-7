@@ -9,6 +9,8 @@ namespace f12_cf7_captcha {
 	use f12_cf7_captcha\core\protection\ip\IPBan;
 	use f12_cf7_captcha\core\protection\ip\IPLog;
 	use f12_cf7_captcha\core\protection\Protection;
+	use f12_cf7_captcha\core\settings\Override_Panel_Renderer;
+	use f12_cf7_captcha\core\settings\Settings_Resolver;
 	use f12_cf7_captcha\core\timer\Timer_Controller;
 	use f12_cf7_captcha\ui\UI_Manager;
 	use f12_cf7_captcha\ui\UI_Page_Form;
@@ -436,6 +438,35 @@ namespace f12_cf7_captcha {
                                             <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"
                                                    id="component-<?php esc_attr_e( $id ); ?>"></label>
                                         </div>
+                                        <a href="#" class="f12-configure-btn"
+                                           data-panel="<?php echo esc_attr( 'f12-panel-integration-' . $id ); ?>"><?php esc_html_e( 'Configure', 'captcha-for-contact-form-7' ); ?></a>
+										<?php
+										$resolver         = new Settings_Resolver();
+										$int_overrides    = $resolver->get_integration_overrides( $id );
+										$int_enabled      = ! empty( $int_overrides['_enabled'] );
+										$int_override_cnt = 0;
+										if ( $int_enabled ) {
+											foreach ( $int_overrides as $k => $v ) {
+												if ( $k !== '_enabled' ) {
+													$int_override_cnt ++;
+												}
+											}
+										}
+										?>
+										<?php if ( $int_enabled && $int_override_cnt > 0 ) : ?>
+                                            <span class="f12-forms-badge f12-forms-badge--active" style="position:relative; z-index:11;">
+												<?php
+												echo esc_html( sprintf(
+													_n( '%d Override', '%d Overrides', $int_override_cnt, 'captcha-for-contact-form-7' ),
+													$int_override_cnt
+												) );
+												?>
+											</span>
+										<?php else : ?>
+                                            <span class="f12-forms-badge f12-forms-badge--global" style="position:relative; z-index:11;">
+												<?php esc_html_e( 'Global Settings', 'captcha-for-contact-form-7' ); ?>
+											</span>
+										<?php endif; ?>
                                     </div>
 								<?php } ?>
                             </div>
@@ -1440,6 +1471,49 @@ namespace f12_cf7_captcha {
             </div>
 
 			<?php
+			// Render hidden panels for each installed integration
+			$resolver = new Settings_Resolver();
+			$Controller_panels = CF7Captcha::getInstance();
+			$Components_panels = [];
+			try {
+				$Compatibility_panels = $Controller_panels->get_module( 'compatibility' );
+				$Components_panels    = $Compatibility_panels->get_components();
+			} catch ( \Exception $e ) {
+				// Already handled above
+			}
+
+			foreach ( $Components_panels as $component ) {
+				$Base_Controller_panel = $component['object'];
+				if ( ! $Base_Controller_panel->is_installed() ) {
+					continue;
+				}
+				$panel_id   = $Base_Controller_panel->get_id();
+				$panel_name = $Base_Controller_panel->get_name();
+				$overrides  = $resolver->get_integration_overrides( $panel_id );
+				// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- HTML from Override_Panel_Renderer is properly escaped internally
+				echo Override_Panel_Renderer::render_integration_panel( $panel_id, $panel_name, $settings, $overrides );
+			}
+
+			// Render the slide-in container shell
+			Override_Panel_Renderer::render_slide_in_container();
+
+			// Enqueue JS and localize data
+			wp_enqueue_script(
+				'f12-forms-admin',
+				$this->get_ui_manager()->get_plugin_dir_url() . 'ui/assets/f12-forms-admin.js',
+				[],
+				'1.1',
+				true
+			);
+			wp_localize_script( 'f12-forms-admin', 'f12FormsAdmin', [
+				'restUrl'    => esc_url_raw( rest_url( 'f12-cf7-captcha/v1/' ) ),
+				'restNonce'  => wp_create_nonce( 'wp_rest' ),
+				'saving'     => __( 'Saving...', 'captcha-for-contact-form-7' ),
+				'saveLabel'  => __( 'Save', 'captcha-for-contact-form-7' ),
+				'msgSuccess' => __( 'Settings saved.', 'captcha-for-contact-form-7' ),
+				'msgError'   => __( 'Error saving settings.', 'captcha-for-contact-form-7' ),
+				'badgeGlobal' => __( 'Global Settings', 'captcha-for-contact-form-7' ),
+			] );
 		}
 
 		protected function the_sidebar( $slug, $page ) {

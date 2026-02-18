@@ -152,7 +152,7 @@ namespace f12_cf7_captcha\ui {
 		}
 
 		public function get_title(): string {
-			return $this->title;
+			return __($this->title, 'captcha-for-contact-form-7');
 		}
 
 		public function get_class(): string {

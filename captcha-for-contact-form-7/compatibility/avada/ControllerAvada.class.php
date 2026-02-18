@@ -36,10 +36,15 @@ class ControllerAvada extends BaseController {
 	 * @return string The modified HTML form content with spam protection added
 	 */
 	public function wp_add_spam_protection( ...$args ): string {
-		$html = (string) ($args[0] ?? '');
+		$html    = (string) ($args[0] ?? '');
+		$args_el = $args[1] ?? [];
+		$form_id = is_array( $args_el ) && isset( $args_el['form_id'] ) ? (string) $args_el['form_id'] : null;
 		$this->get_logger()->info( 'Adding spam protection elements to Avada form HTML.' );
 
-		$captcha_html = $this->Controller->get_module( 'protection' )->get_captcha();
+		$Protection = $this->Controller->get_module( 'protection' );
+		$Protection->set_context( $this->id, $form_id );
+		$captcha_html = $Protection->get_captcha();
+		$Protection->clear_context();
 
 		$is_captcha_added = false;
 
@@ -101,15 +106,19 @@ class ControllerAvada extends BaseController {
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by Avada theme; sanitized after parse_str()
 		$array_post_data = $this->form_data_to_arary( wp_unslash( $_POST['formData'] ) );
+		$form_id         = isset( $array_post_data['form-id'] ) ? (string) $array_post_data['form-id'] : null;
 
 		/** @var Protection $Protection */
 		$Protection = $this->Controller->get_module( 'protection' );
 
+		$Protection->set_context( $this->id, $form_id );
 		if ( ! $Protection->is_spam( $array_post_data ) ) {
+			$Protection->clear_context();
 			return $value;
 		}
 
 		$message = $Protection->get_message() ?: __( 'Invalid input detected.', 'captcha-for-contact-form-7' );
+		$Protection->clear_context();
 		$this->get_logger()->warning( 'Spam detected!' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by Avada theme; sanitized after parse_str()

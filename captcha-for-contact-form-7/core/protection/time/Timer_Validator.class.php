@@ -225,7 +225,7 @@ class Timer_Validator extends BaseProtection {
 	 */
 	protected function is_enabled(): bool
 	{
-		$is_enabled = (int)$this->Controller->get_settings('protection_time_enable', 'global') === 1;
+		$is_enabled = (int)$this->get_protection_setting('protection_time_enable') === 1;
 
 		if ($is_enabled) {
 			$this->get_logger()->info('Timer protection is globally enabled.');

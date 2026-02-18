@@ -237,7 +237,7 @@ abstract class CaptchaGenerator extends BaseModul
 		$image_url   = plugin_dir_url(dirname(dirname(__FILE__))) . 'assets/';
 		$reload_icon = 'reload-icon.png';
 
-		$setting_icon = $this->Controller->get_settings('protection_captcha_reload_icon', 'global');
+		$setting_icon = $this->get_protection_setting('protection_captcha_reload_icon');
 
 		if ($setting_icon === 'white') {
 			$reload_icon = 'reload-icon-white.png';
@@ -269,7 +269,7 @@ abstract class CaptchaGenerator extends BaseModul
 		);
 
 		return sprintf(
-			'<a href="javascript:void(0);" class="cf7 captcha-reload" title="%s"><img style="margin-top:5px;" src="%s" alt="%s"/></a>',
+			'<a href="#" class="cf7 captcha-reload" title="%s"><img style="margin-top:5px;" src="%s" alt="%s"/></a>',
 			__('Reload Captcha', 'captcha-for-contact-form-7'),
 			$image_url,
 			__('Reload', 'captcha-for-contact-form-7')

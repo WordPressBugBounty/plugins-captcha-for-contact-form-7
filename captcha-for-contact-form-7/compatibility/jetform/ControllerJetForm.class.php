@@ -127,15 +127,23 @@ class ControllerJetForm extends BaseController
 	{
 		$this->get_logger()->info('Starting JetForm validation.');
 
+		$form_id = null;
+		if ( is_object( $handler ) && method_exists( $handler, 'get_form_id' ) ) {
+			$form_id = (string) $handler->get_form_id();
+		}
+
 		$Protection = $this->Controller->get_module('protection');
 
+		$Protection->set_context( $this->id, $form_id );
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by JetFormBuilder
 		if ($Protection->is_spam($_POST)) {
 			$message = $Protection->get_message() ?: __('Invalid input detected.', 'captcha-for-contact-form-7');
+			$Protection->clear_context();
 			$this->get_logger()->warning('Spam detected, validation failed.');
 
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
 			throw new \JFB_Modules\Security\Exceptions\Spam_Exception( $message );
 		}
+		$Protection->clear_context();
 	}
 }

@@ -16,6 +16,7 @@ use f12_cf7_captcha\core\protection\multiple_submission\Multiple_Submission_Vali
 use f12_cf7_captcha\core\protection\rules\RulesHandler;
 use f12_cf7_captcha\core\protection\time\Timer_Validator;
 use f12_cf7_captcha\core\protection\whitelist\Whitelist_Validator;
+use f12_cf7_captcha\core\settings\Settings_Resolver;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -31,6 +32,24 @@ class Protection extends BaseModul {
 	 */
 	private static array $pending_deltas = [];
 	private static bool $shutdown_registered = false;
+
+	/**
+	 * Current context for hierarchical settings resolution.
+	 */
+	private ?string $context_integration_id = null;
+	private ?string $context_form_id = null;
+
+	/**
+	 * Cached resolved settings for the current context.
+	 *
+	 * @var array|null
+	 */
+	private ?array $resolved_settings = null;
+
+	/**
+	 * @var Settings_Resolver|null
+	 */
+	private ?Settings_Resolver $settings_resolver = null;
 
 	public function __construct( CF7Captcha $Controller, Log_WordPress_Interface $Logger ) {
 		parent::__construct( $Controller );
@@ -76,6 +95,84 @@ class Protection extends BaseModul {
 		}
 
 		$this->_modules = $moduls;
+	}
+
+	/**
+	 * Set the current context for hierarchical settings resolution.
+	 *
+	 * Must be called before get_captcha() or is_spam() to enable per-form settings.
+	 *
+	 * @param string      $integration_id The integration identifier (e.g. 'cf7').
+	 * @param string|null $form_id        The form ID, or null for integration-level only.
+	 */
+	public function set_context( string $integration_id, ?string $form_id = null ): void {
+		$this->context_integration_id = $integration_id;
+		$this->context_form_id        = $form_id;
+		$this->resolved_settings      = null; // Invalidate cache
+	}
+
+	/**
+	 * Clear the current context (revert to global settings).
+	 */
+	public function clear_context(): void {
+		$this->context_integration_id = null;
+		$this->context_form_id        = null;
+		$this->resolved_settings      = null;
+	}
+
+	/**
+	 * Get a resolved setting value for the current context.
+	 *
+	 * Falls back to global settings if no context is set.
+	 *
+	 * @param string $key The setting key.
+	 *
+	 * @return mixed The setting value.
+	 */
+	public function get_setting( string $key ) {
+		$resolved = $this->get_resolved_settings();
+
+		return $resolved[ $key ] ?? $this->Controller->get_settings( $key, 'global' );
+	}
+
+	/**
+	 * Get the Settings_Resolver instance (lazy-initialized).
+	 *
+	 * @return Settings_Resolver
+	 */
+	public function get_settings_resolver(): Settings_Resolver {
+		if ( $this->settings_resolver === null ) {
+			$this->settings_resolver = new Settings_Resolver();
+		}
+
+		return $this->settings_resolver;
+	}
+
+	/**
+	 * Get the full resolved settings array for the current context.
+	 *
+	 * @return array
+	 */
+	private function get_resolved_settings(): array {
+		if ( $this->resolved_settings !== null ) {
+			return $this->resolved_settings;
+		}
+
+		// Get global settings as flat array
+		$all_settings    = $this->Controller->get_settings( '', 'global' );
+		$global_settings = is_array( $all_settings ) ? $all_settings : [];
+
+		if ( $this->context_integration_id !== null ) {
+			$this->resolved_settings = $this->get_settings_resolver()->resolve(
+				$global_settings,
+				$this->context_integration_id,
+				$this->context_form_id
+			);
+		} else {
+			$this->resolved_settings = $global_settings;
+		}
+
+		return $this->resolved_settings;
 	}
 
 	/**

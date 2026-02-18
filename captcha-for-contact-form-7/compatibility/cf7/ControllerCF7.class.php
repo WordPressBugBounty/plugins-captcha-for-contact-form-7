@@ -28,6 +28,22 @@ class ControllerCF7 extends BaseController
     }
 
     /**
+     * Get the current CF7 form ID if available.
+     *
+     * @return string|null
+     */
+    private function get_current_form_id(): ?string
+    {
+        if ( function_exists( 'wpcf7_get_current_contact_form' ) ) {
+            $form = wpcf7_get_current_contact_form();
+            if ( $form ) {
+                return (string) $form->id();
+            }
+        }
+        return null;
+    }
+
+    /**
      * @param mixed ...$args
      * @return mixed
      */
@@ -35,7 +51,8 @@ class ControllerCF7 extends BaseController
     {
         $content = $args[0];
 
-        $captcha = sprintf('<p><span class="wpcf7-form-control-wrap">%s</span></p>', $this->get_captcha_html());
+        $form_id = $this->get_current_form_id();
+        $captcha = sprintf('<p><span class="wpcf7-form-control-wrap">%s</span></p>', $this->get_captcha_html( $form_id ));
 
         if (preg_match('!<input(.*?)type="submit"!', $content, $matches)) {
             $content = str_replace($matches[0], $captcha . $matches[0], $content);
@@ -54,7 +71,8 @@ class ControllerCF7 extends BaseController
     {
         $spam = $args[0];
 
-        $spam_message = $this->check_spam();
+        $form_id = $this->get_current_form_id();
+        $spam_message = $this->check_spam( null, $form_id );
 
         if ($spam_message !== null) {
             add_filter('wpcf7_display_message', function ($message, $status) use ($spam_message) {

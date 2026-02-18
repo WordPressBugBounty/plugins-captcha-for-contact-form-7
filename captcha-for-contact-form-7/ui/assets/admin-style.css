@@ -374,7 +374,8 @@
 
 .forge12-plugin-content .option .toggle-item-wrapper {
     display: flex;
-    flex-flow: column nowrap;
+    flex-flow: row nowrap;
+    align-items: center;
     margin-bottom: 10px;
 }
 
@@ -616,12 +617,17 @@
     display: flex;
     justify-content: flex-start;
     align-items: center;
+    flex: 1;
+    min-width: 0;
 }
 
 .toggle-item-wrapper {
     position: relative;
     width: calc(100% - 20px);
     padding: 20px 5px;
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
 }
 
 .toggle-item-wrapper .overlay {
@@ -688,4 +694,271 @@
 
 #toplevel_page_f12-cf7-captcha div.wp-menu-image {
     margin-top: -2px;
+}
+
+/**
+ * Forms page: Integration cards
+ */
+.f12-forms-integration-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid #edeaea;
+}
+
+.f12-forms-integration-row:last-child {
+    border-bottom: none;
+}
+
+.f12-forms-integration-row.f12-forms-unavailable {
+    opacity: 0.5;
+}
+
+/**
+ * Forms page: Status badges
+ */
+.f12-forms-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.f12-forms-badge--active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.f12-forms-badge--global {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.f12-forms-badge--unavailable {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/**
+ * Forms page: Source indicator in form detail
+ */
+.f12-forms-source {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.f12-forms-source--global {
+    color: #64748b;
+}
+
+.f12-forms-source--integration {
+    color: #1e40af;
+}
+
+.f12-forms-source--form {
+    color: #166534;
+}
+
+/**
+ * Slide-In Panel: Backdrop
+ */
+.f12-slide-in-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 99999;
+    display: none;
+}
+
+.f12-slide-in-backdrop.f12-slide-in-visible {
+    display: block;
+}
+
+/**
+ * Slide-In Panel: Container
+ */
+.f12-slide-in {
+    position: fixed;
+    top: 0;
+    right: -500px;
+    width: 500px;
+    height: 100%;
+    background: #f8f9fa;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+    z-index: 100000;
+    transition: right 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.f12-slide-in.f12-slide-in-visible {
+    right: 0;
+}
+
+/**
+ * Slide-In Panel: Header
+ */
+.f12-slide-in-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #111;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.f12-slide-in-header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 16px;
+}
+
+.f12-slide-in-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+/**
+ * Slide-In Panel: Body (scrollable)
+ */
+.f12-slide-in-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.f12-slide-in-body h4 {
+    margin: 20px 0 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #edeaea;
+    font-size: 14px;
+}
+
+.f12-slide-in-body h4:first-child {
+    margin-top: 0;
+}
+
+/**
+ * Slide-In Panel: Footer
+ */
+.f12-slide-in-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #edeaea;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/**
+ * Slide-In Panel: Override field rows
+ */
+.f12-override-toggle-row {
+    padding: 10px 0 15px;
+    border-bottom: 1px solid #edeaea;
+    margin-bottom: 10px;
+}
+
+.f12-override-toggle-row label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.f12-override-field-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+.f12-override-field-label {
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.f12-override-field-label strong {
+    font-size: 13px;
+}
+
+.f12-override-field-input select,
+.f12-override-field-input input {
+    width: 100%;
+}
+
+/**
+ * Slide-In Panel: Configure Button (Extended Page)
+ */
+.f12-configure-btn {
+    position: relative;
+    z-index: 11;
+    font-size: 12px;
+    color: #258dc8;
+    text-decoration: none;
+    padding: 2px 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.f12-configure-btn:hover {
+    text-decoration: underline;
+}
+
+/**
+ * Slide-In Panel: Notification Toast
+ */
+.f12-slide-in-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 100001;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    display: none;
+}
+
+.f12-slide-in-toast.f12-toast-success {
+    display: block;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.f12-slide-in-toast.f12-toast-error {
+    display: block;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/**
+ * Forms page: Breadcrumb
+ */
+.f12-forms-breadcrumb {
+    margin-bottom: 15px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.f12-forms-breadcrumb a {
+    color: #258dc8;
+    text-decoration: none;
+}
+
+.f12-forms-breadcrumb a:hover {
+    text-decoration: underline;
+}
+
+.f12-forms-breadcrumb .separator {
+    margin: 0 5px;
 }

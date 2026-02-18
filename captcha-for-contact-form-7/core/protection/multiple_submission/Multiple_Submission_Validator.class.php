@@ -72,7 +72,7 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	protected function is_enabled(): bool
 	{
-		$is_enabled = $this->Controller->get_settings('protection_multiple_submission_enable', 'global');
+		$is_enabled = $this->get_protection_setting('protection_multiple_submission_enable');
 
 		if ($is_enabled === '' || $is_enabled === null) {
 			// Default: active if not explicitly set

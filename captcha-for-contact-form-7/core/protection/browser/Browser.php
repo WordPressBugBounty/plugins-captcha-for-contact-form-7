@@ -101,7 +101,7 @@ class Browser extends BaseProtection {
 	 * @return bool Returns true if browser protection is enabled; otherwise, false.
 	 */
 	protected function is_enabled(): bool {
-		$raw_setting = $this->Controller->get_settings( 'protection_browser_enable', 'global' );
+		$raw_setting = $this->get_protection_setting( 'protection_browser_enable' );
 
 		if ($raw_setting === '' || $raw_setting === null) {
 			// Default: active if not explicitly set

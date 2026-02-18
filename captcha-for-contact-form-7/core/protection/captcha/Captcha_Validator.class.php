@@ -161,7 +161,7 @@ class Captcha_Validator extends BaseProtection {
 	 */
 	protected function is_enabled(): bool
 	{
-		$is_enabled = (int) $this->Controller->get_settings('protection_captcha_enable', 'global') === 1;
+		$is_enabled = (int) $this->get_protection_setting('protection_captcha_enable') === 1;
 
 		if (f12_is_debug()) {
 			$this->get_logger()->debug(
@@ -393,7 +393,7 @@ class Captcha_Validator extends BaseProtection {
 	 */
 	protected function get_validation_method(): string
 	{
-		$method = $this->Controller->get_settings('protection_captcha_method', 'global');
+		$method = $this->get_protection_setting('protection_captcha_method');
 
 		if (empty($method)) {
 			$this->get_logger()->warning(

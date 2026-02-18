@@ -402,7 +402,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		/*
 		 * Get the label
 		 */
-		$label = $this->Controller->get_settings( 'protection_captcha_label', 'global' );
+		$label = $this->get_protection_setting( 'protection_captcha_label' );
 
 		/*
 		 * Set the label
@@ -438,7 +438,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		/*
 		 * Get the placeholder
 		 */
-		$placeholder = $this->Controller->get_settings( 'protection_captcha_placeholder', 'global' );
+		$placeholder = $this->get_protection_setting( 'protection_captcha_placeholder' );
 
 		/**
 		 * Generate the captcha html output
@@ -451,7 +451,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		/*
 		 * Get Template
 		 */
-		$template = (int) $this->Controller->get_settings( 'protection_captcha_template', 'global' );
+		$template = (int) $this->get_protection_setting( 'protection_captcha_template' );
 
 		if (!in_array($template, [0, 1, 2], true)) {
 			$template = 0;

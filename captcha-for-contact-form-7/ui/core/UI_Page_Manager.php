@@ -102,7 +102,6 @@ namespace f12_cf7_captcha\ui {
 					'class' => __CLASS__,
 					'method' => __METHOD__,
 					'page_slug' => $UI_Page->get_slug(),
-					'page_title' => $UI_Page->get_title(),
 				]);
 
 				// Store the UI_Page object in the `Page_Storage` array, using the slug as the key.
@@ -156,7 +155,6 @@ namespace f12_cf7_captcha\ui {
 
 				$this->get_logger()->info('UI page successfully found and retrieved.', [
 					'slug' => $slug,
-					'title' => $page->get_title(),
 				]);
 
 				// Return the found UI_Page object.

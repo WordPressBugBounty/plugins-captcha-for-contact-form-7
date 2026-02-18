@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.3.1
+Stable tag: 2.3.2
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,22 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.3.2 =
+- Fix [Captcha]: Fixed reload button href being stripped by wp_kses. Changed `javascript:void(0)` to `#` to be compatible with WordPress HTML sanitization.
+
+= 2.3.1 =
+- New [Admin UI]: Added per-integration and per-form override settings. Protection settings can now be customized at the integration level (e.g. all CF7 forms) or for individual forms, with hierarchical inheritance (Global > Integration > Form).
+- New [Admin UI]: Added slide-in configuration panels on the Extended and Forms admin pages. Click "Configure" next to any integration or form to open the override panel.
+- New [Admin UI]: Added Forms admin page listing all discovered forms across installed integrations (CF7, WPForms, Elementor, Gravity Forms, etc.) with override status badges.
+- New [REST API]: Added `POST /overrides/save` endpoint for persisting integration and form-level override settings via AJAX with admin permission checks and rate limiting.
+- New [Core]: Added hierarchical settings resolution system (`Settings_Resolver`) that merges Global, Integration, and Form-level settings with proper inheritance.
+- New [Core]: Added form discovery system (`Form_Discovery`) that detects forms across all supported integrations.
+- New [Core]: Added `ProtectionContext` for per-form setting resolution during spam validation, enabling form-specific protection behavior.
+- Fix [Compatibility]: Resolved "Translation loading triggered too early" PHP Notice on WordPress 6.7+ that caused "Cookies are blocked due to unexpected output" errors on login pages, breaking compatibility with plugins like SecuPress Move Login.
+- Fix [JavaScript]: Resolved global scope collision where the bundled `WPForms` class overwrote `window.WPForms`, breaking the WPForms plugin. Build output is now wrapped in an IIFE.
+- Improvement [Translations]: Added 57 new translatable strings for override panels and Forms page to all language files (de_DE, de_DE_formal, es_ES, fr_FR, it_IT, pt_PT).
+- Improvement [Compatibility]: Updated integration controllers (Avada, CF7, FluentForms, Gravity Forms, WPForms) with form discovery support and per-form protection context.
+
 = 2.3.0 =
 - Fix [Security]: Closed mass-assignment vulnerability in IPBan and IPLog classes. Properties are now set via explicit allowlist instead of `property_exists()`, preventing overwrite of internal state like the logger or ID fields.
 - Fix [Security]: Replaced `parse_str()` on raw POST data in API verification with targeted regex extraction, eliminating a potential denial-of-service vector via deeply nested keys.

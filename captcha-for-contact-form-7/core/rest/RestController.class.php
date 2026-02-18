@@ -8,6 +8,7 @@ use f12_cf7_captcha\core\protection\captcha\CaptchaAjax;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
 use f12_cf7_captcha\core\protection\rules\RulesAjax;
 use f12_cf7_captcha\core\protection\rules\RulesHandler;
+use f12_cf7_captcha\core\settings\Settings_Resolver;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_REST_Server;
@@ -82,6 +83,40 @@ class RestController extends BaseModul {
 			'args'                => [],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/overrides/save', [
+			'methods'             => 'POST',
+			'callback'            => [ $this, 'handle_overrides_save' ],
+			'permission_callback' => [ $this, 'validate_admin_request' ],
+			'args'                => [
+				'type'           => [
+					'required'          => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+					'validate_callback' => function ( $value ) {
+						return in_array( $value, [ 'integration', 'form' ], true );
+					},
+				],
+				'integration_id' => [
+					'required'          => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				],
+				'form_id'        => [
+					'required'          => false,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				],
+				'enabled'        => [
+					'required' => true,
+					'type'     => 'boolean',
+				],
+				'overrides'      => [
+					'required' => true,
+					'type'     => 'object',
+				],
+			],
+		] );
+
 		$this->get_logger()->info(
 			'register_routes(): REST routes registered',
 			[
@@ -90,6 +125,7 @@ class RestController extends BaseModul {
 					'captcha/reload',
 					'timer/reload',
 					'blacklist/sync',
+					'overrides/save',
 				],
 			]
 		);
@@ -232,6 +268,72 @@ class RestController extends BaseModul {
 
 			return new WP_Error(
 				'blacklist_sync_failed',
+				$e->getMessage(),
+				[ 'status' => 500 ]
+			);
+		}
+	}
+
+	/**
+	 * Handle saving override settings via REST API.
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_overrides_save( WP_REST_Request $request ) {
+		$rate_check = $this->check_rate_limit( 'overrides_save', self::RATE_LIMIT_ADMIN_MAX );
+		if ( $rate_check !== null ) {
+			return $rate_check;
+		}
+
+		try {
+			$type           = $request->get_param( 'type' );
+			$integration_id = $request->get_param( 'integration_id' );
+			$form_id        = $request->get_param( 'form_id' );
+			$enabled        = (bool) $request->get_param( 'enabled' );
+			$raw_overrides  = $request->get_param( 'overrides' );
+
+			if ( ! is_array( $raw_overrides ) ) {
+				$raw_overrides = [];
+			}
+
+			// Sanitize override values
+			$overridable_keys = Settings_Resolver::get_overridable_keys();
+			$overrides        = [ '_enabled' => $enabled ];
+
+			foreach ( $raw_overrides as $key => $value ) {
+				if ( ! in_array( $key, $overridable_keys, true ) ) {
+					continue;
+				}
+				$sanitized = sanitize_text_field( (string) $value );
+				if ( $sanitized !== '__inherit__' && $sanitized !== '' ) {
+					$overrides[ $key ] = $sanitized;
+				}
+			}
+
+			$resolver = new Settings_Resolver();
+
+			if ( $type === 'form' && ! empty( $form_id ) ) {
+				$resolver->save_form_overrides( $integration_id, $form_id, $overrides );
+			} else {
+				$resolver->save_integration_overrides( $integration_id, $overrides );
+			}
+
+			return new WP_REST_Response( [
+				'status' => 'success',
+			], 200 );
+		} catch ( \Throwable $e ) {
+			$this->get_logger()->error(
+				'handle_overrides_save(): Error',
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'error'  => $e->getMessage(),
+				]
+			);
+
+			return new WP_Error(
+				'overrides_save_failed',
 				$e->getMessage(),
 				[ 'status' => 500 ]
 			);
