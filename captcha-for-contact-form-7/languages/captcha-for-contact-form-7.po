@@ -1628,6 +1628,82 @@ msgstr ""
 msgid "Invalid or missing security token."
 msgstr ""
 
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Background Color"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Padding (px)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Radius (px)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Color"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Icon Size (px)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Inherit (none)"
+msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Preview"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Live preview of the reload button with current settings."
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Background Color"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Color"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Padding (px)"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Radius (px)"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Icon Size (px)"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Asset Loading"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Global Asset Loading"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Enable global loading of all plugin assets (CSS/JS) on all pages. Use this if the automatic form detection does not work on certain pages."
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Load assets on all pages"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "Custom URL Paths"
+msgstr ""
+
+#: ui/controller/UI_Extended.php
+msgid "URL paths (one per line) where assets should always be loaded. Use this for custom login pages or pages where form detection fails."
+msgstr ""
+
 #~ msgid "WooCommerce Login & Registration"
 #~ msgstr "WooCommerce Anmeldung & Registrierung"
 

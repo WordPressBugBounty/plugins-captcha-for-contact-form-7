@@ -27,7 +27,12 @@ class Override_Panel_Renderer {
 				'protection_captcha_template'    => __( 'Captcha Template', 'captcha-for-contact-form-7' ),
 				'protection_captcha_label'       => __( 'Captcha Label', 'captcha-for-contact-form-7' ),
 				'protection_captcha_placeholder' => __( 'Captcha Placeholder', 'captcha-for-contact-form-7' ),
-				'protection_captcha_reload_icon' => __( 'Reload Icon Style', 'captcha-for-contact-form-7' ),
+				'protection_captcha_reload_icon'          => __( 'Reload Icon Style', 'captcha-for-contact-form-7' ),
+				'protection_captcha_reload_bg_color'      => __( 'Reload Background Color', 'captcha-for-contact-form-7' ),
+				'protection_captcha_reload_padding'       => __( 'Reload Padding (px)', 'captcha-for-contact-form-7' ),
+				'protection_captcha_reload_border_radius' => __( 'Reload Border Radius (px)', 'captcha-for-contact-form-7' ),
+				'protection_captcha_reload_border_color'  => __( 'Reload Border Color', 'captcha-for-contact-form-7' ),
+				'protection_captcha_reload_icon_size'     => __( 'Reload Icon Size (px)', 'captcha-for-contact-form-7' ),
 			],
 			__( 'Timer', 'captcha-for-contact-form-7' ) => [
 				'protection_time_enable' => __( 'Timer Protection', 'captcha-for-contact-form-7' ),
@@ -207,6 +212,11 @@ class Override_Panel_Renderer {
 			</div>
 		<?php endforeach; ?>
 		<?php
+		// Render reload button preview after the Captcha group
+		if ( array_key_exists( 'protection_captcha_reload_bg_color', $keys ) ) {
+			self::render_reload_preview( $overrides, $global );
+		}
+		?><?php
 	}
 
 	/**
@@ -282,6 +292,23 @@ class Override_Panel_Renderer {
 			return;
 		}
 
+		// Color fields (rendered as text input with inherit placeholder)
+		$color_keys = [
+			'protection_captcha_reload_bg_color',
+			'protection_captcha_reload_border_color',
+		];
+		if ( in_array( $key, $color_keys, true ) ) {
+			$display_value = $has_override ? $override_value : '';
+			$placeholder   = ! empty( $global_value )
+				? sprintf( __( 'Inherit (%s)', 'captcha-for-contact-form-7' ), $global_value )
+				: __( 'Inherit (none)', 'captcha-for-contact-form-7' );
+			echo '<input type="text" class="f12-override-color-picker" data-override-key="' . esc_attr( $key ) . '" '
+				. 'value="' . esc_attr( $display_value ) . '" '
+				. 'placeholder="' . esc_attr( $placeholder ) . '" '
+				. 'disabled style="width:100%;" />';
+			return;
+		}
+
 		// Numeric fields
 		$numeric_keys = [
 			'protection_time_ms',
@@ -290,6 +317,9 @@ class Override_Panel_Renderer {
 			'protection_ip_period_between_submits',
 			'protection_ip_block_time',
 			'protection_rules_url_limit',
+			'protection_captcha_reload_padding',
+			'protection_captcha_reload_border_radius',
+			'protection_captcha_reload_icon_size',
 		];
 
 		if ( in_array( $key, $numeric_keys, true ) ) {
@@ -307,6 +337,62 @@ class Override_Panel_Renderer {
 			. 'value="' . esc_attr( $display_value ) . '" '
 			. 'placeholder="' . esc_attr( sprintf( __( 'Inherit (%s)', 'captcha-for-contact-form-7' ), mb_substr( (string) $global_value, 0, 30 ) ) ) . '" '
 			. 'disabled style="width:100%;" />';
+	}
+
+	/**
+	 * Render a live preview for the reload button inside override panels.
+	 *
+	 * @param array $overrides Current overrides.
+	 * @param array $global    Global/effective settings.
+	 */
+	private static function render_reload_preview( array $overrides, array $global ): void {
+		$bg     = $overrides['protection_captcha_reload_bg_color'] ?? $global['protection_captcha_reload_bg_color'] ?? '#2196f3';
+		$pad    = $overrides['protection_captcha_reload_padding'] ?? $global['protection_captcha_reload_padding'] ?? '3';
+		$rad    = $overrides['protection_captcha_reload_border_radius'] ?? $global['protection_captcha_reload_border_radius'] ?? '3';
+		$bc     = $overrides['protection_captcha_reload_border_color'] ?? $global['protection_captcha_reload_border_color'] ?? '';
+		$sz     = $overrides['protection_captcha_reload_icon_size'] ?? $global['protection_captcha_reload_icon_size'] ?? '16';
+		$icon   = $overrides['protection_captcha_reload_icon'] ?? $global['protection_captcha_reload_icon'] ?? 'black';
+
+		$assets_url = plugin_dir_url( dirname( __DIR__ ) ) . 'core/assets/';
+		$border_css = ! empty( $bc ) ? 'border:1px solid ' . esc_attr( $bc ) . ';' : '';
+
+		?>
+		<div class="f12-override-field-row">
+			<div class="f12-override-field-label">
+				<strong><?php esc_html_e( 'Preview', 'captcha-for-contact-form-7' ); ?></strong>
+			</div>
+			<div class="f12-override-field-input">
+				<div class="f12-reload-override-preview"
+					 style="display:inline-flex; align-items:center; gap:12px; padding:15px 20px; background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px;"
+					 data-icon-black-url="<?php echo esc_url( $assets_url . 'reload-icon.png' ); ?>"
+					 data-icon-white-url="<?php echo esc_url( $assets_url . 'reload-icon-white.png' ); ?>"
+					 data-default-bg="<?php echo esc_attr( $global['protection_captcha_reload_bg_color'] ?? '#2196f3' ); ?>"
+					 data-default-padding="<?php echo esc_attr( $global['protection_captcha_reload_padding'] ?? '3' ); ?>"
+					 data-default-radius="<?php echo esc_attr( $global['protection_captcha_reload_border_radius'] ?? '3' ); ?>"
+					 data-default-border="<?php echo esc_attr( $global['protection_captcha_reload_border_color'] ?? '' ); ?>"
+					 data-default-size="<?php echo esc_attr( $global['protection_captcha_reload_icon_size'] ?? '16' ); ?>"
+					 data-default-icon="<?php echo esc_attr( $global['protection_captcha_reload_icon'] ?? 'black' ); ?>">
+					<span style="color:#555; font-size:13px;">3 + 7 =</span>
+					<a href="#" onclick="return false;"
+					   class="f12-reload-preview-link"
+					   style="display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+							  background-color:<?php echo esc_attr( $bg ); ?>;
+							  padding:<?php echo esc_attr( $pad ); ?>px;
+							  border-radius:<?php echo esc_attr( $rad ); ?>px;
+							  <?php echo $border_css; ?>">
+						<img class="f12-reload-preview-img f12-reload-preview-img-black"
+							 src="<?php echo esc_url( $assets_url . 'reload-icon.png' ); ?>"
+							 style="width:<?php echo esc_attr( $sz ); ?>px; height:<?php echo esc_attr( $sz ); ?>px; display:<?php echo $icon === 'white' ? 'none' : 'block'; ?>;"
+							 alt="Preview" />
+						<img class="f12-reload-preview-img f12-reload-preview-img-white"
+							 src="<?php echo esc_url( $assets_url . 'reload-icon-white.png' ); ?>"
+							 style="width:<?php echo esc_attr( $sz ); ?>px; height:<?php echo esc_attr( $sz ); ?>px; display:<?php echo $icon === 'white' ? 'block' : 'none'; ?>;"
+							 alt="Preview" />
+					</a>
+				</div>
+			</div>
+		</div>
+		<?php
 	}
 
 	/**

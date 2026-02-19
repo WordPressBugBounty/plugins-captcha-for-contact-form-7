@@ -897,6 +897,10 @@
     width: 100%;
 }
 
+.f12-override-field-input .wp-picker-clear {
+    width: 90px;
+}
+
 /**
  * Slide-In Panel: Configure Button (Extended Page)
  */

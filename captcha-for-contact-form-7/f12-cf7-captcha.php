@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.3.2
+ * Version: 2.3.3
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.3.2' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.3.3' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -445,10 +445,35 @@ class CF7Captcha {
 	 * @return bool True if assets should be loaded, false otherwise.
 	 */
 	private function should_load_assets(): bool {
-		// 1. Filter for Force-Load (allows themes/plugins to force asset loading)
+		// 1a. Filter for Force-Load (allows themes/plugins to force asset loading)
 		if ( apply_filters( 'f12_captcha_force_load_assets', false ) ) {
 			$this->logger->debug( "Assets force-loaded via filter", [ 'plugin' => 'f12-cf7-captcha' ] );
 			return true;
+		}
+
+		// 1b. Global asset loading setting (admin toggle)
+		$global_loading = $this->get_settings( 'protection_global_asset_loading', 'global' );
+		if ( (int) $global_loading === 1 ) {
+			$this->logger->debug( "Assets force-loaded via global setting", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
+
+		// 1c. Custom URL path exceptions
+		$custom_urls = $this->get_settings( 'protection_asset_loading_urls', 'global' );
+		if ( ! empty( $custom_urls ) ) {
+			$request_uri  = isset( $_SERVER['REQUEST_URI'] )
+				? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+			$request_path = strtok( $request_uri, '?' );
+			$url_patterns = array_filter( array_map( 'trim', explode( "\n", $custom_urls ) ) );
+			foreach ( $url_patterns as $pattern ) {
+				if ( ! empty( $pattern ) && strpos( $request_path, $pattern ) !== false ) {
+					$this->logger->debug( "Assets loaded - custom URL matched", [
+						'plugin'  => 'f12-cf7-captcha',
+						'pattern' => $pattern,
+					] );
+					return true;
+				}
+			}
 		}
 
 		// 2. Login/Register pages always need assets
@@ -655,6 +680,33 @@ class CF7Captcha {
 			FORGE12_CAPTCHA_VERSION
 		);
 
+		// Reload button styling fallback (global defaults applied via CSS)
+		$reload_css    = '';
+		$reload_bg     = $this->get_settings( 'protection_captcha_reload_bg_color', 'global' );
+		$reload_pad    = $this->get_settings( 'protection_captcha_reload_padding', 'global' );
+		$reload_radius = $this->get_settings( 'protection_captcha_reload_border_radius', 'global' );
+		$reload_border = $this->get_settings( 'protection_captcha_reload_border_color', 'global' );
+		$reload_icon   = $this->get_settings( 'protection_captcha_reload_icon_size', 'global' );
+
+		if ( ! empty( $reload_bg ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $reload_bg ) ) {
+			$reload_css .= 'background-color:' . esc_attr( $reload_bg ) . ';';
+		}
+		if ( is_numeric( $reload_pad ) ) {
+			$reload_css .= 'padding:' . (int) $reload_pad . 'px;';
+		}
+		if ( is_numeric( $reload_radius ) ) {
+			$reload_css .= 'border-radius:' . (int) $reload_radius . 'px;';
+		}
+		if ( ! empty( $reload_border ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $reload_border ) ) {
+			$reload_css .= 'border:1px solid ' . esc_attr( $reload_border ) . ';';
+		}
+		if ( ! empty( $reload_css ) ) {
+			wp_add_inline_style( 'f12-cf7-captcha-style', '.f12-captcha .c-reload a {' . $reload_css . '}' );
+		}
+		if ( is_numeric( $reload_icon ) ) {
+			wp_add_inline_style( 'f12-cf7-captcha-style', '.f12-captcha .c-reload a img {width:' . (int) $reload_icon . 'px !important;height:' . (int) $reload_icon . 'px !important;}' );
+		}
+
 		$this->logger->debug( "Frontend assets loaded", [
 			'plugin'  => 'f12-cf7-captcha',
 			'scripts' => [ 'f12-cf7-captcha-reload' ],
@@ -672,9 +724,41 @@ class CF7Captcha {
 			true
 		);
 
+		wp_enqueue_style( 'wp-color-picker' );
+		wp_enqueue_script( 'wp-color-picker' );
+		wp_add_inline_script( 'wp-color-picker', '
+jQuery(document).ready(function($){
+	var $btn = $("#f12-reload-preview-btn");
+	var $iconBlack = $("#f12-reload-preview-icon-black");
+	var $iconWhite = $("#f12-reload-preview-icon-white");
+
+	function updatePreview(){
+		var bg = $("#protection_captcha_reload_bg_color").val() || "#2196f3";
+		var bc = $("#protection_captcha_reload_border_color").val();
+		var pad = $("#protection_captcha_reload_padding").val() || "3";
+		var rad = $("#protection_captcha_reload_border_radius").val() || "3";
+		var sz = $("#protection_captcha_reload_icon_size").val() || "16";
+		$btn.css({
+			"background-color": bg,
+			"padding": pad + "px",
+			"border-radius": rad + "px",
+			"border": bc ? "1px solid " + bc : "none"
+		});
+		$iconBlack.add($iconWhite).css({"width": sz + "px", "height": sz + "px"});
+		var isWhite = $("input[name=protection_captcha_reload_icon]:checked").val() === "white";
+		$iconBlack.toggle(!isWhite);
+		$iconWhite.toggle(isWhite);
+	}
+
+	$(".f12-color-picker").wpColorPicker({change: function(){ setTimeout(updatePreview, 50); }, clear: function(){ setTimeout(updatePreview, 50); }});
+
+	$(document).on("input change", "#protection_captcha_reload_padding, #protection_captcha_reload_border_radius, #protection_captcha_reload_icon_size, input[name=protection_captcha_reload_icon]", updatePreview);
+});
+' );
+
 		$this->logger->debug( "Admin assets loaded", [
 			'plugin'  => 'f12-cf7-captcha',
-			'scripts' => [ 'f12-cf7-captcha-toggle' ],
+			'scripts' => [ 'f12-cf7-captcha-toggle', 'wp-color-picker' ],
 			'context' => ( is_admin() ? 'admin' : 'unknown' )
 		] );
 	}

@@ -1195,3 +1195,79 @@ msgstr ""
 #: core/rest/RestController.class.php
 msgid "Invalid or missing security token."
 msgstr ""
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Background Color"
+msgstr "Color de fondo del botón recargar"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Padding (px)"
+msgstr "Relleno del botón recargar (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Radius (px)"
+msgstr "Radio de borde del botón recargar (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Color"
+msgstr "Color de borde del botón recargar"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Icon Size (px)"
+msgstr "Tamaño del icono recargar (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Inherit (none)"
+msgstr "Heredar (ninguno)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Preview"
+msgstr "Vista previa"
+
+#: ui/controller/UI_Extended.php
+msgid "Live preview of the reload button with current settings."
+msgstr "Vista previa en vivo del botón recargar con la configuración actual."
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Background Color"
+msgstr "Color de fondo del botón recargar"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Color"
+msgstr "Color de borde del botón recargar"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Padding (px)"
+msgstr "Relleno del botón recargar (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Radius (px)"
+msgstr "Radio de borde del botón recargar (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Icon Size (px)"
+msgstr "Tamaño del icono recargar (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Asset Loading"
+msgstr "Carga de recursos"
+
+#: ui/controller/UI_Extended.php
+msgid "Global Asset Loading"
+msgstr "Carga global de recursos"
+
+#: ui/controller/UI_Extended.php
+msgid "Enable global loading of all plugin assets (CSS/JS) on all pages. Use this if the automatic form detection does not work on certain pages."
+msgstr "Activa la carga global de todos los recursos del plugin (CSS/JS) en todas las páginas. Usa esto si la detección automática de formularios no funciona en ciertas páginas."
+
+#: ui/controller/UI_Extended.php
+msgid "Load assets on all pages"
+msgstr "Cargar recursos en todas las páginas"
+
+#: ui/controller/UI_Extended.php
+msgid "Custom URL Paths"
+msgstr "Rutas URL personalizadas"
+
+#: ui/controller/UI_Extended.php
+msgid "URL paths (one per line) where assets should always be loaded. Use this for custom login pages or pages where form detection fails."
+msgstr "Rutas URL (una por línea) donde los recursos siempre deben cargarse. Usa esto para páginas de inicio de sesión personalizadas o páginas donde la detección de formularios falla."

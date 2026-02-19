@@ -105,6 +105,10 @@ namespace f12_cf7_captcha {
 				'protection_whitelist_role_logged_in'      => 1,
 				'protection_blacklist_ips'                 => '',
 
+				// Asset loading
+				'protection_global_asset_loading'          => 0,
+				'protection_asset_loading_urls'            => '',
+
 				// Telemetry
 				'telemetry'                                => 1,
 			];
@@ -302,6 +306,7 @@ namespace f12_cf7_captcha {
                 'telemetry',
 				'protection_whitelist_role_admin',
 				'protection_whitelist_role_logged_in',
+				'protection_global_asset_loading',
 			];
 
 			$this->get_logger()->debug( 'Processing all POST values and sanitizing them.' );
@@ -316,7 +321,8 @@ namespace f12_cf7_captcha {
 							'protection_rules_blacklist_value',
 							'protection_whitelist_emails',
 							'protection_whitelist_ips',
-							'protection_blacklist_ips'
+							'protection_blacklist_ips',
+							'protection_asset_loading_urls'
 						], true ) ) {
 							$settings['global'][ $key ] = sanitize_textarea_field( $value );
 						} else {
@@ -324,6 +330,35 @@ namespace f12_cf7_captcha {
 						}
 					}
 					$this->get_logger()->debug( 'New field adopted or existing one updated.', [ 'key' => $key ] );
+				}
+			}
+
+			// Validate hex colors for reload button styling
+			$color_fields = [
+				'protection_captcha_reload_bg_color'     => '#2196f3',
+				'protection_captcha_reload_border_color' => '',
+			];
+			foreach ( $color_fields as $color_key => $color_default ) {
+				if ( isset( $settings['global'][ $color_key ] ) ) {
+					$color = $settings['global'][ $color_key ];
+					if ( ! empty( $color ) && ! preg_match( '/^#[a-fA-F0-9]{6}$/', $color ) ) {
+						$settings['global'][ $color_key ] = $color_default;
+					}
+				}
+			}
+
+			// Validate numeric reload button settings
+			$numeric_fields = [
+				'protection_captcha_reload_padding'       => [ 'default' => '3', 'min' => 0, 'max' => 50 ],
+				'protection_captcha_reload_border_radius' => [ 'default' => '3', 'min' => 0, 'max' => 50 ],
+				'protection_captcha_reload_icon_size'     => [ 'default' => '16', 'min' => 8, 'max' => 64 ],
+			];
+			foreach ( $numeric_fields as $num_key => $constraints ) {
+				if ( isset( $settings['global'][ $num_key ] ) ) {
+					$val = (int) $settings['global'][ $num_key ];
+					if ( $val < $constraints['min'] || $val > $constraints['max'] ) {
+						$settings['global'][ $num_key ] = $constraints['default'];
+					}
 				}
 			}
 
@@ -559,6 +594,119 @@ namespace f12_cf7_captcha {
 
                     <div class="option">
                         <div class="label">
+                            <label><?php esc_html_e( 'Preview', 'captcha-for-contact-form-7' ); ?></label>
+                            <p style="padding-right:20px;"><?php esc_html_e( 'Live preview of the reload button with current settings.', 'captcha-for-contact-form-7' ); ?></p>
+                        </div>
+                        <div class="input">
+                            <div id="f12-reload-preview-wrapper" style="display:inline-flex; align-items:center; gap:12px; padding:15px 20px; background:#f9f9f9; border:1px solid #e0e0e0; border-radius:4px;">
+                                <span style="color:#555; font-size:13px;">3 + 7 =</span>
+                                <a href="#" id="f12-reload-preview-btn" onclick="return false;"
+                                   style="display:inline-flex; align-items:center; justify-content:center; text-decoration:none;
+                                          background-color:<?php echo esc_attr( $settings['protection_captcha_reload_bg_color'] ?? '#2196f3' ); ?>;
+                                          padding:<?php echo esc_attr( $settings['protection_captcha_reload_padding'] ?? '3' ); ?>px;
+                                          border-radius:<?php echo esc_attr( $settings['protection_captcha_reload_border_radius'] ?? '3' ); ?>px;
+                                          <?php
+                                          $preview_border = $settings['protection_captcha_reload_border_color'] ?? '';
+                                          if ( ! empty( $preview_border ) ) {
+                                              echo 'border:1px solid ' . esc_attr( $preview_border ) . ';';
+                                          }
+                                          ?>">
+                                    <img id="f12-reload-preview-icon-black"
+                                         src="<?php echo esc_url( plugin_dir_url( dirname( dirname( __FILE__ ) ) ) . 'core/assets/reload-icon.png' ); ?>"
+                                         style="width:<?php echo esc_attr( $settings['protection_captcha_reload_icon_size'] ?? '16' ); ?>px; height:<?php echo esc_attr( $settings['protection_captcha_reload_icon_size'] ?? '16' ); ?>px; display:<?php echo ( isset( $settings['protection_captcha_reload_icon'] ) && $settings['protection_captcha_reload_icon'] === 'white' ) ? 'none' : 'block'; ?>;"
+                                         alt="Preview" />
+                                    <img id="f12-reload-preview-icon-white"
+                                         src="<?php echo esc_url( plugin_dir_url( dirname( dirname( __FILE__ ) ) ) . 'core/assets/reload-icon-white.png' ); ?>"
+                                         style="width:<?php echo esc_attr( $settings['protection_captcha_reload_icon_size'] ?? '16' ); ?>px; height:<?php echo esc_attr( $settings['protection_captcha_reload_icon_size'] ?? '16' ); ?>px; display:<?php echo ( isset( $settings['protection_captcha_reload_icon'] ) && $settings['protection_captcha_reload_icon'] === 'white' ) ? 'block' : 'none'; ?>;"
+                                         alt="Preview" />
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="option">
+                        <div class="label">
+                            <label for="protection_captcha_reload_bg_color"><?php esc_html_e( 'Reload Button Background Color', 'captcha-for-contact-form-7' ); ?></label>
+                        </div>
+                        <div class="input">
+                            <input
+                                type="text"
+                                id="protection_captcha_reload_bg_color"
+                                name="protection_captcha_reload_bg_color"
+                                value="<?php echo esc_attr( $settings['protection_captcha_reload_bg_color'] ?? '#2196f3' ); ?>"
+                                class="f12-color-picker"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="option">
+                        <div class="label">
+                            <label for="protection_captcha_reload_border_color"><?php esc_html_e( 'Reload Button Border Color', 'captcha-for-contact-form-7' ); ?></label>
+                        </div>
+                        <div class="input">
+                            <input
+                                type="text"
+                                id="protection_captcha_reload_border_color"
+                                name="protection_captcha_reload_border_color"
+                                value="<?php echo esc_attr( $settings['protection_captcha_reload_border_color'] ?? '' ); ?>"
+                                class="f12-color-picker"
+                            />
+                        </div>
+                    </div>
+
+                    <div class="option">
+                        <div class="label">
+                            <label for="protection_captcha_reload_padding"><?php esc_html_e( 'Reload Button Padding (px)', 'captcha-for-contact-form-7' ); ?></label>
+                        </div>
+                        <div class="input">
+                            <input
+                                type="number"
+                                id="protection_captcha_reload_padding"
+                                name="protection_captcha_reload_padding"
+                                value="<?php echo esc_attr( $settings['protection_captcha_reload_padding'] ?? '3' ); ?>"
+                                min="0"
+                                max="50"
+                                style="width:80px;"
+                            /> px
+                        </div>
+                    </div>
+
+                    <div class="option">
+                        <div class="label">
+                            <label for="protection_captcha_reload_border_radius"><?php esc_html_e( 'Reload Button Border Radius (px)', 'captcha-for-contact-form-7' ); ?></label>
+                        </div>
+                        <div class="input">
+                            <input
+                                type="number"
+                                id="protection_captcha_reload_border_radius"
+                                name="protection_captcha_reload_border_radius"
+                                value="<?php echo esc_attr( $settings['protection_captcha_reload_border_radius'] ?? '3' ); ?>"
+                                min="0"
+                                max="50"
+                                style="width:80px;"
+                            /> px
+                        </div>
+                    </div>
+
+                    <div class="option">
+                        <div class="label">
+                            <label for="protection_captcha_reload_icon_size"><?php esc_html_e( 'Reload Icon Size (px)', 'captcha-for-contact-form-7' ); ?></label>
+                        </div>
+                        <div class="input">
+                            <input
+                                type="number"
+                                id="protection_captcha_reload_icon_size"
+                                name="protection_captcha_reload_icon_size"
+                                value="<?php echo esc_attr( $settings['protection_captcha_reload_icon_size'] ?? '16' ); ?>"
+                                min="8"
+                                max="64"
+                                style="width:80px;"
+                            /> px
+                        </div>
+                    </div>
+
+                    <div class="option">
+                        <div class="label">
                             <label
                                     for="protection_captcha_template"><?php esc_html_e( 'Template', 'captcha-for-contact-form-7' ); ?></label>
                         </div>
@@ -704,6 +852,57 @@ namespace f12_cf7_captcha {
                             <p>
 								<?php esc_html_e( 'Make sure to backup your database before clicking one of these buttons.', 'captcha-for-contact-form-7' ); ?>
                             </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container">
+
+                <h3>
+					<?php esc_html_e( 'Asset Loading', 'captcha-for-contact-form-7' ); ?>
+                </h3>
+                <div class="section-wrapper">
+                    <div class="section">
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_global_asset_loading"><strong><?php esc_html_e( 'Global Asset Loading', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php esc_html_e( 'Enable global loading of all plugin assets (CSS/JS) on all pages. Use this if the automatic form detection does not work on certain pages.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'protection_global_asset_loading';
+											$is_checked = ( isset( $settings[ $field_name ] ) && $settings[ $field_name ] == 1 ) ? 'checked="checked"' : '';
+											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), esc_attr( $is_checked ) );
+											?>
+                                            <label for="<?php echo esc_attr( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php echo esc_attr( $field_name ); ?>">
+											<?php esc_html_e( 'Load assets on all pages', 'captcha-for-contact-form-7' ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php echo esc_attr( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_asset_loading_urls"><strong><?php esc_html_e( 'Custom URL Paths', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php esc_html_e( 'URL paths (one per line) where assets should always be loaded. Use this for custom login pages or pages where form detection fails.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <textarea
+                                    id="protection_asset_loading_urls"
+                                    name="protection_asset_loading_urls"
+                                    rows="5"
+                                    style="width:100%;"
+                                    placeholder="/my-secret-login/"
+                                ><?php echo esc_textarea( $settings['protection_asset_loading_urls'] ?? '' ); ?></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1498,11 +1697,12 @@ namespace f12_cf7_captcha {
 			Override_Panel_Renderer::render_slide_in_container();
 
 			// Enqueue JS and localize data
+			wp_enqueue_style( 'wp-color-picker' );
 			wp_enqueue_script(
 				'f12-forms-admin',
 				$this->get_ui_manager()->get_plugin_dir_url() . 'ui/assets/f12-forms-admin.js',
-				[],
-				'1.1',
+				[ 'jquery', 'wp-color-picker' ],
+				'1.2',
 				true
 			);
 			wp_localize_script( 'f12-forms-admin', 'f12FormsAdmin', [

@@ -268,11 +268,37 @@ abstract class CaptchaGenerator extends BaseModul
 			]
 		);
 
+		// Reload button styling settings
+		$bg_color      = $this->get_protection_setting('protection_captcha_reload_bg_color');
+		$padding       = $this->get_protection_setting('protection_captcha_reload_padding');
+		$border_radius = $this->get_protection_setting('protection_captcha_reload_border_radius');
+		$border_color  = $this->get_protection_setting('protection_captcha_reload_border_color');
+		$icon_size     = $this->get_protection_setting('protection_captcha_reload_icon_size');
+
+		// Validate and apply defaults
+		if ( empty( $bg_color ) || ! preg_match( '/^#[a-fA-F0-9]{6}$/', $bg_color ) ) {
+			$bg_color = '#2196f3';
+		}
+		$padding       = is_numeric( $padding ) ? (int) $padding : 3;
+		$border_radius = is_numeric( $border_radius ) ? (int) $border_radius : 3;
+		$icon_size     = is_numeric( $icon_size ) ? (int) $icon_size : 16;
+
+		// Build inline styles for <a>
+		$a_styles = sprintf( 'background-color:%s; padding:%dpx; border-radius:%dpx;', $bg_color, $padding, $border_radius );
+		if ( ! empty( $border_color ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $border_color ) ) {
+			$a_styles .= sprintf( ' border:1px solid %s;', $border_color );
+		}
+
+		// Build inline styles for <img>
+		$img_styles = sprintf( 'margin-top:5px; width:%dpx; height:%dpx;', $icon_size, $icon_size );
+
 		return sprintf(
-			'<a href="#" class="cf7 captcha-reload" title="%s"><img style="margin-top:5px;" src="%s" alt="%s"/></a>',
-			__('Reload Captcha', 'captcha-for-contact-form-7'),
-			$image_url,
-			__('Reload', 'captcha-for-contact-form-7')
+			'<a href="#" class="cf7 captcha-reload" style="%s" title="%s"><img style="%s" src="%s" alt="%s"/></a>',
+			esc_attr( $a_styles ),
+			esc_attr__('Reload Captcha', 'captcha-for-contact-form-7'),
+			esc_attr( $img_styles ),
+			esc_url( $image_url ),
+			esc_attr__('Reload', 'captcha-for-contact-form-7')
 		);
 	}
 

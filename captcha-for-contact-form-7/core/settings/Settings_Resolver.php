@@ -27,6 +27,11 @@ class Settings_Resolver {
 		'protection_captcha_label',
 		'protection_captcha_placeholder',
 		'protection_captcha_reload_icon',
+		'protection_captcha_reload_bg_color',
+		'protection_captcha_reload_padding',
+		'protection_captcha_reload_border_radius',
+		'protection_captcha_reload_border_color',
+		'protection_captcha_reload_icon_size',
 		// Timer
 		'protection_time_enable',
 		'protection_time_ms',

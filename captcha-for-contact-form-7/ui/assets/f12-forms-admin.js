@@ -68,6 +68,73 @@
             // Show
             backdrop.classList.add('f12-slide-in-visible');
             slideIn.classList.add('f12-slide-in-visible');
+
+            // Initialize reload button preview if present
+            initReloadPreview();
+        }
+
+        /**
+         * Initialize the reload button live preview inside the slide-in body.
+         * Also initializes wp-color-picker on color fields.
+         */
+        function initReloadPreview() {
+            var preview = body.querySelector('.f12-reload-override-preview');
+            if (!preview) return;
+
+            var link = preview.querySelector('.f12-reload-preview-link');
+            var imgBlack = preview.querySelector('.f12-reload-preview-img-black');
+            var imgWhite = preview.querySelector('.f12-reload-preview-img-white');
+            if (!link || !imgBlack || !imgWhite) return;
+
+            var defaults = {
+                bg: preview.getAttribute('data-default-bg') || '#2196f3',
+                padding: preview.getAttribute('data-default-padding') || '3',
+                radius: preview.getAttribute('data-default-radius') || '3',
+                border: preview.getAttribute('data-default-border') || '',
+                size: preview.getAttribute('data-default-size') || '16',
+                icon: preview.getAttribute('data-default-icon') || 'black'
+            };
+
+            function getVal(key) {
+                var field = body.querySelector('[data-override-key="' + key + '"]');
+                if (!field) return null;
+                var v = field.value;
+                return (v === '__inherit__' || v === '') ? null : v;
+            }
+
+            function updateOverridePreview() {
+                var bg = getVal('protection_captcha_reload_bg_color') || defaults.bg;
+                var pad = getVal('protection_captcha_reload_padding') || defaults.padding;
+                var rad = getVal('protection_captcha_reload_border_radius') || defaults.radius;
+                var bc = getVal('protection_captcha_reload_border_color') || defaults.border;
+                var sz = getVal('protection_captcha_reload_icon_size') || defaults.size;
+                var icon = getVal('protection_captcha_reload_icon') || defaults.icon;
+
+                link.style.backgroundColor = bg;
+                link.style.padding = pad + 'px';
+                link.style.borderRadius = rad + 'px';
+                link.style.border = bc ? '1px solid ' + bc : 'none';
+                imgBlack.style.width = imgBlack.style.height = sz + 'px';
+                imgWhite.style.width = imgWhite.style.height = sz + 'px';
+                imgBlack.style.display = (icon === 'white') ? 'none' : 'block';
+                imgWhite.style.display = (icon === 'white') ? 'block' : 'none';
+            }
+
+            // Initialize wp-color-picker on color fields inside the slide-in
+            if (typeof jQuery !== 'undefined' && jQuery.fn.wpColorPicker) {
+                jQuery(body).find('.f12-override-color-picker').wpColorPicker({
+                    change: function () { setTimeout(updateOverridePreview, 50); },
+                    clear: function () { setTimeout(updateOverridePreview, 50); }
+                });
+            }
+
+            // Listen for changes on all override fields in the slide-in body
+            body.querySelectorAll('[data-override-key]').forEach(function (field) {
+                field.addEventListener('input', updateOverridePreview);
+                field.addEventListener('change', updateOverridePreview);
+            });
+
+            updateOverridePreview();
         }
 
         /**

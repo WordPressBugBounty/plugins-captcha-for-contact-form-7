@@ -1625,6 +1625,82 @@ msgstr ""
 msgid "Invalid or missing security token."
 msgstr ""
 
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Background Color"
+msgstr "Couleur d'arrière-plan du bouton recharger"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Padding (px)"
+msgstr "Marge intérieure du bouton recharger (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Radius (px)"
+msgstr "Rayon de bordure du bouton recharger (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Color"
+msgstr "Couleur de bordure du bouton recharger"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Icon Size (px)"
+msgstr "Taille de l'icône recharger (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Inherit (none)"
+msgstr "Hériter (aucun)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Preview"
+msgstr "Aperçu"
+
+#: ui/controller/UI_Extended.php
+msgid "Live preview of the reload button with current settings."
+msgstr "Aperçu en direct du bouton recharger avec les paramètres actuels."
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Background Color"
+msgstr "Couleur d'arrière-plan du bouton recharger"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Color"
+msgstr "Couleur de bordure du bouton recharger"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Padding (px)"
+msgstr "Marge intérieure du bouton recharger (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Radius (px)"
+msgstr "Rayon de bordure du bouton recharger (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Icon Size (px)"
+msgstr "Taille de l'icône recharger (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Asset Loading"
+msgstr "Chargement des ressources"
+
+#: ui/controller/UI_Extended.php
+msgid "Global Asset Loading"
+msgstr "Chargement global des ressources"
+
+#: ui/controller/UI_Extended.php
+msgid "Enable global loading of all plugin assets (CSS/JS) on all pages. Use this if the automatic form detection does not work on certain pages."
+msgstr "Active le chargement global de toutes les ressources du plugin (CSS/JS) sur toutes les pages. Utilisez ceci si la détection automatique des formulaires ne fonctionne pas sur certaines pages."
+
+#: ui/controller/UI_Extended.php
+msgid "Load assets on all pages"
+msgstr "Charger les ressources sur toutes les pages"
+
+#: ui/controller/UI_Extended.php
+msgid "Custom URL Paths"
+msgstr "Chemins URL personnalisés"
+
+#: ui/controller/UI_Extended.php
+msgid "URL paths (one per line) where assets should always be loaded. Use this for custom login pages or pages where form detection fails."
+msgstr "Chemins URL (un par ligne) où les ressources doivent toujours être chargées. Utilisez ceci pour les pages de connexion personnalisées ou les pages où la détection de formulaire échoue."
+
 #~ msgid "WooCommerce Login & Registration"
 #~ msgstr "Connexion & inscription WooCommerce"
 

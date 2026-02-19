@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.3.2
+Stable tag: 2.3.3
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,14 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.3.3 =
+- New [Admin UI]: Added full reload button styling options: background color, border color (color pickers), padding, border radius, and icon size (number inputs). All settings have backward-compatible defaults.
+- New [Admin UI]: All reload button styling settings can be overridden per integration (CF7, Avada, WPForms, etc.) and per individual form via the existing override panel system.
+- New [Admin UI]: Added live preview for the reload button in global settings and all override panels (integration + form level). Changes are reflected in real-time.
+- New [Admin UI]: Added "Asset Loading" section with global toggle to force-load all plugin assets (CSS/JS) on every page, useful when automatic form detection fails.
+- New [Admin UI]: Added custom URL path exceptions textarea. Define URL paths (one per line) where assets should always be loaded, e.g. for custom login pages (WPS Hide Login) or exotic page builders.
+- Improvement [Core]: `should_load_assets()` now checks global asset loading toggle and custom URL paths before falling back to automatic form detection.
+
 = 2.3.2 =
 - Fix [Captcha]: Fixed reload button href being stripped by wp_kses. Changed `javascript:void(0)` to `#` to be compatible with WordPress HTML sanitization.
 

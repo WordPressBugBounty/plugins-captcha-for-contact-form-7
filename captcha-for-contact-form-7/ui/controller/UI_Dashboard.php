@@ -71,7 +71,12 @@ namespace f12_cf7_captcha {
 				'protection_captcha_reload_icon' => 'black',
 				'protection_captcha_template'    => 2,
 				'protection_captcha_method'      => 'honey',
-				'protection_captcha_field_name'  => 'f12_captcha',
+				'protection_captcha_field_name'              => 'f12_captcha',
+				'protection_captcha_reload_bg_color'         => '#2196f3',
+				'protection_captcha_reload_padding'          => '3',
+				'protection_captcha_reload_border_radius'    => '3',
+				'protection_captcha_reload_border_color'     => '',
+				'protection_captcha_reload_icon_size'        => '16',
 			];
 
 			// Add the default settings under the 'global' key to the passed array.

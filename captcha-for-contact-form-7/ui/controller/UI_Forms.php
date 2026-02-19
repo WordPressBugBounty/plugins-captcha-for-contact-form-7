@@ -283,11 +283,12 @@ namespace f12_cf7_captcha {
 			Override_Panel_Renderer::render_slide_in_container();
 
 			// Enqueue JS and localize data
+			wp_enqueue_style( 'wp-color-picker' );
 			wp_enqueue_script(
 				'f12-forms-admin',
 				$this->get_ui_manager()->get_plugin_dir_url() . 'ui/assets/f12-forms-admin.js',
-				[],
-				'1.2',
+				[ 'jquery', 'wp-color-picker' ],
+				'1.3',
 				true
 			);
 			wp_localize_script( 'f12-forms-admin', 'f12FormsAdmin', [

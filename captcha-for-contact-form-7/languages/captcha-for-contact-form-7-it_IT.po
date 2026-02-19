@@ -1617,6 +1617,82 @@ msgstr ""
 msgid "Invalid or missing security token."
 msgstr ""
 
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Background Color"
+msgstr "Colore di sfondo del pulsante ricarica"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Padding (px)"
+msgstr "Padding del pulsante ricarica (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Radius (px)"
+msgstr "Raggio del bordo del pulsante ricarica (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Border Color"
+msgstr "Colore del bordo del pulsante ricarica"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Reload Icon Size (px)"
+msgstr "Dimensione icona ricarica (px)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Inherit (none)"
+msgstr "Eredita (nessuno)"
+
+#: core/settings/Override_Panel_Renderer.php
+msgid "Preview"
+msgstr "Anteprima"
+
+#: ui/controller/UI_Extended.php
+msgid "Live preview of the reload button with current settings."
+msgstr "Anteprima dal vivo del pulsante ricarica con le impostazioni correnti."
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Background Color"
+msgstr "Colore di sfondo del pulsante ricarica"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Color"
+msgstr "Colore del bordo del pulsante ricarica"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Padding (px)"
+msgstr "Padding del pulsante ricarica (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Button Border Radius (px)"
+msgstr "Raggio del bordo del pulsante ricarica (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Reload Icon Size (px)"
+msgstr "Dimensione icona ricarica (px)"
+
+#: ui/controller/UI_Extended.php
+msgid "Asset Loading"
+msgstr "Caricamento risorse"
+
+#: ui/controller/UI_Extended.php
+msgid "Global Asset Loading"
+msgstr "Caricamento globale risorse"
+
+#: ui/controller/UI_Extended.php
+msgid "Enable global loading of all plugin assets (CSS/JS) on all pages. Use this if the automatic form detection does not work on certain pages."
+msgstr "Attiva il caricamento globale di tutte le risorse del plugin (CSS/JS) su tutte le pagine. Usa questa opzione se il rilevamento automatico dei moduli non funziona su determinate pagine."
+
+#: ui/controller/UI_Extended.php
+msgid "Load assets on all pages"
+msgstr "Carica risorse su tutte le pagine"
+
+#: ui/controller/UI_Extended.php
+msgid "Custom URL Paths"
+msgstr "Percorsi URL personalizzati"
+
+#: ui/controller/UI_Extended.php
+msgid "URL paths (one per line) where assets should always be loaded. Use this for custom login pages or pages where form detection fails."
+msgstr "Percorsi URL (uno per riga) dove le risorse devono sempre essere caricate. Usa questa opzione per pagine di accesso personalizzate o pagine dove il rilevamento dei moduli non funziona."
+
 #~ msgid "WooCommerce Login & Registration"
 #~ msgstr "Accesso e Registrazione WooCommerce"
 
