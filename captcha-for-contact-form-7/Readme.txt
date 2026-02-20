@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.3.4
+Stable tag: 2.3.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,11 +174,16 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.3.5 =
+- Fix [Fluent Forms]: Fixed JavaScript protection failing for Conversational Forms (`[fluentform type="conversational"]`). Conversational Forms render as a Vue.js app inside a `<div>` instead of a `<form>` element, so the regular `render_item_submit_button` hook and the JS form discovery (`querySelectorAll("form")`) never fired. Timing fields (`php_start_time`, `js_start_time`, `js_end_time`) are now injected via `jQuery.ajaxPrefilter` directly into the inner `data` POST parameter where the PHP backend expects them. Hooks into both `wp_footer` (embedded forms) and `fluentform/conversational_frame_footer` (standalone pages).
+
 = 2.3.4 =
-- Fix [Templates]: Reload button inline styles (background color, padding, border radius, border) were stripped by `wp_kses()` because the `style` attribute was missing from the `<a>` tag whitelist. Per-form and per-integration overrides for reload button appearance now work correctly.
+- Fix [Templates]: Reload button inline styles were stripped by `wp_kses()` CSS property filtering (`safecss_filter_attr`), causing `display:inline-flex`, `align-items`, `box-sizing` etc. to be removed. Reload button HTML is now output directly (all values are escaped at construction via `esc_attr`/`esc_url`), ensuring per-form and per-integration style overrides work correctly.
+- Fix [CSS]: Removed hardcoded `width:32px; height:32px; display:flex; background-color` from template-1 `.c-reload a` CSS rule that overrode per-form settings. All visual properties are now controlled exclusively via inline styles from `get_reload_button()`.
 - Fix [CSS]: Removed `!important` declarations on reload button icon dimensions in template-1 CSS that prevented per-form icon size overrides from taking effect.
-- Fix [CSS]: Removed redundant global inline CSS (`wp_add_inline_style`) for reload button styling that conflicted with the hierarchical settings resolution (form > module > global). Styling is now handled exclusively via inline styles from `get_reload_button()`.
+- Fix [CSS]: Removed redundant global inline CSS (`wp_add_inline_style`) for reload button styling that conflicted with the hierarchical settings resolution (form > module > global).
 - Fix [CSS]: Reload button icon is now vertically centered using flexbox (`display:inline-flex; align-items:center`) instead of `margin-top:5px`.
+- Improvement [CSS]: All reload button inline styles now use `!important` to prevent theme and plugin CSS from overriding configured values (background-color, padding, border-radius, display, icon dimensions, margin, max-width).
 - Fix [Core]: Replaced deprecated `CF7Captcha::getInstance()` calls in UI_Extended with `CF7Captcha::get_instance()`.
 
 = 2.3.3 =

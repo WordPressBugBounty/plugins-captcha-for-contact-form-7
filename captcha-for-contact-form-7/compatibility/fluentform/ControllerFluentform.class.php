@@ -20,6 +20,8 @@ class ControllerFluentform extends BaseController
     protected array $hooks = [
         ['type' => 'action', 'hook' => 'fluentform/render_item_submit_button', 'method' => 'wp_add_spam_protection', 'priority' => 5, 'args' => 2],
         ['type' => 'filter', 'hook' => 'fluentform/validation_errors', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 4],
+        ['type' => 'action', 'hook' => 'wp_footer', 'method' => 'wp_conversational_form_js_protection'],
+        ['type' => 'action', 'hook' => 'fluentform/conversational_frame_footer', 'method' => 'wp_conversational_form_js_protection'],
     ];
 
     public function is_installed(): bool
@@ -82,5 +84,41 @@ class ControllerFluentform extends BaseController
 
         $Protection->clear_context();
         return $errors;
+    }
+
+    /**
+     * Outputs a JS snippet for Fluent Forms Conversational Forms.
+     *
+     * Conversational Forms render as a Vue.js app inside a <div>, not a <form>.
+     * The regular render_item_submit_button hook and the JS form discovery
+     * (querySelectorAll("form")) do not fire. This method injects the timing
+     * fields via jQuery.ajaxPrefilter directly into the inner "data" POST
+     * parameter where the PHP backend expects them.
+     */
+    public function wp_conversational_form_js_protection(): void
+    {
+        $php_start_time = microtime( true );
+        ?>
+        <script>
+        (function () {
+            if (typeof jQuery === 'undefined') { return; }
+            var phpStart = <?php echo wp_json_encode( $php_start_time ); ?>;
+            jQuery.ajaxPrefilter(function (options, originalOptions) {
+                if (typeof options.data !== 'string') { return; }
+                var params = new URLSearchParams(options.data);
+                var innerData = params.get('data');
+                if (innerData === null) { return; }
+                var inner = new URLSearchParams(innerData);
+                if (inner.has('php_start_time')) { return; }
+                var now = Date.now() / 1000;
+                inner.set('php_start_time', phpStart);
+                inner.set('js_start_time', phpStart + 0.001);
+                inner.set('js_end_time', now);
+                params.set('data', inner.toString());
+                options.data = params.toString();
+            });
+        })();
+        </script>
+        <?php
     }
 }
