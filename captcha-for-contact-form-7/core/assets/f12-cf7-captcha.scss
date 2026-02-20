@@ -65,21 +65,8 @@ $template_1_border_color: #ccc;
     .c-reload {
       padding: 0;
 
-      a {
-        background-color: #2196f3;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        flex-flow: column nowrap;
-        justify-content: center;
-        border-radius: 3px;
-
-        img {
-          margin: 0 !important;
-          align-self: center;
-          width: 16px!important;
-          height: 16px!important;
-        }
+      a img {
+        border: 0;
       }
     }
 

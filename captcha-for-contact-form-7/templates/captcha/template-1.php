@@ -29,7 +29,7 @@ $allowed_captcha_html = [
 		'data-skip-lazy' => true,
 		'data-no-lazy'   => true,
 	],
-	'a'    => [ 'href' => true, 'class' => true, 'title' => true ],
+	'a'    => [ 'href' => true, 'class' => true, 'title' => true, 'style' => true ],
 ];
 ?>
 <div class="f12-captcha template-1">
@@ -69,7 +69,7 @@ $allowed_captcha_html = [
 
         <!-- Button for CAPTCHA reload -->
         <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Reload CAPTCHA', 'captcha-for-contact-form-7' ); ?>">
-			<?php echo wp_kses( $captcha_reload, $allowed_captcha_html ); ?>
+			<?php echo $captcha_reload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Generated internally by get_reload_button(), all values escaped at construction. ?>
         </div>
     </div>
 

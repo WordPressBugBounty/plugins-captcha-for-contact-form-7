@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.3.3
+ * Version: 2.3.4
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.3.3' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.3.4' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -680,32 +680,8 @@ class CF7Captcha {
 			FORGE12_CAPTCHA_VERSION
 		);
 
-		// Reload button styling fallback (global defaults applied via CSS)
-		$reload_css    = '';
-		$reload_bg     = $this->get_settings( 'protection_captcha_reload_bg_color', 'global' );
-		$reload_pad    = $this->get_settings( 'protection_captcha_reload_padding', 'global' );
-		$reload_radius = $this->get_settings( 'protection_captcha_reload_border_radius', 'global' );
-		$reload_border = $this->get_settings( 'protection_captcha_reload_border_color', 'global' );
-		$reload_icon   = $this->get_settings( 'protection_captcha_reload_icon_size', 'global' );
-
-		if ( ! empty( $reload_bg ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $reload_bg ) ) {
-			$reload_css .= 'background-color:' . esc_attr( $reload_bg ) . ';';
-		}
-		if ( is_numeric( $reload_pad ) ) {
-			$reload_css .= 'padding:' . (int) $reload_pad . 'px;';
-		}
-		if ( is_numeric( $reload_radius ) ) {
-			$reload_css .= 'border-radius:' . (int) $reload_radius . 'px;';
-		}
-		if ( ! empty( $reload_border ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $reload_border ) ) {
-			$reload_css .= 'border:1px solid ' . esc_attr( $reload_border ) . ';';
-		}
-		if ( ! empty( $reload_css ) ) {
-			wp_add_inline_style( 'f12-cf7-captcha-style', '.f12-captcha .c-reload a {' . $reload_css . '}' );
-		}
-		if ( is_numeric( $reload_icon ) ) {
-			wp_add_inline_style( 'f12-cf7-captcha-style', '.f12-captcha .c-reload a img {width:' . (int) $reload_icon . 'px !important;height:' . (int) $reload_icon . 'px !important;}' );
-		}
+		// Reload button styling is handled via inline styles in get_reload_button()
+		// which respects the per-form > per-module > global settings hierarchy.
 
 		$this->logger->debug( "Frontend assets loaded", [
 			'plugin'  => 'f12-cf7-captcha',

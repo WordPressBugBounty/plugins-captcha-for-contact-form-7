@@ -416,7 +416,7 @@ namespace f12_cf7_captcha {
                             <div class="input">
 
 								<?php
-								$Controller = CF7Captcha::getInstance();
+								$Controller = CF7Captcha::get_instance();
 								$Components = [];
 								try {
 									/** @var Compatibility $Compatibility */
@@ -1672,7 +1672,7 @@ namespace f12_cf7_captcha {
 			<?php
 			// Render hidden panels for each installed integration
 			$resolver = new Settings_Resolver();
-			$Controller_panels = CF7Captcha::getInstance();
+			$Controller_panels = CF7Captcha::get_instance();
 			$Components_panels = [];
 			try {
 				$Compatibility_panels = $Controller_panels->get_module( 'compatibility' );

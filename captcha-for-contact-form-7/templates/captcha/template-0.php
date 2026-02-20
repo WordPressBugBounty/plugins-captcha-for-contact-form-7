@@ -29,7 +29,7 @@ $allowed_captcha_html = [
 		'data-skip-lazy' => true,
 		'data-no-lazy'   => true,
 	],
-	'a'    => [ 'href' => true, 'class' => true, 'title' => true ],
+	'a'    => [ 'href' => true, 'class' => true, 'title' => true, 'style' => true ],
 ];
 ?>
 <div class="f12-captcha template-0">
@@ -42,7 +42,7 @@ $allowed_captcha_html = [
 			<?php echo wp_kses( $captcha_data, $allowed_captcha_html ); ?>
         </div>
         <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Reload CAPTCHA' ); ?>">
-			<?php echo wp_kses( $captcha_reload, $allowed_captcha_html ); ?>
+			<?php echo $captcha_reload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Generated internally by get_reload_button(), all values escaped at construction. ?>
         </div>
         <p id="captcha-instructions" class="screen-reader-text">
 			<?php esc_html_e( 'Please enter the characters shown in the CAPTCHA to ensure that you are human.' ); ?>

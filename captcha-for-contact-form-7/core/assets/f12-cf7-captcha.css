@@ -54,20 +54,8 @@
 .f12-captcha.template-1 .c-reload {
   padding: 0;
 }
-.f12-captcha.template-1 .c-reload a {
-  background-color: #2196f3;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  flex-flow: column nowrap;
-  justify-content: center;
-  border-radius: 3px;
-}
 .f12-captcha.template-1 .c-reload a img {
-  margin: 0 !important;
-  align-self: center;
-  width: 16px !important;
-  height: 16px !important;
+  border: 0;
 }
 .f12-captcha.template-1 input.f12c {
   display: block;

@@ -283,14 +283,17 @@ abstract class CaptchaGenerator extends BaseModul
 		$border_radius = is_numeric( $border_radius ) ? (int) $border_radius : 3;
 		$icon_size     = is_numeric( $icon_size ) ? (int) $icon_size : 16;
 
-		// Build inline styles for <a>
-		$a_styles = sprintf( 'background-color:%s; padding:%dpx; border-radius:%dpx;', $bg_color, $padding, $border_radius );
+		// Build inline styles for <a> — use !important to prevent theme/plugin CSS overrides
+		$a_styles = sprintf(
+			'display:inline-flex !important; align-items:center !important; justify-content:center !important; background-color:%s !important; padding:%dpx !important; border-radius:%dpx !important; line-height:0 !important; box-sizing:content-box !important; text-decoration:none !important;',
+			$bg_color, $padding, $border_radius
+		);
 		if ( ! empty( $border_color ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $border_color ) ) {
-			$a_styles .= sprintf( ' border:1px solid %s;', $border_color );
+			$a_styles .= sprintf( ' border:1px solid %s !important;', $border_color );
 		}
 
-		// Build inline styles for <img>
-		$img_styles = sprintf( 'margin-top:5px; width:%dpx; height:%dpx;', $icon_size, $icon_size );
+		// Build inline styles for <img> — use !important to prevent theme/plugin CSS overrides
+		$img_styles = sprintf( 'display:block !important; width:%dpx !important; height:%dpx !important; max-width:none !important; margin:0 !important; padding:0 !important;', $icon_size, $icon_size );
 
 		return sprintf(
 			'<a href="#" class="cf7 captcha-reload" style="%s" title="%s"><img style="%s" src="%s" alt="%s"/></a>',

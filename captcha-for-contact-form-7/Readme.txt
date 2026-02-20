@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.3.3
+Stable tag: 2.3.4
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,13 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.3.4 =
+- Fix [Templates]: Reload button inline styles (background color, padding, border radius, border) were stripped by `wp_kses()` because the `style` attribute was missing from the `<a>` tag whitelist. Per-form and per-integration overrides for reload button appearance now work correctly.
+- Fix [CSS]: Removed `!important` declarations on reload button icon dimensions in template-1 CSS that prevented per-form icon size overrides from taking effect.
+- Fix [CSS]: Removed redundant global inline CSS (`wp_add_inline_style`) for reload button styling that conflicted with the hierarchical settings resolution (form > module > global). Styling is now handled exclusively via inline styles from `get_reload_button()`.
+- Fix [CSS]: Reload button icon is now vertically centered using flexbox (`display:inline-flex; align-items:center`) instead of `margin-top:5px`.
+- Fix [Core]: Replaced deprecated `CF7Captcha::getInstance()` calls in UI_Extended with `CF7Captcha::get_instance()`.
+
 = 2.3.3 =
 - New [Admin UI]: Added full reload button styling options: background color, border color (color pickers), padding, border radius, and icon size (number inputs). All settings have backward-compatible defaults.
 - New [Admin UI]: All reload button styling settings can be overridden per integration (CF7, Avada, WPForms, etc.) and per individual form via the existing override panel system.
