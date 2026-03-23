@@ -12,6 +12,19 @@ if (!defined('ABSPATH')) {
 class Array_Formatter
 {
 	/**
+	 * Check if plain text logging is enabled (no anonymization).
+	 * Default: false (anonymized). Must be explicitly enabled by admin.
+	 */
+	private static function is_plaintext_enabled(): bool {
+		if ( ! class_exists( '\f12_cf7_captcha\CF7Captcha' ) ) {
+			return false;
+		}
+
+		$instance = \f12_cf7_captcha\CF7Captcha::get_instance();
+		return (int) $instance->get_settings( 'protection_log_plaintext', 'global' ) === 1;
+	}
+
+	/**
 	 * Check if an array key is likely a password field
 	 */
 	private static function is_password_field(string $key): bool {
@@ -36,7 +49,8 @@ class Array_Formatter
 
 	public static function to_string($data, $delimiter = '', $use_key_as_label = false)
 	{
-		$response = '';
+		$plaintext = self::is_plaintext_enabled();
+		$response  = '';
 
 		foreach ($data as $key => $value) {
 			if (true === $use_key_as_label) {
@@ -47,15 +61,15 @@ class Array_Formatter
 				$value = self::to_string($value, $delimiter, $use_key_as_label);
 			}
 
-			// Apply masking
+			// Apply masking (passwords are always masked, email/IP only when plaintext is off)
 			if (is_string($value)) {
 				if (self::is_password_field($key)) {
 					$value = self::mask_password($value);
 				}
-				elseif (filter_var($value, FILTER_VALIDATE_EMAIL)) {
+				elseif ( ! $plaintext && filter_var($value, FILTER_VALIDATE_EMAIL)) {
 					$value = self::mask_email($value);
 				}
-				elseif (filter_var($value, FILTER_VALIDATE_IP)) {
+				elseif ( ! $plaintext && filter_var($value, FILTER_VALIDATE_IP)) {
 					$value = self::mask_ip($value);
 				}
 			}
@@ -64,8 +78,9 @@ class Array_Formatter
 		}
 
 		\Forge12\Shared\Logger::getInstance()->debug("Array_Formatter used", [
-			'plugin'  => 'f12-cf7-captcha',
-			'preview' => mb_substr($response, 0, 120) . (strlen($response) > 120 ? '...' : '')
+			'plugin'    => 'f12-cf7-captcha',
+			'plaintext' => $plaintext,
+			'preview'   => mb_substr($response, 0, 120) . (strlen($response) > 120 ? '...' : '')
 		]);
 
 		return $response;

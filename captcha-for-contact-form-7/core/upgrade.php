@@ -192,4 +192,39 @@ function on_update() {
 			'to'     => '2.2.71',
 		] );
 	}
+
+	// 🔹 Upgrade auf 2.6.1 (BlockLog + AuditLog Tabellen erstellen, falls fehlend)
+	if ( version_compare( $currentVersion, '2.6.1', '<' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$block_log = new \f12_cf7_captcha\core\log\BlockLog( $logger );
+		$block_log->create_table();
+
+		$audit_log = new \f12_cf7_captcha\core\log\AuditLog( $logger );
+		$audit_log->create_table();
+
+		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );
+
+		$logger->info( "Upgrade performed: BlockLog and AuditLog tables created", [
+			'plugin' => 'f12-cf7-captcha',
+			'from'   => $currentVersion ?: 'none',
+			'to'     => '2.6.1',
+		] );
+	}
+
+	// 🔹 Upgrade auf 2.6.2 (MailLog Tabelle erstellen)
+	if ( version_compare( $currentVersion, '2.6.2', '<' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$mail_log = new \f12_cf7_captcha\core\log\MailLog( $logger );
+		$mail_log->create_table();
+
+		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );
+
+		$logger->info( "Upgrade performed: MailLog table created", [
+			'plugin' => 'f12-cf7-captcha',
+			'from'   => $currentVersion ?: 'none',
+			'to'     => '2.6.2',
+		] );
+	}
 }

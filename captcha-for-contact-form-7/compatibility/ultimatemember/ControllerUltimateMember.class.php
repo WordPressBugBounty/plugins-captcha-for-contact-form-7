@@ -65,8 +65,10 @@ class ControllerUltimateMember extends BaseController
 
         $Protection = $this->Controller->get_module('protection');
 
+        $Protection->set_context( $this->id, null );
         if ($Protection->is_spam($array_post_data)) {
             $this->get_logger()->warning('Spam detected!');
+            $Protection->clear_context();
             $this->is_valid = false;
 
             if (function_exists('UM')) {
@@ -76,6 +78,8 @@ class ControllerUltimateMember extends BaseController
 
             return true;
         }
+
+        $Protection->clear_context();
 
         add_filter('f12_cf7_captcha_wc_login_validated', '__return_true');
         add_filter('f12_cf7_captcha_wc_registration_validated', '__return_true');

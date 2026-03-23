@@ -77,6 +77,7 @@ namespace f12_cf7_captcha {
 				'protection_captcha_reload_border_radius'    => '3',
 				'protection_captcha_reload_border_color'     => '',
 				'protection_captcha_reload_icon_size'        => '16',
+				'protection_captcha_audio_enable'            => 0,
 			];
 
 			// Add the default settings under the 'global' key to the passed array.
@@ -224,6 +225,7 @@ namespace f12_cf7_captcha {
 			// A list of options whose value should be set to 0 if they are not present in the POST request.
 			$options_to_zero = [
 				'protection_captcha_enable',
+				'protection_captcha_audio_enable',
 			];
 
 			$this->get_logger()->debug( 'Processing all POST values and sanitizing them.' );
@@ -419,6 +421,28 @@ namespace f12_cf7_captcha {
                                             <span>
                         <label for="protection_method_image"><?php esc_html_e( 'Image', 'captcha-for-contact-form-7' ); ?></label>
                     </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="option" style="padding:0px 10px;">
+                                    <div class="label">
+                                        <label for="protection_captcha_audio_enable"><strong><?php esc_html_e( 'Audio Accessibility', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                        <p><?php esc_html_e( 'Adds a speaker button to help visually impaired users solve the CAPTCHA using the Web Speech API.', 'captcha-for-contact-form-7' ); ?></p>
+                                    </div>
+                                    <div class="input">
+                                        <div class="f12-checkbox-toggle">
+                                            <div class="toggle-container">
+                                                <?php
+                                                $audio_field_name = 'protection_captcha_audio_enable';
+                                                $audio_is_checked = ( $settings[ $audio_field_name ] ?? 0 ) == 1 ? 'checked="checked"' : '';
+                                                echo wp_kses( sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $audio_field_name ), esc_attr( $audio_field_name ), $audio_is_checked ), array( 'input' => array( 'name' => array(), 'type' => array(), 'value' => array(), 'id' => array(), 'class' => array(), 'checked' => array() ) ) );
+                                                ?>
+                                                <label for="<?php echo esc_attr( $audio_field_name ); ?>" class="toggle-label"></label>
+                                            </div>
+                                            <label for="<?php echo esc_attr( $audio_field_name ); ?>">
+                                                <?php esc_html_e( 'Enable Audio CAPTCHA', 'captcha-for-contact-form-7' ); ?>
+                                            </label>
+                                            <label class="overlay" for="<?php echo esc_attr( $audio_field_name ); ?>"></label>
                                         </div>
                                     </div>
                                 </div>

@@ -171,7 +171,12 @@ class Timer_Validator extends BaseProtection {
 	 */
 	protected function get_validation_time(): int
 	{
-		$validation_time = 2000;
+		$raw = $this->get_protection_setting( 'protection_time_ms' );
+		$validation_time = is_numeric( $raw ) ? (int) $raw : 2000;
+
+		if ( $validation_time < 0 ) {
+			$validation_time = 2000;
+		}
 
 		$this->get_logger()->debug('Retrieving minimum validation time.', [
 			'class' => __CLASS__,

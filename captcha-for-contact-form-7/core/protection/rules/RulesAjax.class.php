@@ -97,8 +97,8 @@ class RulesAjax extends BaseModul
 	{
 		$this->get_logger()->info('Attempting to retrieve blacklist content from external API.');
 
-		//$url = 'https://api.forge12.com/v1/tools/blacklist.txt';
-		$url = 'https://api.silentshield.io/api/captcha/blacklist';
+		$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
+		$url = rtrim( $base_url, '/' ) . '/api/captcha/blacklist';
 
 		// Execute API request securely via WordPress HTTP API.
 		$response = wp_remote_get($url, [

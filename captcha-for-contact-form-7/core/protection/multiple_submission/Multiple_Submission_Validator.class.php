@@ -72,12 +72,13 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	protected function is_enabled(): bool
 	{
-		$is_enabled = $this->get_protection_setting('protection_multiple_submission_enable');
+		$raw = $this->get_protection_setting('protection_multiple_submission_enable');
 
-		if ($is_enabled === '' || $is_enabled === null) {
-			// Default: active if not explicitly set
-			$is_enabled = 1;
+		if ($raw === '' || $raw === null) {
+			$raw = 1;
 		}
+
+		$is_enabled = (int) $raw === 1;
 
 		if ($is_enabled) {
 			$this->get_logger()->info('Multiple submission protection is enabled.', [
@@ -239,7 +240,12 @@ class Multiple_Submission_Validator extends BaseProtection {
 	 */
 	protected function get_validation_time(): int
 	{
-		$validation_time = 2000;
+		$raw = $this->get_protection_setting( 'protection_time_ms' );
+		$validation_time = is_numeric( $raw ) ? (int) $raw : 2000;
+
+		if ( $validation_time < 0 ) {
+			$validation_time = 2000;
+		}
 
 		$this->get_logger()->debug('Retrieving minimum validation time.', [
 			'class' => __CLASS__,

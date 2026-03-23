@@ -33,6 +33,15 @@ $IP_Log->delete_table();
 $IP_Ban = new IPBan($logger);
 $IP_Ban->delete_table();
 
+$Block_Log = new \f12_cf7_captcha\core\log\BlockLog($logger);
+$Block_Log->delete_table();
+
+$Audit_Log = new \f12_cf7_captcha\core\log\AuditLog($logger);
+$Audit_Log->delete_table();
+
+$Mail_Log = new \f12_cf7_captcha\core\log\MailLog($logger);
+$Mail_Log->delete_table();
+
 delete_option('f12-cf7-captcha-settings');
 delete_option('f12_captcha_settings');
 delete_option('f12-cf7-captcha-settings-backup');

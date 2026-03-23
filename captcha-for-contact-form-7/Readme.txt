@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.3.5
+Stable tag: 2.6.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,111 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.6.5 =
+- New [Templates]: Captcha image now uses transparent PNG background, blending seamlessly with all template styles (Standard, Compact, Clean, Dark Card, Gradient Dark). Dark templates (Gradient Dark) use light text colors for readability.
+- New [Templates]: Classic templates (0–2) from v2.3.x are now visible and selectable in the template picker alongside the modern templates, ensuring backward compatibility for existing users after updates.
+- New [Templates]: Template picker UI now groups templates into "Templates" (modern) and "Classic Templates" (legacy) sections with distinct preview styles.
+- Fix [Templates]: Audio tooltip text ("Click to have the CAPTCHA read aloud") was rendered as visible text instead of a hover tooltip. Added global CSS rule to hide by default and show on hover.
+- Fix [Templates]: Compact template (6) reload and audio icons were separated instead of grouped on the right side. Fixed flex layout so icons stay together.
+- Fix [Templates]: Compact template (6) input field was too short and had no border. Added proper border styling and flex layout for hint text + input inline.
+- Fix [Templates]: Audio button icon was misaligned vertically with reload icon across all templates. Added `line-height: 0; display: inline-flex; align-items: center` to audio buttons.
+- Fix [Templates]: Removed `padding-right: 0` override on `.c-header > div` for all v2 templates (5–9) which caused math captcha question mark to stick to the container edge.
+- Fix [Captcha Pool]: Pool entries now store the template ID they were generated for. On retrieval, only entries matching the current template are used, preventing stale images with wrong colors after template changes.
+
+= 2.6.4 =
+- Fix [Charts]: Fixed empty/blank Recharts charts on Dashboard and Analytics pages. MySQL returns `COUNT(*)` as strings via `$wpdb->get_results()`, but Recharts requires numeric values for `dataKey`. All chart data (LineChart, BarChart, PieChart) now casts `entry.count` to `Number()` before rendering.
+- Fix [Admin UI]: Fixed `useSettingsContext must be used within a SettingsProvider` crash on API and other pages. The context hook now returns a safe loading-state fallback instead of throwing, preventing app crashes from stale browser cache or module loading race conditions.
+- Fix [Admin UI]: Hidden "Kostenlose Trial starten" section on the API page when an API key is already configured. Previously clicking "Trial starten" with an active key returned a 409 error.
+- Fix [Admin UI]: Replaced text-based status badges in the Mail-Log table with compact status icons (CheckCircle, ShieldAlert, RotateCw) and hover tooltips. Fixes "Erneut gesendet" badge text wrapping to a new line in narrow columns.
+- New [Translations]: Built .po/.mo files for 12 previously missing locales: Bulgarian (bg_BG), Czech (cs_CZ), Danish (da_DK), Finnish (fi), Croatian (hr), Hungarian (hu_HU), Dutch (nl_NL), Polish (pl_PL), Romanian (ro_RO), Slovak (sk_SK), Slovenian (sl_SI), Swedish (sv_SE). All 25 languages now have compiled translation files at 100% coverage (492/492 strings).
+
+= 2.6.3 =
+- Fix [Type Safety]: Fixed `is_enabled()` type comparison bug in JavaScript, Browser, and Multiple Submission protection modules. Settings value was not cast to `(int)` before comparison, causing string `'0'` (disabled) to evaluate as truthy — these modules could not be reliably disabled via settings.
+- Fix [Type Safety]: Fixed `Api::is_enabled()` default value from `1` (enabled) to `0` (disabled). Previously, if `beta_captcha_enable` was not explicitly set, the API mode defaulted to active, potentially bypassing all local protection modules.
+- Fix [Timer]: `Timer_Validator::get_validation_time()` now reads the `protection_time_ms` setting instead of using a hardcoded 2000ms value. The UI default is 500ms — previously the setting had no effect.
+- Fix [Multiple Submission]: `Multiple_Submission_Validator::get_validation_time()` now reads the `protection_time_ms` setting instead of using a hardcoded 2000ms value.
+- Fix [Context]: Added missing `set_context()`/`clear_context()` calls in Elementor, Ultimate Member, and WP Job Manager controllers. Without context, spam blocks were logged with empty `form_plugin` and mail logging could not identify the source integration.
+- Fix [Analytics]: Fixed protection module label mapping in the Analytics block log UI. The database stores module names with `-validator` suffix (e.g. `timer-validator`, `captcha-validator`), but the React UI was looking for short names without suffix (e.g. `timer`, `captcha`). All labels, badge variants, and pie chart entries now use the exact database values.
+- Fix [BlockLog]: Block reason detail now uses the module's specific error message (`$modul->get_message()`) instead of the generic static map description. For content rules, this means the actual rule violation (e.g. "The word 'viagra' is blacklisted") is logged instead of the generic "Content matched a blacklist rule".
+- Fix [Mail-Log]: CF7 sent mail logging now uses the universal `wp_mail` filter instead of the CF7-specific `wpcf7_mail_components` hook. This ensures all form plugins (CF7, WPForms, Elementor, Gravity Forms, Fluent Forms, Avada, JetFormBuilder, WooCommerce) are covered with a single hook.
+- Fix [Mail-Log]: Sent mail logging now captures the actual resolved mail data (recipient, subject, body) from `wp_mail()` instead of raw CF7 templates with unresolved `[tags]`.
+- Fix [Mail-Log]: Form data (posted fields) is now stored for sent mails, enabling proper review and resend from the admin UI.
+- Fix [Mail-Log]: Added `table_exists()` check in `MailLog::log()` to prevent silent failures on fresh installations before the upgrade migration runs.
+
+= 2.6.2 =
+- New [Mail-Log]: Added complete mail logging system for tracking sent and blocked form submissions. Stores sender, recipient, subject, body, headers, attachments, form data, IP hash, and block reason in a dedicated database table (`f12_mail_log`).
+- New [Mail-Log]: Blocked submissions are automatically logged from the central `Protection::is_spam()` method, capturing block reason and form data. Works across all supported integrations (CF7, WPForms, Elementor, Gravity Forms, Fluent Forms, Avada, WooCommerce, WordPress core).
+- New [Mail-Log]: Successfully sent Contact Form 7 mails are logged via `wpcf7_mail_components` filter, capturing the fully resolved mail data (recipient, sender, subject, body with all [tags] replaced, headers, attachments). Previously used `wpcf7_before_send_mail` which only had raw templates with unresolved CF7 tags.
+- New [Mail-Log]: Added "Resend" functionality — any mail log entry (sent, blocked, or previously resent) can be resent directly from the admin UI via `wp_mail()`. Attachments are only included if files still exist on disk. Status is updated to "resent" with audit log entry.
+- New [Admin UI]: Added dedicated "Mail-Log" page with summary cards (total, sent, blocked, resent), filterable/searchable table (status, form plugin, free-text search with debounce), pagination, and auto-refresh controls.
+- New [Admin UI]: Mail-Log detail dialog shows full message body, form data (JSON), block reason, IP hash, headers, and action buttons (resend with confirmation, delete with double-confirmation).
+- New [Admin UI]: Bulk actions for Mail-Log — select individual entries via checkboxes or "select all" on the current page. Bulk resend (with confirmation dialog) and bulk delete (with toggle-switch double-confirmation) for multiple entries at once.
+- New [Admin UI]: Delete confirmation uses a double-confirm pattern: a toggle switch "Ich verstehe, dass dieser Eintrag unwiderruflich gelöscht wird" must be activated before the delete button becomes clickable. Applied to both single and bulk delete.
+- New [Admin UI]: Added Mail-Log sidebar navigation entry with Mail icon (between Analytics and Audit Log).
+- New [Admin UI]: Added "Mail-Logging" settings section in Advanced Settings with GDPR warning banner, enable/disable toggle, sub-toggles for sent/blocked logging, and configurable retention period (1–365 days).
+- New [Admin UI]: Added Mail-Log cleanup options in Data Cleanup page ("Alle Mail-Logs löschen", "Blockierte Mail-Logs löschen") with entry counts.
+- New [REST API]: Added 5 admin-only Mail-Log REST endpoints: `GET /mail-log/entries` (paginated with filters), `GET /mail-log/summary` (counts by status), `GET /mail-log/entry/{id}` (full entry with body), `DELETE /mail-log/entry/{id}`, `POST /mail-log/resend/{id}`.
+- New [Core]: `MailLog` PHP class (`core/log/MailLog.class.php`) with full CRUD operations, table existence checks, `suppress_errors` for resilient inserts, and separate `log_blocked()`/`log_sent()` convenience methods.
+- New [Core]: Automatic Mail-Log cleanup integrated into `Log_Cleaner` cron job with configurable retention (`protection_mail_log_retention`, default 30 days).
+- New [Settings]: 4 new settings: `protection_mail_log_enable` (default: off), `protection_mail_log_sent` (default: on), `protection_mail_log_blocked` (default: on), `protection_mail_log_retention` (default: 30 days).
+- Fix [API Fallback]: Frontend assets (`client.js` vs local JS bundle) now respect the API health check transient. When the SilentShield API is unreachable, the local JS bundle (with JavaScriptProtection, SubmitGuard, form handlers) is loaded instead of the API client — fixing missing `js_end_time` timestamps, broken captcha reload, and CORS errors from offline API endpoints.
+- Fix [REST API]: Increased admin endpoint rate limit from 10 to 60 requests per minute to prevent rate-limit errors when using auto-refresh or loading pages with multiple concurrent API calls.
+- Improvement [Settings]: Changed default for `protection_global_asset_loading` from 0 to 1, ensuring frontend JS/CSS assets are loaded on all pages by default. Prevents issues where captcha fields render but JS handlers are not loaded.
+
+= 2.6.1 =
+- Fix [API]: Fixed settings type mismatch between PHP REST API and React admin UI. The REST save handler converted all values to strings via `sanitize_text_field()`, but the React frontend used strict equality (`=== 1`) to check toggle states. This caused API-related toggles (API enable, Shadow Mode) to always appear as "off" after saving, even though the value was correctly stored. The server now preserves native integer, float, and boolean types during save, and the React UI uses `Number()` coercion for defensive comparison.
+- Fix [API Fallback]: When the SilentShield API is enabled but unreachable (e.g. dev/staging environment offline, network issues, server errors), the plugin now automatically falls back to all local protection modules (Captcha, Timer, JS detection, Browser detection, IP blocking, Content rules, etc.) instead of silently disabling all protection. Previously, an active API key with an unreachable API resulted in no captcha output and no spam protection at all.
+- New [Admin Notice]: Added a dismissible admin warning that appears when the API fallback is active, informing administrators that the SilentShield API is unreachable and local protection modules have been automatically reactivated. Includes a link to the API settings page.
+- New [API Health Check]: Added lightweight API reachability check with transient caching (5 min on success, 2 min on failure) to avoid hitting the API on every request. HTTP 2xx–4xx responses are treated as "reachable" (the API is up, even if the key is invalid); only connection errors and 5xx responses trigger the local fallback.
+- New [Audit Log]: API health failures are now logged as `API_HEALTH_UNREACHABLE` (connection error) or `API_HEALTH_SERVER_ERROR` (5xx response) audit events with endpoint and error context.
+- Fix [Database]: Added missing upgrade migration for BlockLog and AuditLog tables. Sites that upgraded to 2.6.0 without deactivating/reactivating the plugin had missing database tables, causing `wpdb` errors on the Audit Log and Analytics pages and cascading rate-limit failures.
+- Fix [Database]: AuditLog and BlockLog query methods now gracefully return empty results when the underlying table does not exist, preventing HTML error output from leaking into REST API JSON responses.
+- Fix [Database]: `$wpdb->suppress_errors()` is now used around AuditLog and BlockLog insert operations to prevent database error HTML from breaking REST responses when tables are missing.
+- Fix [Admin UI]: Fixed IP hash string overflowing into adjacent columns in the block detail and audit event detail dialogs. Long hash strings now wrap automatically via `break-all`.
+- New [Admin UI]: Added "Erweitertes Tracking" hint banner on the Analytics page. When detailed tracking is disabled (default), a dismissible warning explains that Analytics requires this setting and links directly to the Advanced settings page to enable it.
+- New [Admin UI]: Added auto-refresh controls to both Analytics and Audit Log pages. A tab bar allows selecting refresh intervals (Aus / 5s / 15s / 30s) and a manual refresh button with spin animation is available for on-demand data reload.
+
+= 2.6.0 =
+- New [Audit Log]: Added always-active audit log system (`AuditLog` class) that records admin and system events (settings changes, cron runs, activation/deactivation, rate limiting, API errors, DB errors, trial events, i18n failures) to a dedicated database table with throttling, sensitive data masking, and error_log fallback.
+- New [Admin UI]: Added Audit Log admin page (SilentShield → Audit Log) with summary cards, filterable/paginated event table, severity color-coding, and slide-out detail panel with JSON context viewer.
+- New [Admin UI]: Dashboard widget now shows the 5 most recent warnings/errors/critical events with a direct link to the full Audit Log page.
+- New [REST API]: Added 2 new admin-only REST endpoints (`/audit/entries`, `/audit/summary`) with filters for time range, event type, severity, and pagination.
+- New [Core]: API verification errors (`Api.class.php`) now log `API_VERIFY_UNREACHABLE` audit events with endpoint and fail-mode context.
+- New [Core]: Trial activation failures now log `TRIAL_API_UNREACHABLE`, `TRIAL_API_ERROR`, and `TRIAL_INVALID_RESPONSE` audit events.
+- New [Core]: All 6 cron jobs now have bookend audit hooks that log start/completion with execution timing and catch/log failures as `CRON_FAILED` events.
+- New [Core]: Telemetry, monthly report, and weekly report cron handlers now audit-log send failures and unexpected responses.
+- New [Core]: Translation loading failures now log `TRANSLATION_LOAD_FAILED` audit events with locale and path context.
+- New [Core]: BlockLog database operations (`log`, `get_entries`, `get_overview`, `cleanup`) now audit-log insert/query/cleanup failures as `BLOCKLOG_*` events.
+- New [Settings]: Added configurable "Audit Log Retention" setting (7–365 days, default 90) under Settings → Extended. Log cleanup respects this setting automatically.
+- Improvement [Core]: Log_Cleaner now also cleans up AuditLog and BlockLog tables during the weekly cron job, respecting their individual retention settings.
+- New [Audit Log]: API key validation failures (`API_KEY_VALIDATION_UNREACHABLE`, `API_KEY_INVALID`) are now audit-logged when the SilentShield key validation endpoint is unreachable or returns invalid.
+- New [Audit Log]: API key lifecycle changes are now audit-logged: key set (`API_KEY_SET`), key removed (`API_KEY_REMOVED`), key rotated (`API_KEY_CHANGED`).
+- New [Audit Log]: API mode and Shadow Mode toggles are now audit-logged (`API_MODE_ENABLED/DISABLED`, `SHADOW_MODE_ENABLED/DISABLED`).
+- New [Audit Log]: API verify HTTP error responses (4xx/5xx) and unparseable JSON are now audit-logged as `API_VERIFY_ERROR_RESPONSE`.
+- New [Audit Log]: Trial expiration is now proactively audit-logged once as `TRIAL_EXPIRED` when the admin visits the Beta settings page after the trial period ends.
+
+= 2.5.0 =
+- New [F2P]: Added Shadow Mode for statistical estimation of API-blocked spam. Samples 30% of passed submissions and projects weekly totals. Enable under Settings > Beta. Dormant API call behind `F12_CAPTCHA_SHADOW_API_LIVE` constant.
+- New [F2P]: Added Weekly Email Report (opt-in) with block statistics, top 3 reason codes, breakdown by protection type, and upgrade CTA with UTM tracking. Enable under Settings > Extended > Weekly Report.
+- New [Analytics]: Shadow Mode comparison section on Analytics page showing estimated additional API catches with 4 stat cards and upgrade CTA.
+- New [Beta]: Shadow Mode toggle added to Beta settings page.
+
+= 2.4.0 =
+- New [Analytics]: Added Analytics admin page (SilentShield → Analytics) with block statistics overview, timeline chart, protection module breakdown, reason code frequency, and paginated block log with detail drawer.
+- New [Analytics]: 4 new REST API endpoints for analytics data (summary, timeline, reasons, log) with admin-only access and rate limiting.
+- New [Analytics]: Score breakdown visualization for API-mode blocks showing 7 sub-score categories with color-coded progress bars.
+- New [Analytics]: Time range selector (7/30/90 days) for all analytics views.
+- New [Privacy]: Added "Disable Log Anonymization (Debug Mode)" toggle in Extended Settings → Detailed Tracking. When enabled, email addresses and IP addresses are stored in plain text in submission logs and the block log, allowing admins to identify blocked users. Disabled by default. Includes GDPR/DSGVO privacy warning. Passwords are always masked regardless of this setting.
+- New [Core]: Added `Protection::has_module()` method to safely check module availability before access.
+- Fix [Admin UI]: Fixed fatal error "Module captcha-validator does not exist" on Extended Settings page when SilentShield API mode is active. The Captcha management section now shows an informational message in API mode instead of crashing.
+
+= 2.3.6 =
+- New [Accessibility]: Added Audio CAPTCHA feature using the Web Speech API. A speaker button next to the CAPTCHA allows visually impaired users to have the challenge read aloud via browser-native text-to-speech. Privacy-first — no external API calls. Disabled by default, enable under Settings > Protection > Audio Accessibility.
+- New [Accessibility]: Added hover/focus tooltip on the audio button ("Click to have the CAPTCHA read aloud") so users understand the button's purpose before clicking.
+- New [REST API]: Added rate-limited `POST /captcha/audio` endpoint (5 req/min per IP) that returns spelled-out characters for image CAPTCHAs and the formula for math CAPTCHAs.
+- Improvement [Image CAPTCHA]: When Audio CAPTCHA is enabled, the character pool is restricted to lowercase letters + digits to avoid ambiguity (TTS cannot distinguish upper/lowercase). Existing pooled CAPTCHAs with uppercase characters are automatically discarded and regenerated.
+- Improvement [Translations]: Added all new Audio CAPTCHA strings to all language files (de_DE, de_DE_formal, es_ES, fr_FR, it_IT, pt_PT).
+
 = 2.3.5 =
 - Fix [Fluent Forms]: Fixed JavaScript protection failing for Conversational Forms (`[fluentform type="conversational"]`). Conversational Forms render as a Vue.js app inside a `<div>` instead of a `<form>` element, so the regular `render_item_submit_button` hook and the JS form discovery (`querySelectorAll("form")`) never fired. Timing fields (`php_start_time`, `js_start_time`, `js_end_time`) are now injected via `jQuery.ajaxPrefilter` directly into the inner `data` POST parameter where the PHP backend expects them. Hooks into both `wp_footer` (embedded forms) and `fluentform/conversational_frame_footer` (standalone pages).
 

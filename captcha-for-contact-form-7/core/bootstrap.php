@@ -3,11 +3,14 @@
 namespace f12_cf7_captcha;
 
 use Forge12\Shared\Logger;
+use f12_cf7_captcha\core\log\AuditLog;
 
 require_once __DIR__ . '/activation.php';
 require_once __DIR__ . '/helpers/uuid.php';
 require_once __DIR__ . '/telemetry.php';
 require_once __DIR__ . '/cron.php';
+require_once __DIR__ . '/monthly_report.php';
+require_once __DIR__ . '/weekly_report.php';
 require_once __DIR__ . '/upgrade.php';
 require_once __DIR__ . '/review.php';
 
@@ -68,12 +71,29 @@ register_activation_hook(FORGE12_CAPTCHA_BASENAME, function () {
 			'plugin' => FORGE12_CAPTCHA_SLUG,
 			'version'=> FORGE12_CAPTCHA_VERSION,
 		]);
+
+		AuditLog::log(
+			AuditLog::TYPE_ACTIVATION,
+			'PLUGIN_ACTIVATED',
+			AuditLog::SEVERITY_INFO,
+			sprintf( 'Plugin activated (v%s) by user #%d', FORGE12_CAPTCHA_VERSION, get_current_user_id() ),
+			[ 'version' => FORGE12_CAPTCHA_VERSION ]
+		);
 	} catch (\Throwable $e) {
 		$logger->error("Error during plugin activation", [
 			'plugin' => FORGE12_CAPTCHA_SLUG,
 			'error'  => $e->getMessage(),
 			'trace'  => $e->getTraceAsString(),
 		]);
+
+		AuditLog::log(
+			AuditLog::TYPE_ACTIVATION,
+			'PLUGIN_ACTIVATION_FAILED',
+			AuditLog::SEVERITY_CRITICAL,
+			sprintf( 'Plugin activation failed: %s', $e->getMessage() ),
+			[ 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine() ]
+		);
+
 		throw $e;
 	}
 });
@@ -82,7 +102,18 @@ register_activation_hook(FORGE12_CAPTCHA_BASENAME, function () {
 function clear_cron_jobs() {
 	$logger = Logger::getInstance();
 
+	// Audit before clearing (table may be dropped soon on uninstall)
+	AuditLog::log(
+		AuditLog::TYPE_ACTIVATION,
+		'PLUGIN_DEACTIVATED',
+		AuditLog::SEVERITY_INFO,
+		sprintf( 'Plugin deactivated by user #%d, cron jobs cleared', get_current_user_id() ),
+		[ 'version' => defined( 'FORGE12_CAPTCHA_VERSION' ) ? FORGE12_CAPTCHA_VERSION : 'unknown' ]
+	);
+
 	wp_clear_scheduled_hook('f12_cf7_captcha_daily_telemetry');
+	wp_clear_scheduled_hook('f12_cf7_captcha_monthly_report');
+	wp_clear_scheduled_hook('f12_cf7_captcha_weekly_report');
 	wp_clear_scheduled_hook('weeklyIPClear');
 	wp_clear_scheduled_hook('dailyCaptchaClear');
 	wp_clear_scheduled_hook('dailyCaptchaTimerClear');
@@ -98,7 +129,20 @@ add_action('plugins_loaded', function () {
 	add_cron_jobs();
 	$logger = Logger::getInstance();
 	try {
+		$old_version = get_option( 'f12-cf7-captcha_version', '' );
 		on_update();
+		$new_version = get_option( 'f12-cf7-captcha_version', '' );
+
+		if ( $old_version !== $new_version && ! empty( $new_version ) ) {
+			AuditLog::log(
+				AuditLog::TYPE_ACTIVATION,
+				'PLUGIN_UPDATED',
+				AuditLog::SEVERITY_INFO,
+				sprintf( 'Plugin updated from v%s to v%s', $old_version ?: 'unknown', $new_version ),
+				[ 'from' => $old_version, 'to' => $new_version ]
+			);
+		}
+
 		$logger->debug("Update check performed on plugin load", [
 			'plugin' => FORGE12_CAPTCHA_SLUG,
 		]);
@@ -107,5 +151,13 @@ add_action('plugins_loaded', function () {
 			'plugin' => FORGE12_CAPTCHA_SLUG,
 			'error'  => $e->getMessage(),
 		]);
+
+		AuditLog::log(
+			AuditLog::TYPE_ACTIVATION,
+			'PLUGIN_UPDATE_FAILED',
+			AuditLog::SEVERITY_ERROR,
+			sprintf( 'Plugin update check failed: %s', $e->getMessage() ),
+			[ 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine() ]
+		);
 	}
 });

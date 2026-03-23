@@ -265,6 +265,8 @@ class Override_Panel_Renderer {
 				'0'           => __( 'Template 0', 'captcha-for-contact-form-7' ),
 				'1'           => __( 'Template 1', 'captcha-for-contact-form-7' ),
 				'2'           => __( 'Template 2', 'captcha-for-contact-form-7' ),
+				'3'           => __( 'Template 3 – Dark Card', 'captcha-for-contact-form-7' ),
+				'4'           => __( 'Template 4 – Gradient Dark', 'captcha-for-contact-form-7' ),
 			];
 			self::render_select( $key, $options, $current_value );
 			return;

@@ -104,11 +104,11 @@ class Browser extends BaseProtection {
 		$raw_setting = $this->get_protection_setting( 'protection_browser_enable' );
 
 		if ($raw_setting === '' || $raw_setting === null) {
-			// Default: active if not explicitly set
 			$raw_setting = 1;
 		}
 
-		$is_enabled = apply_filters( 'f12-cf7-captcha-skip-validation-browser', $raw_setting );
+		$is_enabled = (int) $raw_setting === 1;
+		$is_enabled = apply_filters( 'f12-cf7-captcha-skip-validation-browser', $is_enabled );
 
 		$this->get_logger()->debug("Browser protection status checked", [
 			'plugin'      => 'f12-cf7-captcha',

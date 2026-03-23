@@ -54,12 +54,13 @@ class Javascript_Validator extends BaseProtection
 
 	protected function is_enabled(): bool
 	{
-		$is_enabled = $this->get_protection_setting('protection_javascript_enable');
+		$raw = $this->get_protection_setting('protection_javascript_enable');
 
-		if ($is_enabled === '' || $is_enabled === null) {
-			// Default: active if not explicitly set
-			$is_enabled = 1;
+		if ($raw === '' || $raw === null) {
+			$raw = 1;
 		}
+
+		$is_enabled = (int) $raw === 1;
 
 		$debug = f12_is_debug();
 

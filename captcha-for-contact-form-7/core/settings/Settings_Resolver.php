@@ -32,6 +32,7 @@ class Settings_Resolver {
 		'protection_captcha_reload_border_radius',
 		'protection_captcha_reload_border_color',
 		'protection_captcha_reload_icon_size',
+		'protection_captcha_audio_enable',
 		// Timer
 		'protection_time_enable',
 		'protection_time_ms',

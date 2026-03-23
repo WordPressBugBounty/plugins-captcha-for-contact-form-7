@@ -62,13 +62,16 @@ class ControllerWPJobManagerApplications extends BaseController {
 
 		$Protection = $this->Controller->get_module('protection');
 
+		$Protection->set_context( $this->id, null );
 		if ($Protection->is_spam($array_post_data)) {
 			$message = $Protection->get_message();
+			$Protection->clear_context();
 			$this->get_logger()->warning('Spam detected! Error message: ' . $message);
 
 			return new \WP_Error('validation-error', sprintf(__('Captcha not correct: %s', 'captcha-for-contact-form-7'), $message));
 		}
 
+		$Protection->clear_context();
 		return $validated;
 	}
 }

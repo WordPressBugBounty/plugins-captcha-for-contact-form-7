@@ -55,29 +55,43 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	 * constructor.
 	 */
 	public function __construct( CF7Captcha $Controller, int $length = 6 ) {
+		// Check if audio captcha is enabled — if so, only use lowercase + digits
+		$audio_enabled = (int) $Controller->get_settings( 'protection_captcha_audio_enable', 'global' ) === 1;
+		if ( $audio_enabled ) {
+			$this->use_audio_safe_characters();
+		}
+
 		// Try to get from pool first for performance
 		$this->pool = new CaptchaPool( $Controller );
 		$pooled     = $this->pool->get_from_pool();
 
 		if ( $pooled !== null ) {
-			// Use pre-generated captcha from pool
-			$this->_captcha   = $pooled['code'];
-			$this->image      = $pooled['image'];
-			$this->from_pool  = true;
+			// Skip pooled entry if it has uppercase chars and audio is enabled
+			$has_uppercase = $audio_enabled && preg_match( '/[A-Z]/', $pooled['code'] );
 
-			// Still need to call parent for other initialization,
-			// but skip captcha generation by passing length 0 and then setting _captcha
-			parent::__construct( $Controller, 0 );
-			$this->_captcha = $pooled['code'];
+			if ( ! $has_uppercase ) {
+				// Use pre-generated captcha from pool
+				$this->_captcha  = $pooled['code'];
+				$this->image     = $pooled['image'];
+				$this->from_pool = true;
 
-			$this->get_logger()->info(
-				"__construct(): Captcha loaded from pool (fast path)",
-				[
-					'plugin'    => 'f12-cf7-captcha',
-					'class'     => __CLASS__,
-					'pool_size' => $this->pool->get_pool_size(),
-				]
-			);
+				// Still need to call parent for other initialization,
+				// but skip captcha generation by passing length 0 and then setting _captcha
+				parent::__construct( $Controller, 0 );
+				$this->_captcha = $pooled['code'];
+
+				$this->get_logger()->info(
+					"__construct(): Captcha loaded from pool (fast path)",
+					[
+						'plugin'    => 'f12-cf7-captcha',
+						'class'     => __CLASS__,
+						'pool_size' => $this->pool->get_pool_size(),
+					]
+				);
+			} else {
+				// Pool entry incompatible with audio mode, generate fresh
+				parent::__construct( $Controller, $length );
+			}
 		} else {
 			// Fall back to regular generation
 			parent::__construct( $Controller, $length );
@@ -214,9 +228,27 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 			]
 		);
 
-		// Create the image
-		$image = imagecreate( 125, 30 );
-		imagecolorallocate( $image, 255, 255, 255 );
+		// Determine color scheme based on selected template.
+		// All templates use transparent background so the image blends
+		// seamlessly with any .c-data background color.
+		// Dark templates (Gradient Dark) additionally need light text colors.
+		$template = (int) $this->get_protection_setting( 'protection_captcha_template' );
+		$is_dark  = in_array( $template, [ 4, 9 ], true );
+
+		$image = imagecreatetruecolor( 125, 30 );
+		imagealphablending( $image, false );
+		imagesavealpha( $image, true );
+		$trans = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		imagefill( $image, 0, 0, $trans );
+		imagealphablending( $image, true );
+
+		if ( $is_dark ) {
+			$shadow_color = [ 100, 120, 140 ];
+			$text_color   = [ 224, 232, 239 ]; // #e0e8ef
+		} else {
+			$shadow_color = [ 200, 200, 200 ];
+			$text_color   = [ 69, 103, 137 ];
+		}
 
 		// Positioning
 		$offsetLeft = 10;
@@ -228,7 +260,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 				rand( - 10, 10 ),
 				$offsetLeft + ( ( $i == 0 ? 5 : 15 ) * $i ),
 				25,
-				imagecolorallocate( $image, 200, 200, 200 ),
+				imagecolorallocate( $image, $shadow_color[0], $shadow_color[1], $shadow_color[2] ),
 				$this->_font,
 				$captcha[ $i ]
 			);
@@ -238,7 +270,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 				rand( - 15, 15 ),
 				$offsetLeft + ( ( $i == 0 ? 5 : 15 ) * $i ),
 				25,
-				imagecolorallocate( $image, 69, 103, 137 ),
+				imagecolorallocate( $image, $text_color[0], $text_color[1], $text_color[2] ),
 				$this->_font,
 				$captcha[ $i ]
 			);
@@ -487,9 +519,12 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		 */
 		$template = (int) $this->get_protection_setting( 'protection_captcha_template' );
 
-		if ( ! in_array( $template, [ 0, 1, 2 ], true ) ) {
+		if ( ! in_array( $template, [ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 ], true ) ) {
 			$template = 0;
 		}
+
+		// v2 templates (5-9) use SVG reload button and transparent audio styles
+		$is_v2 = $template >= 5;
 
 		$this->get_logger()->info(
 			"get_field(): Captcha field is being generated",
@@ -502,21 +537,28 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 			]
 		);
 
+		$captcha_audio_enabled = (int) $this->get_protection_setting( 'protection_captcha_audio_enable' ) === 1;
+		$icon_size             = $this->get_protection_setting( 'protection_captcha_reload_icon_size' );
+		$icon_size             = is_numeric( $icon_size ) ? (int) $icon_size : 16;
+
 		$captcha = $TemplateController->get_plugin_template( 'captcha/template-' . $template, [
-			'hash_id'            => $hash_id,
-			'hash_field_name'    => $field_name . '_hash',
-			'hash_value'         => $hash,
-			'wrapper_classes'    => $atts['wrapper_classes'],
-			'wrapper_attributes' => $wrapper_attributes,
-			'label'              => $label,
-			'classes'            => $atts['classes'],
-			'attributes'         => $attributes,
-			'captcha_id'         => $captcha_id,
-			'field_name'         => $field_name,
-			'placeholder'        => $placeholder,
-			'captcha_data'       => $this->get_image(),
-			'captcha_reload'     => $this->get_reload_button(),
-			'method'             => 'image',
+			'hash_id'               => $hash_id,
+			'hash_field_name'       => $field_name . '_hash',
+			'hash_value'            => $hash,
+			'wrapper_classes'       => $atts['wrapper_classes'],
+			'wrapper_attributes'    => $wrapper_attributes,
+			'label'                 => $label,
+			'classes'               => $atts['classes'],
+			'attributes'            => $attributes,
+			'captcha_id'            => $captcha_id,
+			'field_name'            => $field_name,
+			'placeholder'           => $placeholder,
+			'captcha_data'          => $this->get_image(),
+			'captcha_reload'        => $is_v2 ? $this->get_reload_button_v2() : $this->get_reload_button(),
+			'method'                => 'image',
+			'captcha_audio_enabled' => $captcha_audio_enabled,
+			'audio_btn_styles'      => $captcha_audio_enabled ? ( $is_v2 ? $this->get_audio_button_styles_v2() : $this->get_audio_button_styles() ) : '',
+			'icon_size'             => $icon_size,
 		] );
 
 

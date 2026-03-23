@@ -88,8 +88,12 @@ class ControllerElementor extends BaseController
 
         $Protection = $this->Controller->get_module('protection');
 
-        if ($Protection->is_spam($array_post_data)) {
+        $Protection->set_context( $this->id, null );
+        $is_spam = $Protection->is_spam($array_post_data);
+
+        if ($is_spam) {
             $message = $Protection->get_message();
+            $Protection->clear_context();
             $this->get_logger()->warning('Spam detected! Message: ' . $message);
 
             $field_name = '';
@@ -104,6 +108,7 @@ class ControllerElementor extends BaseController
             return true;
         }
 
+        $Protection->clear_context();
         return false;
     }
 }

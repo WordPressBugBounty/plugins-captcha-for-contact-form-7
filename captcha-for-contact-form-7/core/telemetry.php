@@ -118,42 +118,75 @@ function build_telemetry_payload(): array {
  */
 function send_telemetry_snapshot(): void {
 	$logger = Logger::getInstance();
-	$payload = build_telemetry_payload();
 
-	$logger->debug("Telemetry payload prepared", [
-		'plugin'  => FORGE12_CAPTCHA_SLUG,
-		'payload' => $payload,
-	]);
+	try {
+		$payload = build_telemetry_payload();
 
-	$response = wp_remote_post('https://api.silentshield.io/api/telemetry/snapshot', [
-		'headers' => [
-			'Content-Type' => 'application/json; charset=utf-8',
-		],
-		'body'    => wp_json_encode($payload),
-		'timeout' => 15,
-	]);
+		$logger->debug("Telemetry payload prepared", [
+			'plugin'  => FORGE12_CAPTCHA_SLUG,
+			'payload' => $payload,
+		]);
 
-	if (is_wp_error($response)) {
-		$logger->error("Telemetry failed", [
+		$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
+		$response = wp_remote_post( rtrim( $base_url, '/' ) . '/api/telemetry/snapshot', [
+			'headers' => [
+				'Content-Type' => 'application/json; charset=utf-8',
+			],
+			'body'    => wp_json_encode($payload),
+			'timeout' => 15,
+		]);
+
+		if (is_wp_error($response)) {
+			$logger->error("Telemetry failed", [
+				'plugin' => FORGE12_CAPTCHA_SLUG,
+				'error'  => $response->get_error_message(),
+			]);
+
+			core\log\AuditLog::log(
+				core\log\AuditLog::TYPE_CRON,
+				'TELEMETRY_SEND_FAILED',
+				core\log\AuditLog::SEVERITY_WARNING,
+				sprintf( 'Telemetry API unreachable: %s', $response->get_error_message() ),
+				[ 'error' => $response->get_error_message() ]
+			);
+			return;
+		}
+
+		$code = wp_remote_retrieve_response_code($response);
+
+		if ($code === 201) {
+			$logger->info("Telemetry successfully sent", [
+				'plugin' => FORGE12_CAPTCHA_SLUG,
+				'code'   => $code,
+			]);
+		} else {
+			$logger->warning("Telemetry unexpected response", [
+				'plugin'   => FORGE12_CAPTCHA_SLUG,
+				'code'     => $code,
+				'response' => wp_remote_retrieve_body($response),
+			]);
+
+			core\log\AuditLog::log(
+				core\log\AuditLog::TYPE_CRON,
+				'TELEMETRY_UNEXPECTED_RESPONSE',
+				core\log\AuditLog::SEVERITY_WARNING,
+				sprintf( 'Telemetry API returned HTTP %d', $code ),
+				[ 'http_code' => $code ]
+			);
+		}
+	} catch ( \Throwable $e ) {
+		$logger->error( "Telemetry cron failed with exception", [
 			'plugin' => FORGE12_CAPTCHA_SLUG,
-			'error'  => $response->get_error_message(),
-		]);
-		return;
-	}
+			'error'  => $e->getMessage(),
+		] );
 
-	$code = wp_remote_retrieve_response_code($response);
-
-	if ($code === 201) {
-		$logger->info("Telemetry successfully sent", [
-			'plugin' => FORGE12_CAPTCHA_SLUG,
-			'code'   => $code,
-		]);
-	} else {
-		$logger->warning("Telemetry unexpected response", [
-			'plugin'   => FORGE12_CAPTCHA_SLUG,
-			'code'     => $code,
-			'response' => wp_remote_retrieve_body($response),
-		]);
+		core\log\AuditLog::log(
+			core\log\AuditLog::TYPE_CRON,
+			'CRON_FAILED',
+			core\log\AuditLog::SEVERITY_ERROR,
+			sprintf( 'Telemetry cron failed: %s', $e->getMessage() ),
+			[ 'job' => 'send_telemetry_snapshot', 'error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine() ]
+		);
 	}
 }
 

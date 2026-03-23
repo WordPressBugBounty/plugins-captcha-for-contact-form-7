@@ -20,7 +20,13 @@ abstract class CaptchaGenerator extends BaseModul
     /**
      * @var string List of allowed characters for the captcha
      */
-    private $_allowedCharacters = 'abcdefghjkmnopqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    protected $_allowedCharacters = 'abcdefghjkmnopqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
+    /**
+     * Lowercase-only characters for use when audio captcha is enabled.
+     * TTS cannot distinguish between upper- and lowercase letters.
+     */
+    private const ALLOWED_CHARACTERS_AUDIO = 'abcdefghjkmnopqrstuvwxyz23456789';
 
     /**
      * The Captcha string.
@@ -305,6 +311,79 @@ abstract class CaptchaGenerator extends BaseModul
 		);
 	}
 
+	/**
+	 * Generate the reload button for v2 templates (5-9).
+	 * Uses inline SVG instead of PNG, transparent background by default,
+	 * and no !important so template CSS can style the button.
+	 *
+	 * @since 2.1.0
+	 * @return string The HTML markup for the reload button.
+	 */
+	public function get_reload_button_v2(): string
+	{
+		$icon_size = $this->get_protection_setting('protection_captcha_reload_icon_size');
+		$icon_size = is_numeric( $icon_size ) ? (int) $icon_size : 16;
+
+		$svg = sprintf(
+			'<svg aria-hidden="true" width="%1$d" height="%1$d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>',
+			$icon_size
+		);
+
+		return sprintf(
+			'<a href="#" class="cf7 captcha-reload" style="display:inline-flex;align-items:center;justify-content:center;background:transparent;padding:0;border:none;line-height:0;text-decoration:none;" title="%s">%s</a>',
+			esc_attr__('Reload Captcha', 'captcha-for-contact-form-7'),
+			$svg
+		);
+	}
+
+
+	/**
+	 * Generate inline styles for the audio button, consistent with the reload button.
+	 *
+	 * @return string Inline CSS styles.
+	 */
+	/**
+	 * Restrict allowed characters to lowercase + digits for audio captcha compatibility.
+	 * Must be called before generate_captcha().
+	 */
+	public function use_audio_safe_characters(): void {
+		$this->_allowedCharacters = self::ALLOWED_CHARACTERS_AUDIO;
+	}
+
+	public function get_audio_button_styles(): string {
+		$bg_color      = $this->get_protection_setting( 'protection_captcha_reload_bg_color' );
+		$padding       = $this->get_protection_setting( 'protection_captcha_reload_padding' );
+		$border_radius = $this->get_protection_setting( 'protection_captcha_reload_border_radius' );
+		$border_color  = $this->get_protection_setting( 'protection_captcha_reload_border_color' );
+
+		if ( empty( $bg_color ) || ! preg_match( '/^#[a-fA-F0-9]{6}$/', $bg_color ) ) {
+			$bg_color = '#2196f3';
+		}
+		$padding       = is_numeric( $padding ) ? (int) $padding : 3;
+		$border_radius = is_numeric( $border_radius ) ? (int) $border_radius : 3;
+
+		$styles = sprintf(
+			'display:inline-flex; align-items:center; justify-content:center; background-color:%s; padding:%dpx; border-radius:%dpx; line-height:0; box-sizing:content-box;',
+			$bg_color, $padding, $border_radius
+		);
+
+		if ( ! empty( $border_color ) && preg_match( '/^#[a-fA-F0-9]{6}$/', $border_color ) ) {
+			$styles .= sprintf( ' border:1px solid %s;', $border_color );
+		}
+
+		return $styles;
+	}
+
+	/**
+	 * Audio button styles for v2 templates (5-9).
+	 * Transparent background, styled via template CSS.
+	 *
+	 * @since 2.1.0
+	 * @return string Inline CSS styles.
+	 */
+	public function get_audio_button_styles_v2(): string {
+		return 'display:inline-flex; align-items:center; justify-content:center; background:transparent; padding:0; border:none; line-height:0; cursor:pointer;';
+	}
 
     /**
      * Generate a captcha string of specified length

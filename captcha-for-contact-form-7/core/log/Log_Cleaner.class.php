@@ -5,6 +5,7 @@ namespace f12_cf7_captcha\core\log;
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseModul;
 use f12_cf7_captcha\core\Log_WordPress_Interface;
+use f12_cf7_captcha\core\log\MailLog;
 use Forge12\Shared\Logger;
 use Forge12\Shared\LoggerInterface;
 
@@ -59,11 +60,58 @@ class Log_Cleaner extends BaseModul
 	    try {
 		    $deleted = $this->Logger->delete_older_than($threshold);
 
+		    // Also clean up the block log based on its own retention setting
+		    $retention = (int) $this->Controller->get_settings( 'protection_detailed_tracking_retention', 'global' );
+		    if ( $retention < 1 ) {
+			    $retention = 30;
+		    }
+		    $block_log = new BlockLog( $this->get_logger() );
+		    $block_deleted = $block_log->cleanup( $retention );
+
+		    // Clean up the audit log based on its own retention setting
+		    $audit_retention = (int) $this->Controller->get_settings( 'protection_audit_log_retention', 'global' );
+		    if ( $audit_retention < 7 ) {
+			    $audit_retention = 90;
+		    }
+		    $audit_log = new AuditLog( $this->get_logger() );
+		    $audit_deleted = $audit_log->cleanup( $audit_retention );
+
+		    // Clean up the mail log based on its own retention setting
+		    $mail_retention = (int) $this->Controller->get_settings( 'protection_mail_log_retention', 'global' );
+		    if ( $mail_retention < 1 ) {
+			    $mail_retention = 30;
+		    }
+		    $mail_log = new MailLog( $this->get_logger() );
+		    $mail_deleted = $mail_log->cleanup( $mail_retention );
+
+		    // Audit the cleanup itself
+		    if ( $block_deleted > 0 || $audit_deleted > 0 || $mail_deleted > 0 ) {
+			    AuditLog::log(
+				    AuditLog::TYPE_CRON,
+				    'LOG_CLEANUP_COMPLETED',
+				    AuditLog::SEVERITY_INFO,
+				    sprintf( 'Log cleanup: %d block log + %d audit log + %d mail log entries deleted', $block_deleted, $audit_deleted, $mail_deleted ),
+				    [
+					    'block_deleted'   => $block_deleted,
+					    'block_retention' => $retention,
+					    'audit_deleted'   => $audit_deleted,
+					    'audit_retention' => $audit_retention,
+					    'mail_deleted'    => $mail_deleted,
+					    'mail_retention'  => $mail_retention,
+				    ]
+			    );
+		    }
+
 		    $this->get_logger()->info("Log cleaner executed", [
-			    'plugin'    => 'f12-cf7-captcha',
-			    'class'     => static::class,
-			    'threshold' => $threshold,
-			    'deleted'   => $deleted
+			    'plugin'          => 'f12-cf7-captcha',
+			    'class'           => static::class,
+			    'threshold'       => $threshold,
+			    'deleted'         => $deleted,
+			    'block_deleted'   => $block_deleted,
+			    'audit_deleted'   => $audit_deleted,
+			    'audit_retention' => $audit_retention,
+			    'mail_deleted'    => $mail_deleted,
+			    'mail_retention'  => $mail_retention,
 		    ]);
 
 		    return $deleted;

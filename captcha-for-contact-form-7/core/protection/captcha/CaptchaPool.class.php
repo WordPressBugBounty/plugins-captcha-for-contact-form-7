@@ -163,9 +163,31 @@ class CaptchaPool extends BaseModul {
 			return null;
 		}
 
-		// Get first captcha from pool (FIFO)
-		$captcha = array_shift( $pool );
+		// Get first captcha from pool that matches the current template (FIFO)
+		$current_template = (int) $this->get_protection_setting( 'protection_captcha_template' );
+		$captcha          = null;
+
+		foreach ( $pool as $key => $entry ) {
+			if ( isset( $entry['template'] ) && (int) $entry['template'] === $current_template ) {
+				$captcha = $entry;
+				unset( $pool[ $key ] );
+				$pool = array_values( $pool );
+				break;
+			}
+		}
+
 		$this->save_pool( $pool );
+
+		if ( $captcha === null ) {
+			$this->get_logger()->warning(
+				"get_from_pool(): No matching captcha for current template",
+				[
+					'plugin'   => 'f12-cf7-captcha',
+					'template' => $current_template,
+				]
+			);
+			return null;
+		}
 
 		$this->get_logger()->info(
 			"get_from_pool(): Captcha retrieved from pool",
@@ -202,9 +224,10 @@ class CaptchaPool extends BaseModul {
 		}
 
 		$pool[] = [
-			'code'    => $code,
-			'image'   => $image,
-			'created' => time(),
+			'code'     => $code,
+			'image'    => $image,
+			'created'  => time(),
+			'template' => (int) $this->get_protection_setting( 'protection_captcha_template' ),
 		];
 
 		$result = $this->save_pool( $pool );
@@ -335,7 +358,11 @@ class CaptchaPool extends BaseModul {
 	 * @return array|null Array with 'code' and 'image' or null on failure.
 	 */
 	private function generate_captcha_image( int $length ): ?array {
-		$allowed_chars = 'abcdefghjkmnopqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+		// Use lowercase-only characters when audio captcha is enabled (TTS cannot distinguish case)
+		$audio_enabled = (int) $this->get_protection_setting( 'protection_captcha_audio_enable' ) === 1;
+		$allowed_chars = $audio_enabled
+			? 'abcdefghjkmnopqrstuvwxyz23456789'
+			: 'abcdefghjkmnopqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
 		$max           = strlen( $allowed_chars ) - 1;
 		$code          = '';
 
@@ -357,9 +384,24 @@ class CaptchaPool extends BaseModul {
 			return null;
 		}
 
-		// Create the image
-		$image = imagecreate( 125, 30 );
-		imagecolorallocate( $image, 255, 255, 255 );
+		// Determine color scheme based on selected template
+		$template = (int) $this->get_protection_setting( 'protection_captcha_template' );
+		$is_dark = in_array( $template, [ 4, 9 ], true );
+
+		$image = imagecreatetruecolor( 125, 30 );
+		imagealphablending( $image, false );
+		imagesavealpha( $image, true );
+		$trans = imagecolorallocatealpha( $image, 0, 0, 0, 127 );
+		imagefill( $image, 0, 0, $trans );
+		imagealphablending( $image, true );
+
+		if ( $is_dark ) {
+			$shadow_color = [ 100, 120, 140 ];
+			$text_color   = [ 224, 232, 239 ];
+		} else {
+			$shadow_color = [ 200, 200, 200 ];
+			$text_color   = [ 69, 103, 137 ];
+		}
 
 		$offset_left = 10;
 
@@ -370,7 +412,7 @@ class CaptchaPool extends BaseModul {
 				rand( -10, 10 ),
 				$offset_left + ( ( $i == 0 ? 5 : 15 ) * $i ),
 				25,
-				imagecolorallocate( $image, 200, 200, 200 ),
+				imagecolorallocate( $image, $shadow_color[0], $shadow_color[1], $shadow_color[2] ),
 				$font_path,
 				$code[ $i ]
 			);
@@ -380,7 +422,7 @@ class CaptchaPool extends BaseModul {
 				rand( -15, 15 ),
 				$offset_left + ( ( $i == 0 ? 5 : 15 ) * $i ),
 				25,
-				imagecolorallocate( $image, 69, 103, 137 ),
+				imagecolorallocate( $image, $text_color[0], $text_color[1], $text_color[2] ),
 				$font_path,
 				$code[ $i ]
 			);

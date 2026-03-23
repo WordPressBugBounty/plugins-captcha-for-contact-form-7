@@ -3,6 +3,9 @@ namespace f12_cf7_captcha;
 
 use Forge12\Shared\Logger;
 
+use f12_cf7_captcha\core\log\AuditLog;
+use f12_cf7_captcha\core\log\BlockLog;
+use f12_cf7_captcha\core\log\MailLog;
 use f12_cf7_captcha\core\protection\captcha\Captcha;
 use f12_cf7_captcha\core\protection\ip\IPBan;
 use f12_cf7_captcha\core\protection\ip\IPLog;
@@ -50,6 +53,27 @@ function on_activation() {
 		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'ip_ban'
+		] );
+
+		$Block_Log = new BlockLog( $logger );
+		$Block_Log->create_table();
+		$logger->info( "Table created", [
+			'plugin' => 'f12-cf7-captcha',
+			'table'  => 'block_log'
+		] );
+
+		$Audit_Log = new AuditLog( $logger );
+		$Audit_Log->create_table();
+		$logger->info( "Table created", [
+			'plugin' => 'f12-cf7-captcha',
+			'table'  => 'audit_log'
+		] );
+
+		$Mail_Log = new MailLog( $logger );
+		$Mail_Log->create_table();
+		$logger->info( "Table created", [
+			'plugin' => 'f12-cf7-captcha',
+			'table'  => 'mail_log'
 		] );
 
 		if ( ! get_option( 'f12_cf7_captcha_installed_at' ) ) {

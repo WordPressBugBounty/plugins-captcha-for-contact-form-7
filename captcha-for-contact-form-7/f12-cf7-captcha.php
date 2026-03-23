@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.3.5
+ * Version: 2.6.5
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.3.5' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.6.5' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -170,6 +170,11 @@ class CF7Captcha {
 	public function set_settings( string $single, string $value, ?string $container = null ): void {
 		$settings = $this->get_settings();
 
+		// Capture old value for audit
+		$old_value = null === $container
+			? ( $settings[ $single ] ?? null )
+			: ( $settings[ $container ][ $single ] ?? null );
+
 		if ( null === $container ) {
 			$settings[ $single ] = $value;
 		} else {
@@ -179,6 +184,26 @@ class CF7Captcha {
 		update_option( 'f12-cf7-captcha-settings', $settings );
 
 		// Invalidate request-level cache
+		$this->_settings_cache = null;
+
+		// Audit: log individual setting change
+		if ( $old_value !== $value ) {
+			$setting_key = null === $container ? $single : $container . '.' . $single;
+			core\log\AuditLog::log(
+				core\log\AuditLog::TYPE_SETTINGS,
+				'SETTING_CHANGED',
+				core\log\AuditLog::SEVERITY_INFO,
+				sprintf( 'Setting "%s" changed by user #%d', $setting_key, get_current_user_id() ),
+				[ 'key' => $setting_key, 'old' => $old_value, 'new' => $value ]
+			);
+		}
+	}
+
+	/**
+	 * Invalidate the request-level settings cache so the next
+	 * get_settings() call re-reads from the database.
+	 */
+	public function invalidate_settings_cache(): void {
 		$this->_settings_cache = null;
 	}
 
@@ -302,8 +327,21 @@ class CF7Captcha {
 		} );
 
 		add_action( 'init', function () {
-			load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-			$this->logger->debug( "Textdomain loaded", [ 'plugin' => 'f12-cf7-captcha' ] );
+			$loaded = load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+			if ( $loaded ) {
+				$this->logger->debug( "Textdomain loaded", [ 'plugin' => 'f12-cf7-captcha' ] );
+			} else {
+				$locale = determine_locale();
+				$this->logger->warning( "Textdomain failed to load", [ 'plugin' => 'f12-cf7-captcha', 'locale' => $locale ] );
+
+				core\log\AuditLog::log(
+					core\log\AuditLog::TYPE_I18N,
+					'TRANSLATION_LOAD_FAILED',
+					core\log\AuditLog::SEVERITY_WARNING,
+					sprintf( 'Failed to load translations for locale "%s"', $locale ),
+					[ 'locale' => $locale, 'path' => dirname( plugin_basename( __FILE__ ) ) . '/languages' ]
+				);
+			}
 		} );
 
 		// Filter for Blacklist
@@ -320,11 +358,23 @@ class CF7Captcha {
 		);
 		$this->logger->debug( "UI Manager registered", [ 'plugin' => 'f12-cf7-captcha' ] );
 
+		// React Admin SPA (SilentShield v2 UI)
+		require_once plugin_dir_path( __FILE__ ) . 'ui/ReactApp.php';
+		new UI_ReactApp();
+
 		// Load assets
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_admin_assets' ) );
 		add_action( 'wp_enqueue_scripts', array( $this, 'load_frontend_assets' ) );
 		add_action( 'login_enqueue_scripts', array( $this, 'load_frontend_assets' ) );
 		$this->logger->debug( "Asset loader hooks registered", [ 'plugin' => 'f12-cf7-captcha' ] );
+
+		// Protection Score Dashboard Widget
+		require_once plugin_dir_path( __FILE__ ) . 'ui/UI_Dashboard_Widget.php';
+		new UI_Dashboard_Widget();
+
+		// Contextual Upgrade Prompts
+		require_once plugin_dir_path( __FILE__ ) . 'ui/UI_Upgrade_Prompts.php';
+		new UI_Upgrade_Prompts();
 
 		// Check Upgrade Notice
 		add_action( 'in_plugin_update_message-f12-cf7-captcha/f12-cf7-captcha.php', [
@@ -594,49 +644,55 @@ class CF7Captcha {
 	 * @return void
 	 */
 	public function load_frontend_assets() {
-		// Check if assets should be loaded on this page
-		if ( ! $this->should_load_assets() ) {
-			return;
-		}
-
 		// Settings
 		$settings = $this->get_settings();
 
-		if (isset($settings['beta'], $settings['beta']['beta_captcha_enable'], $settings['beta']['beta_captcha_api_key']) && (bool)$settings['beta']['beta_captcha_enable'] === true) {
-			if(!empty( $settings['beta']['beta_captcha_api_key'])) {
-				$this->get_logger()->info( "Behavior API enabled" );
-				// Insert JavaScript
-				wp_enqueue_script(
-					'f12-cf7-captcha-client',
-					plugin_dir_url( __FILE__ ) . 'core/assets/client.js',
-					array(),
-					FORGE12_CAPTCHA_VERSION,
-					true
-				);
-				wp_script_add_data( 'f12-cf7-captcha-client', 'strategy', 'defer' );
+		// SilentShield v2: load client.js on all pages (independent of form detection)
+		$api_enabled = isset( $settings['beta'], $settings['beta']['beta_captcha_enable'], $settings['beta']['beta_captcha_api_key'] )
+			&& (bool) $settings['beta']['beta_captcha_enable'] === true
+			&& ! empty( $settings['beta']['beta_captcha_api_key'] );
 
-				// Provide data for the script locally
-				$api_url = defined( 'F12_CAPTCHA_API_URL' )
-					? F12_CAPTCHA_API_URL
-					: 'https://api.silentshield.io';
+		// Check if the API is actually reachable (uses the same transient as Protection::init_modules)
+		$api_reachable = $api_enabled && get_transient( 'f12_captcha_api_health' ) !== 'fail';
 
-				wp_localize_script(
-					'f12-cf7-captcha-client',
-					'f12_client_data',
-					[
-						'key' => $settings['beta']['beta_captcha_api_key'],
-						'url' => $api_url,
-					]
-				);
+		if ( $api_enabled && $api_reachable ) {
+			$this->get_logger()->info( "Behavior API enabled" );
+			// Insert JavaScript
+			wp_enqueue_script(
+				'f12-cf7-captcha-client',
+				plugin_dir_url( __FILE__ ) . 'core/assets/client.js',
+				array(),
+				FORGE12_CAPTCHA_VERSION,
+				true
+			);
+			wp_script_add_data( 'f12-cf7-captcha-client', 'strategy', 'defer' );
 
-				$this->logger->debug( "API assets loaded", [
-					'plugin'  => 'f12-cf7-captcha',
-					'scripts' => [ 'f12-cf7-captcha-client' ], // Korrigierter Scriptname
-					'styles'  => [],                        // Aktuell keine Styles vorhanden
-					'context' => ( is_admin() ? 'admin' : ( is_user_logged_in() ? 'frontend-logged-in' : 'frontend-guest' ) )
-				] );
-			}
+			// Provide data for the script locally
+			$api_url = defined( 'F12_CAPTCHA_API_URL' )
+				? F12_CAPTCHA_API_URL
+				: 'https://api.silentshield.io';
+
+			wp_localize_script(
+				'f12-cf7-captcha-client',
+				'f12_client_data',
+				[
+					'key' => $settings['beta']['beta_captcha_api_key'],
+					'url' => $api_url,
+				]
+			);
+
+			$this->logger->debug( "API assets loaded", [
+				'plugin'  => 'f12-cf7-captcha',
+				'scripts' => [ 'f12-cf7-captcha-client' ],
+				'styles'  => [],
+				'context' => ( is_admin() ? 'admin' : ( is_user_logged_in() ? 'frontend-logged-in' : 'frontend-guest' ) )
+			] );
 		}else{
+			// v1: only load assets when a form is detected on the page
+			if ( ! $this->should_load_assets() ) {
+				return;
+			}
+
 			// Hole aktive Komponenten aus dem Compatibility-Modul
 			$active_components = [];
 			try {

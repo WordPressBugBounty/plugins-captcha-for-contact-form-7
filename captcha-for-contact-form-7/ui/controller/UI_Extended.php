@@ -106,8 +106,23 @@ namespace f12_cf7_captcha {
 				'protection_blacklist_ips'                 => '',
 
 				// Asset loading
-				'protection_global_asset_loading'          => 0,
+				'protection_global_asset_loading'          => 1,
 				'protection_asset_loading_urls'            => '',
+
+				// Detailed tracking (block log)
+				'protection_detailed_tracking'             => 0,
+				'protection_detailed_tracking_retention'   => 30,
+				'protection_audit_log_retention'           => 90,
+				'protection_log_plaintext'                 => 0,
+
+				// Mail logging
+				'protection_mail_log_enable'              => 0,
+				'protection_mail_log_sent'                => 1,
+				'protection_mail_log_blocked'             => 1,
+				'protection_mail_log_retention'           => 30,
+
+				// Shadow Mode (API comparison)
+				'protection_api_shadow_mode'               => 0,
 
 				// Telemetry
 				'telemetry'                                => 1,
@@ -307,6 +322,12 @@ namespace f12_cf7_captcha {
 				'protection_whitelist_role_admin',
 				'protection_whitelist_role_logged_in',
 				'protection_global_asset_loading',
+				'protection_detailed_tracking',
+				'protection_log_plaintext',
+				'protection_api_shadow_mode',
+				'protection_mail_log_enable',
+				'protection_mail_log_sent',
+				'protection_mail_log_blocked',
 			];
 
 			$this->get_logger()->debug( 'Processing all POST values and sanitizing them.' );
@@ -758,6 +779,38 @@ namespace f12_cf7_captcha {
                                  style=""/>
                             </div>
                         </label>
+                    </span><br><br>
+
+                            <input
+                                    id="protection_captcha_template_3"
+                                    type="radio"
+                                    value="3"
+                                    name="protection_captcha_template"
+								<?php echo esc_attr( isset( $settings['protection_captcha_template'] ) && $settings['protection_captcha_template'] == '3' ? 'checked="checked"' : '' ); ?>
+                            />
+                            <span>
+                        <label for="protection_captcha_template_3">
+                            <div style="border:3px solid #edeaea; border-radius:3px; display:inline-block;">
+                            <img src="<?php echo esc_url( plugin_dir_url( dirname( dirname( __FILE__ ) ) ) . 'core/assets/template-3.jpg' ); ?>"
+                                 style=""/>
+                            </div>
+                        </label>
+                    </span><br><br>
+
+                            <input
+                                    id="protection_captcha_template_4"
+                                    type="radio"
+                                    value="4"
+                                    name="protection_captcha_template"
+								<?php echo esc_attr( isset( $settings['protection_captcha_template'] ) && $settings['protection_captcha_template'] == '4' ? 'checked="checked"' : '' ); ?>
+                            />
+                            <span>
+                        <label for="protection_captcha_template_4">
+                            <div style="border:3px solid #edeaea; border-radius:3px; display:inline-block;">
+                            <img src="<?php echo esc_url( plugin_dir_url( dirname( dirname( __FILE__ ) ) ) . 'core/assets/template-4.jpg' ); ?>"
+                                 style=""/>
+                            </div>
+                        </label>
                     </span>
                         </div>
                     </div>
@@ -773,6 +826,8 @@ namespace f12_cf7_captcha {
 						 * @var Protection $Protection
 						 */
 						$Protection = CF7Captcha::get_instance()->get_module( 'protection' );
+
+						if ( $Protection->has_module( 'captcha-validator' ) ) :
 						/**
 						 * @var Captcha_Validator $Captcha_Validator
 						 */
@@ -818,6 +873,14 @@ namespace f12_cf7_captcha {
 								<?php esc_html_e( 'Make sure to backup your database before clicking one of these buttons.', 'captcha-for-contact-form-7' ); ?>
                             </p>
                         </div>
+						<?php else : ?>
+                        <div class="label">
+                            <label for=""><?php esc_html_e( 'Captchas', 'captcha-for-contact-form-7' ); ?></label>
+                        </div>
+                        <div class="input">
+                            <p><?php esc_html_e( 'Captcha management is not available in API mode.', 'captcha-for-contact-form-7' ); ?></p>
+                        </div>
+						<?php endif; ?>
                     </div>
                     <div class="option">
 						<?php
@@ -1510,6 +1573,97 @@ namespace f12_cf7_captcha {
                                 <p>
 									<?php esc_html_e( 'Make sure to backup your database before clicking one of these buttons.', 'captcha-for-contact-form-7' ); ?>
                                 </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container">
+                <h3><?php esc_html_e( 'Detailed Tracking', 'captcha-for-contact-form-7' ); ?></h3>
+                <div class="section-wrapper">
+                    <div class="section">
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_detailed_tracking"><strong><?php esc_html_e( 'Enable Detailed Block Tracking', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php esc_html_e( 'When enabled, every blocked submission is logged with a machine-readable reason code and a human-readable explanation of why it was blocked. This allows you to analyze exactly which protection methods are working and why.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'protection_detailed_tracking';
+											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+											$name       = __( 'Detailed Tracking', 'captcha-for-contact-form-7' );
+											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), esc_attr( $is_checked ) );
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php echo esc_html( $name ); ?>
+                                            <p><?php esc_html_e( 'Increases database storage usage. Old entries are automatically cleaned up based on the retention period below.', 'captcha-for-contact-form-7' ); ?></p>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_detailed_tracking_retention"><strong><?php esc_html_e( 'Retention Period (Days)', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p><?php esc_html_e( 'Block log entries older than this number of days are automatically deleted.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <input type="number" min="1" max="365" step="1"
+                                       id="protection_detailed_tracking_retention"
+                                       name="protection_detailed_tracking_retention"
+                                       value="<?php echo esc_attr( $settings['protection_detailed_tracking_retention'] ); ?>" />
+                            </div>
+                        </div>
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_audit_log_retention"><strong><?php esc_html_e( 'Audit Log Retention (Days)', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p><?php esc_html_e( 'Audit log entries (settings changes, cron jobs, errors) older than this number of days are automatically deleted.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <input type="number" min="7" max="365" step="1"
+                                       id="protection_audit_log_retention"
+                                       name="protection_audit_log_retention"
+                                       value="<?php echo esc_attr( $settings['protection_audit_log_retention'] ?? 90 ); ?>" />
+                            </div>
+                        </div>
+                        <div class="option">
+                            <div class="label">
+                                <label for="protection_log_plaintext"><strong><?php esc_html_e( 'Disable Log Anonymization (Debug Mode)', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;"><?php esc_html_e( 'When enabled, email addresses and IP addresses are stored in plain text in the submission logs instead of being masked. This allows you to identify which user was blocked and contact them if needed.', 'captcha-for-contact-form-7' ); ?></p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'protection_log_plaintext';
+											$is_checked = $settings[ $field_name ] == 1 ? 'checked="checked"' : '';
+											$name       = __( 'Plain Text Logs', 'captcha-for-contact-form-7' );
+											echo sprintf( '<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>', esc_attr( $field_name ), esc_attr( $field_name ), esc_attr( $is_checked ) );
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php echo esc_html( $name ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                                <div style="margin-top:10px; padding:12px 16px; background:#fef3c7; border:1px solid #f59e0b; border-radius:6px;">
+                                    <p style="margin:0; color:#92400e; font-size:13px;">
+                                        <strong>&#9888; <?php esc_html_e( 'Privacy Notice (GDPR / DSGVO)', 'captcha-for-contact-form-7' ); ?></strong><br>
+										<?php esc_html_e( 'Storing personal data (email addresses, IP addresses) in plain text may require a legal basis under GDPR Art. 6. Use this setting only for temporary debugging purposes to identify false-positive blocks. Disable it again after troubleshooting. Ensure your privacy policy covers the storage of submission data. We recommend keeping the retention period as short as possible while this setting is active.', 'captcha-for-contact-form-7' ); ?>
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

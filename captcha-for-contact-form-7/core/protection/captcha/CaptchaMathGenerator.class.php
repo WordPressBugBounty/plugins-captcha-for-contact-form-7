@@ -453,9 +453,12 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 		 */
 		$template = (int) $this->get_protection_setting( 'protection_captcha_template' );
 
-		if (!in_array($template, [0, 1, 2], true)) {
+		if (!in_array($template, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], true)) {
 			$template = 0;
 		}
+
+		// v2 templates (5-9) use SVG reload button and transparent audio styles
+		$is_v2 = $template >= 5;
 
 		$this->get_logger()->info(
 			"get_field(math): Captcha field is being generated",
@@ -469,21 +472,28 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 			]
 		);
 
+		$captcha_audio_enabled = (int) $this->get_protection_setting( 'protection_captcha_audio_enable' ) === 1;
+		$icon_size             = $this->get_protection_setting( 'protection_captcha_reload_icon_size' );
+		$icon_size             = is_numeric( $icon_size ) ? (int) $icon_size : 16;
+
 		$captcha = $TemplateController->get_plugin_template( 'captcha/template-' . $template, [
-			'hash_id'            => $hash_id,
-			'hash_field_name'    => $field_name . '_hash',
-			'hash_value'         => $hash,
-			'wrapper_classes'    => $atts['wrapper_classes'],
-			'wrapper_attributes' => $wrapper_attributes,
-			'label'              => $label,
-			'classes'            => $atts['classes'],
-			'attributes'         => $attributes,
-			'captcha_id'         => $captcha_id,
-			'field_name'         => $field_name,
-			'placeholder'        => $placeholder,
-			'captcha_data'       => $this->get_calculation(),
-			'captcha_reload'     => $this->get_reload_button(),
-			'method'             => 'math',
+			'hash_id'               => $hash_id,
+			'hash_field_name'       => $field_name . '_hash',
+			'hash_value'            => $hash,
+			'wrapper_classes'       => $atts['wrapper_classes'],
+			'wrapper_attributes'    => $wrapper_attributes,
+			'label'                 => $label,
+			'classes'               => $atts['classes'],
+			'attributes'            => $attributes,
+			'captcha_id'            => $captcha_id,
+			'field_name'            => $field_name,
+			'placeholder'           => $placeholder,
+			'captcha_data'          => $this->get_calculation(),
+			'captcha_reload'        => $is_v2 ? $this->get_reload_button_v2() : $this->get_reload_button(),
+			'method'                => 'math',
+			'captcha_audio_enabled' => $captcha_audio_enabled,
+			'audio_btn_styles'      => $captcha_audio_enabled ? ( $is_v2 ? $this->get_audio_button_styles_v2() : $this->get_audio_button_styles() ) : '',
+			'icon_size'             => $icon_size,
 		] );
 
 		#$captcha = sprintf( '<input type="hidden" id="%s" name="%s_hash" value="%s"/>', esc_attr( $hash_id ), esc_attr( $field_name ), esc_attr( $hash ) );

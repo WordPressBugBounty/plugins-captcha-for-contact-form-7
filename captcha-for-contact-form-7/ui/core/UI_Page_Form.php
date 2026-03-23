@@ -55,11 +55,17 @@ namespace f12_cf7_captcha\ui {
 				if ( $do_save ) {
 					$this->get_logger()->info( 'Saving settings is allowed. Executing on_save().' );
 
+					// Capture old settings for audit diff
+					$old_settings = get_option( $this->get_domain() . '-settings', [] );
+
 					// Execute the specific on_save logic of the respective UI page.
 					$settings = $this->on_save( $settings );
 
 					// Save the final settings to the WordPress database.
 					update_option( $this->get_domain() . '-settings', $settings );
+
+					// Audit: log settings change
+					$this->audit_settings_change( $old_settings, $settings );
 
 					// Add a success message for the user.
 					$this->get_ui_manager()->get_ui_message()->add( __( 'Settings updated', 'captcha-for-contact-form-7' ), 'success' );
@@ -114,6 +120,52 @@ namespace f12_cf7_captcha\ui {
 			$this->get_logger()->debug( 'Submit button status: ' . ( $is_hidden ? 'hidden' : 'visible' ) );
 
 			return $is_hidden;
+		}
+
+		/**
+		 * Audit a settings change by computing the diff between old and new values.
+		 *
+		 * @param array $old_settings The settings before the change.
+		 * @param array $new_settings The settings after the change.
+		 */
+		private function audit_settings_change( array $old_settings, array $new_settings ): void {
+			$diff = [];
+
+			// Find changed and added keys (flat comparison)
+			foreach ( $new_settings as $key => $value ) {
+				if ( is_array( $value ) ) {
+					// Compare container-level settings
+					$old_container = $old_settings[ $key ] ?? [];
+					if ( is_array( $old_container ) ) {
+						foreach ( $value as $sub_key => $sub_value ) {
+							$old_val = $old_container[ $sub_key ] ?? null;
+							if ( $old_val !== $sub_value ) {
+								$diff[ $key . '.' . $sub_key ] = [
+									'old' => $old_val,
+									'new' => $sub_value,
+								];
+							}
+						}
+					} else {
+						$diff[ $key ] = [ 'old' => $old_container, 'new' => '(array)' ];
+					}
+				} else {
+					$old_val = $old_settings[ $key ] ?? null;
+					if ( $old_val !== $value ) {
+						$diff[ $key ] = [ 'old' => $old_val, 'new' => $value ];
+					}
+				}
+			}
+
+			if ( ! empty( $diff ) ) {
+				\f12_cf7_captcha\core\log\AuditLog::log(
+					\f12_cf7_captcha\core\log\AuditLog::TYPE_SETTINGS,
+					'GLOBAL_SETTINGS_UPDATED',
+					\f12_cf7_captcha\core\log\AuditLog::SEVERITY_INFO,
+					sprintf( 'Global settings updated by user #%d (%d changes)', get_current_user_id(), count( $diff ) ),
+					[ 'changes' => $diff, 'page' => $this->get_slug() ]
+				);
+			}
 		}
 
 		/**

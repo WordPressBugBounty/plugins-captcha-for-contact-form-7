@@ -5,8 +5,12 @@ namespace f12_cf7_captcha\core\protection;
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseModul;
 use f12_cf7_captcha\core\BaseProtection;
+use f12_cf7_captcha\core\log\AuditLog;
+use f12_cf7_captcha\core\log\BlockLog;
+use f12_cf7_captcha\core\log\MailLog;
 use f12_cf7_captcha\core\Log_WordPress_Interface;
 use f12_cf7_captcha\core\protection\api\Api;
+use f12_cf7_captcha\core\protection\Shadow_Mode;
 use f12_cf7_captcha\core\protection\browser\Browser;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
 use f12_cf7_captcha\core\protection\ip\IPValidator;
@@ -51,18 +55,45 @@ class Protection extends BaseModul {
 	 */
 	private ?Settings_Resolver $settings_resolver = null;
 
+	/**
+	 * Stores the form context after a successful (non-spam) is_spam() check.
+	 * Used by the wp_mail filter to log sent mails for ALL form plugins.
+	 *
+	 * @var array|null {form_plugin: string, form_id: string|null, form_data: array}
+	 */
+	private static ?array $last_passed_context = null;
+
 	public function __construct( CF7Captcha $Controller, Log_WordPress_Interface $Logger ) {
 		parent::__construct( $Controller );
 		$this->Logger = $Logger;
 		add_action( 'f12_cf7_captcha_compatibilities_loaded', array( $this, 'on_init' ) );
+
+		// Universal wp_mail hook for logging sent mails across all form plugins
+		add_filter( 'wp_mail', [ $this, 'capture_sent_mail' ], 999999 );
 	}
+
+	/**
+	 * Transient key for caching the API health status.
+	 */
+	private const API_HEALTH_TRANSIENT = 'f12_captcha_api_health';
+
+	/**
+	 * How long to cache a successful API health check (5 minutes).
+	 */
+	private const API_HEALTH_TTL_OK = 5 * MINUTE_IN_SECONDS;
+
+	/**
+	 * How long to cache a failed API health check (15 minutes).
+	 */
+	private const API_HEALTH_TTL_FAIL = 15 * MINUTE_IN_SECONDS;
 
 	/**
 	 * Initializes the modules for the software.
 	 *
 	 * All modules are loaded, but each module has its own is_enabled() method
-	 * to check if it should be active. The only optimization is for API mode:
-	 * when API is enabled with a key, only API and whitelist modules are loaded.
+	 * to check if it should be active. When API mode is enabled with a valid key
+	 * AND the API is reachable, only API and whitelist modules are loaded.
+	 * If the API is unreachable, all local modules are loaded as fallback.
 	 *
 	 * @return void
 	 */
@@ -83,18 +114,134 @@ class Protection extends BaseModul {
 
 		// Check if API is enabled and API key is present
 		/** @var Api $api */
-		$api = $moduls['api-validator'];
-		$api_key = $this->Controller->get_settings('beta_captcha_api_key', 'beta');
+		$api     = $moduls['api-validator'];
+		$api_key = $this->Controller->get_settings( 'beta_captcha_api_key', 'beta' );
 
-		if ($api->is_enabled() && !empty($api_key)) {
-			// Only keep whitelist & API active
-			$moduls = [
-				'api-validator'       => $api,
-				'whitelist-validator' => $moduls['whitelist-validator'],
-			];
+		if ( $api->is_enabled() && ! empty( $api_key ) ) {
+			if ( $this->is_api_reachable( $api_key ) ) {
+				// API is reachable — use API mode exclusively
+				$moduls = [
+					'api-validator'       => $api,
+					'whitelist-validator' => $moduls['whitelist-validator'],
+				];
+			} else {
+				// API is unreachable — fallback to all local modules (without api-validator)
+				unset( $moduls['api-validator'] );
+
+				// Show admin warning about the fallback
+				add_action( 'admin_notices', [ $this, 'render_api_fallback_notice' ] );
+			}
 		}
 
 		$this->_modules = $moduls;
+	}
+
+	/**
+	 * Check whether the SilentShield API is reachable.
+	 *
+	 * Uses a lightweight key validation request with transient caching
+	 * to avoid hitting the API on every page load.
+	 *
+	 * @param string $api_key The API key to validate against.
+	 *
+	 * @return bool True if the API responded successfully.
+	 */
+	private function is_api_reachable( string $api_key ): bool {
+		$cached = get_transient( self::API_HEALTH_TRANSIENT );
+
+		if ( $cached !== false ) {
+			return $cached === 'ok';
+		}
+
+		// Check if the previous state was also a failure (to avoid repeat audit logging)
+		$was_failing = get_option( 'f12_captcha_api_health_failing', false );
+
+		$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
+		$api_endpoint = rtrim( $base_url, '/' ) . '/api/keys/validate';
+
+		$response = wp_remote_post( $api_endpoint, [
+			'headers' => [ 'Content-Type' => 'application/json' ],
+			'body'    => wp_json_encode( [ 'key' => $api_key ] ),
+			'timeout' => 3,
+		] );
+
+		if ( is_wp_error( $response ) ) {
+			set_transient( self::API_HEALTH_TRANSIENT, 'fail', self::API_HEALTH_TTL_FAIL );
+
+			// Only audit-log on the FIRST failure, not on every cache expiry
+			if ( ! $was_failing ) {
+				update_option( 'f12_captcha_api_health_failing', true, false );
+				AuditLog::log(
+					AuditLog::TYPE_API,
+					'API_HEALTH_UNREACHABLE',
+					AuditLog::SEVERITY_WARNING,
+					sprintf(
+						'SilentShield API unreachable — falling back to local protection modules (%s)',
+						$response->get_error_message()
+					),
+					[ 'endpoint' => $api_endpoint, 'error' => $response->get_error_message() ]
+				);
+			}
+
+			return false;
+		}
+
+		$code = wp_remote_retrieve_response_code( $response );
+
+		if ( $code >= 200 && $code < 500 ) {
+			set_transient( self::API_HEALTH_TRANSIENT, 'ok', self::API_HEALTH_TTL_OK );
+
+			// API recovered — log recovery if it was failing before
+			if ( $was_failing ) {
+				delete_option( 'f12_captcha_api_health_failing' );
+				AuditLog::log(
+					AuditLog::TYPE_API,
+					'API_HEALTH_RECOVERED',
+					AuditLog::SEVERITY_INFO,
+					'SilentShield API is reachable again — switching back to API mode',
+					[ 'endpoint' => $api_endpoint, 'http_code' => $code ]
+				);
+			}
+
+			return true;
+		}
+
+		// 5xx server error
+		set_transient( self::API_HEALTH_TRANSIENT, 'fail', self::API_HEALTH_TTL_FAIL );
+
+		if ( ! $was_failing ) {
+			update_option( 'f12_captcha_api_health_failing', true, false );
+			AuditLog::log(
+				AuditLog::TYPE_API,
+				'API_HEALTH_SERVER_ERROR',
+				AuditLog::SEVERITY_WARNING,
+				sprintf( 'SilentShield API returned HTTP %d — falling back to local protection modules', $code ),
+				[ 'endpoint' => $api_endpoint, 'http_code' => $code ]
+			);
+		}
+
+		return false;
+	}
+
+	/**
+	 * Render an admin notice when the API is unreachable and local fallback is active.
+	 */
+	public function render_api_fallback_notice(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		$settings_url = admin_url( 'admin.php?page=silentshield-admin' );
+
+		printf(
+			'<div class="notice notice-warning is-dismissible"><p><strong>SilentShield:</strong> %s <a href="%s">%s</a></p></div>',
+			esc_html__(
+				'Die SilentShield API ist nicht erreichbar. Die lokalen Schutzmodule (Captcha, Timer, JS-Erkennung etc.) wurden automatisch reaktiviert. Deine Formulare sind weiterhin geschützt.',
+				'captcha-for-contact-form-7'
+			),
+			esc_url( $settings_url ),
+			esc_html__( 'API-Einstellungen prüfen', 'captcha-for-contact-form-7' )
+		);
 	}
 
 	/**
@@ -173,6 +320,17 @@ class Protection extends BaseModul {
 		}
 
 		return $this->resolved_settings;
+	}
+
+	/**
+	 * Checks whether a module with the given name is registered.
+	 *
+	 * @param string $name The name of the module to check.
+	 *
+	 * @return bool True if the module exists, false otherwise.
+	 */
+	public function has_module( string $name ): bool {
+		return isset( $this->_modules[ $name ] );
 	}
 
 	/**
@@ -294,12 +452,18 @@ class Protection extends BaseModul {
 					$this->get_logger()->warning( "Module '{$name}' found spam.", [ 'plugin' => 'f12-cf7-captcha' ] );
 					$this->set_message( $modul->get_message() );
 					$this->Logger->maybe_log( 'protection', $array_post_data, true, $this->get_message() );
+
+					// Detailed block log
+					$this->maybe_log_block( $name, $modul );
 				}
 			}
 		}
 
 		if ( $is_spam ) {
 			self::$pending_deltas['checks_spam'] = ( self::$pending_deltas['checks_spam'] ?? 0 ) + 1;
+
+			// Mail log: record blocked submission
+			$this->maybe_log_mail_blocked( $spam_modul_name, $array_post_data );
 		} else {
 			foreach ( $this->_modules as $modul ) {
 				$modul->success();
@@ -308,11 +472,167 @@ class Protection extends BaseModul {
 			$this->Logger->maybe_log( 'protection', $array_post_data, false );
 
 			self::$pending_deltas['checks_clean'] = ( self::$pending_deltas['checks_clean'] ?? 0 ) + 1;
+
+			// Store context for the universal wp_mail hook to log sent mails
+			if ( MailLog::is_enabled() ) {
+				// Clean form data: remove internal/captcha fields
+				$clean = $array_post_data;
+				$strip = [
+					'_wpcf7', '_wpcf7_version', '_wpcf7_locale', '_wpcf7_unit_tag',
+					'_wpcf7_container_post', '_wpcf7_posted_data_hash', '_wpcf7_nonce',
+					'php_start_time', 'js_start_time', 'js_end_time',
+					'f12_captcha', 'f12_captcha_hash', '_wpnonce', 'behavior_nonce',
+				];
+				foreach ( $strip as $k ) {
+					unset( $clean[ $k ] );
+				}
+
+				self::$last_passed_context = [
+					'form_plugin' => $this->context_integration_id ?? '',
+					'form_id'     => $this->context_form_id,
+					'form_data'   => $clean,
+				];
+			}
 		}
+
+		// Shadow Mode: record the local verdict for API comparison analytics.
+		Shadow_Mode::record( $is_spam, $spam_modul_name, $array_post_data );
 
 		return $is_spam;
 	}
 
+
+	/**
+	 * Map module names to machine-readable reason codes and human-readable details.
+	 */
+	private static array $block_reason_map = [
+		'timer-validator'               => [ 'SUBMIT_TOO_FAST',   'Form submitted too quickly (minimum time not reached)' ],
+		'captcha-validator'             => [ 'CAPTCHA_FAILED',    'CAPTCHA verification failed' ],
+		'ip-validator'                  => [ 'IP_RATE_LIMIT',     'IP rate limit exceeded or IP banned' ],
+		'ip-blacklist-validator'        => [ 'IP_BLACKLISTED',    'IP address is on the blacklist' ],
+		'browser-validator'             => [ 'NO_BROWSER',        'No valid browser detected (missing User-Agent)' ],
+		'javascript-validator'          => [ 'NO_JAVASCRIPT',     'JavaScript validation failed' ],
+		'rule-validator'                => [ 'BLACKLIST_MATCH',   'Content matched a blacklist rule' ],
+		'multiple-submission-validator' => [ 'DUPLICATE_SUBMIT',  'Duplicate submission detected' ],
+		'api-validator'                 => [ 'API_VERDICT_BOT',   'SilentShield API classified as bot/suspicious' ],
+	];
+
+	/**
+	 * Log a block event to the detailed block log (if enabled).
+	 *
+	 * @param string         $module_name The protection module name.
+	 * @param BaseProtection $modul       The protection module instance.
+	 */
+	private function maybe_log_block( string $module_name, BaseProtection $modul ): void {
+		if ( ! BlockLog::is_enabled() ) {
+			return;
+		}
+
+		$reason      = self::$block_reason_map[ $module_name ] ?? [ strtoupper( str_replace( '-', '_', $module_name ) ), '' ];
+		$reason_code = $reason[0];
+		// Use the module's specific message as detail (more precise than the generic map description)
+		$reason_detail = $modul->get_message();
+		if ( empty( $reason_detail ) ) {
+			$reason_detail = $reason[1];
+		}
+
+		$block_log  = new BlockLog( $this->get_logger() );
+
+		$extra = [
+			'form_plugin' => $this->context_integration_id ?? '',
+			'form_id'     => $this->context_form_id ?? '',
+		];
+
+		$block_log->log( $module_name, $reason_code, $reason_detail, $extra );
+	}
+
+	/**
+	 * Log a blocked submission to the mail log (if enabled).
+	 *
+	 * @param string $module_name The protection module that triggered the block.
+	 * @param array  $post_data   The submitted form data.
+	 */
+	private function maybe_log_mail_blocked( string $module_name, array $post_data ): void {
+		if ( ! MailLog::is_enabled() ) {
+			return;
+		}
+
+		$reason = self::$block_reason_map[ $module_name ] ?? [ strtoupper( str_replace( '-', '_', $module_name ) ), '' ];
+
+		$mail_log = new MailLog( $this->get_logger() );
+		$mail_log->log_blocked(
+			$this->context_integration_id ?? '',
+			$this->context_form_id,
+			$reason[0],
+			$post_data
+		);
+	}
+
+	/**
+	 * Universal wp_mail filter that logs sent mails for ALL form plugins.
+	 *
+	 * Only logs when a form just passed spam validation (context is stored).
+	 * This ensures only form-related emails are logged, not password resets etc.
+	 *
+	 * @param array $args wp_mail arguments: to, subject, message, headers, attachments.
+	 *
+	 * @return array Unmodified $args (pass-through filter).
+	 */
+	public function capture_sent_mail( $args ) {
+		if ( self::$last_passed_context === null || ! is_array( $args ) ) {
+			return $args;
+		}
+
+		$ctx = self::$last_passed_context;
+		// Clear immediately to prevent double-logging (e.g. CF7 sends mail + mail_2)
+		self::$last_passed_context = null;
+
+		if ( ! MailLog::is_enabled() ) {
+			return $args;
+		}
+
+		$log_sent = (int) $this->Controller->get_settings( 'protection_mail_log_sent', 'global' );
+		if ( $log_sent !== 1 ) {
+			return $args;
+		}
+
+		$recipient = $args['to'] ?? '';
+		$subject   = $args['subject'] ?? '';
+		$body      = $args['message'] ?? '';
+
+		// Extract sender from headers
+		$sender  = '';
+		$headers = $args['headers'] ?? [];
+		if ( is_string( $headers ) ) {
+			$headers = array_filter( array_map( 'trim', explode( "\n", $headers ) ) );
+		}
+		foreach ( $headers as $header ) {
+			if ( stripos( $header, 'From:' ) === 0 ) {
+				$sender = trim( substr( $header, 5 ) );
+				break;
+			}
+		}
+
+		$attachments = $args['attachments'] ?? [];
+		if ( ! is_array( $attachments ) ) {
+			$attachments = [];
+		}
+
+		$mail_log = new MailLog( $this->get_logger() );
+		$mail_log->log_sent(
+			$ctx['form_plugin'],
+			$ctx['form_id'] ?? '',
+			is_array( $recipient ) ? implode( ', ', $recipient ) : $recipient,
+			$sender,
+			$subject,
+			$body,
+			$headers,
+			$attachments,
+			$ctx['form_data'] ?? []
+		);
+
+		return $args;
+	}
 
 	/**
 	 * Override modules (for testing).
