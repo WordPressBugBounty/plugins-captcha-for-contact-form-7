@@ -973,8 +973,8 @@ class RestController extends BaseModul {
 			$domain      = wp_parse_url( home_url(), PHP_URL_HOST );
 			$admin_email = get_option( 'admin_email' );
 
-			$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
-			$api_endpoint = rtrim( $base_url, '/' ) . '/api/v1/trial/create';
+			$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
+			$api_endpoint = rtrim( $base_url, '/' ) . '/trial/create';
 
 			$response = wp_remote_post( $api_endpoint, [
 				'headers' => [
@@ -1873,8 +1873,8 @@ class RestController extends BaseModul {
 				return new WP_REST_Response( $cached, 200 );
 			}
 
-			$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
-			$response = wp_remote_post( rtrim( $base_url, '/' ) . '/api/keys/validate', [
+			$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
+			$response = wp_remote_post( rtrim( $base_url, '/' ) . '/keys/validate', [
 				'headers' => [
 					'Content-Type'  => 'application/json',
 					'Authorization' => 'Bearer ' . $api_key,

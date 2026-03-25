@@ -156,8 +156,8 @@ class Protection extends BaseModul {
 		// Check if the previous state was also a failure (to avoid repeat audit logging)
 		$was_failing = get_option( 'f12_captcha_api_health_failing', false );
 
-		$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
-		$api_endpoint = rtrim( $base_url, '/' ) . '/api/keys/validate';
+		$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
+		$api_endpoint = rtrim( $base_url, '/' ) . '/keys/validate';
 
 		$response = wp_remote_post( $api_endpoint, [
 			'headers' => [ 'Content-Type' => 'application/json' ],
@@ -459,11 +459,19 @@ class Protection extends BaseModul {
 			}
 		}
 
+		// Collect API response data for logging (available for both spam and clean)
+		$api_response = null;
+		if ( $this->has_module( 'api-validator' ) ) {
+			/** @var Api $api_module */
+			$api_module   = $this->get_module( 'api-validator' );
+			$api_response = $api_module->get_last_api_response();
+		}
+
 		if ( $is_spam ) {
 			self::$pending_deltas['checks_spam'] = ( self::$pending_deltas['checks_spam'] ?? 0 ) + 1;
 
 			// Mail log: record blocked submission
-			$this->maybe_log_mail_blocked( $spam_modul_name, $array_post_data );
+			$this->maybe_log_mail_blocked( $spam_modul_name, $array_post_data, $api_response );
 		} else {
 			foreach ( $this->_modules as $modul ) {
 				$modul->success();
@@ -488,9 +496,10 @@ class Protection extends BaseModul {
 				}
 
 				self::$last_passed_context = [
-					'form_plugin' => $this->context_integration_id ?? '',
-					'form_id'     => $this->context_form_id,
-					'form_data'   => $clean,
+					'form_plugin'  => $this->context_integration_id ?? '',
+					'form_id'      => $this->context_form_id,
+					'form_data'    => $clean,
+					'api_response' => $api_response,
 				];
 			}
 		}
@@ -549,10 +558,11 @@ class Protection extends BaseModul {
 	/**
 	 * Log a blocked submission to the mail log (if enabled).
 	 *
-	 * @param string $module_name The protection module that triggered the block.
-	 * @param array  $post_data   The submitted form data.
+	 * @param string     $module_name  The protection module that triggered the block.
+	 * @param array      $post_data    The submitted form data.
+	 * @param array|null $api_response Optional API response data for meta.
 	 */
-	private function maybe_log_mail_blocked( string $module_name, array $post_data ): void {
+	private function maybe_log_mail_blocked( string $module_name, array $post_data, ?array $api_response = null ): void {
 		if ( ! MailLog::is_enabled() ) {
 			return;
 		}
@@ -564,7 +574,8 @@ class Protection extends BaseModul {
 			$this->context_integration_id ?? '',
 			$this->context_form_id,
 			$reason[0],
-			$post_data
+			$post_data,
+			$api_response
 		);
 	}
 
@@ -628,7 +639,8 @@ class Protection extends BaseModul {
 			$body,
 			$headers,
 			$attachments,
-			$ctx['form_data'] ?? []
+			$ctx['form_data'] ?? [],
+			$ctx['api_response'] ?? null
 		);
 
 		return $args;

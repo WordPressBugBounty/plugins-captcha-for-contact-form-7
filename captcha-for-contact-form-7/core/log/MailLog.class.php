@@ -185,10 +185,11 @@ class MailLog {
 	 * @param string|null $form_id       Form ID.
 	 * @param string      $block_reason  Reason code (e.g. CAPTCHA_FAILED).
 	 * @param array       $post_data     The $_POST data.
+	 * @param array|null  $api_response  Optional SilentShield API response data.
 	 *
 	 * @return int|false
 	 */
-	public function log_blocked( string $form_plugin, ?string $form_id, string $block_reason, array $post_data ) {
+	public function log_blocked( string $form_plugin, ?string $form_id, string $block_reason, array $post_data, ?array $api_response = null ) {
 		// Check if blocked logging is enabled
 		$log_blocked = (int) CF7Captcha::get_instance()
 			->get_settings( 'protection_mail_log_blocked', 'global' );
@@ -212,7 +213,7 @@ class MailLog {
 			$clean_data['_wpnonce']
 		);
 
-		return $this->log( [
+		$data = [
 			'form_plugin'  => $form_plugin,
 			'form_id'      => $form_id ?? '',
 			'status'       => 'blocked',
@@ -221,7 +222,13 @@ class MailLog {
 			'subject'      => $subject,
 			'body'         => $body,
 			'form_data'    => $clean_data,
-		] );
+		];
+
+		if ( $api_response !== null ) {
+			$data['meta'] = self::build_api_meta( $api_response );
+		}
+
+		return $this->log( $data );
 	}
 
 	/**
@@ -248,7 +255,8 @@ class MailLog {
 		string $body,
 		array $headers = [],
 		array $attachments = [],
-		array $form_data = []
+		array $form_data = [],
+		?array $api_response = null
 	) {
 		// Check if sent logging is enabled
 		$log_sent = (int) CF7Captcha::get_instance()
@@ -273,7 +281,39 @@ class MailLog {
 			$data['form_data'] = $form_data;
 		}
 
+		if ( $api_response !== null ) {
+			$data['meta'] = self::build_api_meta( $api_response );
+		}
+
 		return $this->log( $data );
+	}
+
+	/**
+	 * Build a structured meta array from the SilentShield API response.
+	 *
+	 * @param array $api_response The raw API response.
+	 *
+	 * @return array Cleaned meta data with verdict, confidence, score_breakdown, and reason_codes.
+	 */
+	private static function build_api_meta( array $api_response ): array {
+		$meta = [
+			'verdict'    => $api_response['verdict'] ?? null,
+			'confidence' => $api_response['confidence'] ?? null,
+		];
+
+		if ( ! empty( $api_response['score_breakdown'] ) ) {
+			$meta['score_breakdown'] = $api_response['score_breakdown'];
+		}
+
+		if ( ! empty( $api_response['reason_codes'] ) ) {
+			$meta['reason_codes'] = $api_response['reason_codes'];
+		}
+
+		if ( isset( $api_response['requested_nonce'] ) ) {
+			$meta['nonce'] = $api_response['requested_nonce'];
+		}
+
+		return $meta;
 	}
 
 	/**

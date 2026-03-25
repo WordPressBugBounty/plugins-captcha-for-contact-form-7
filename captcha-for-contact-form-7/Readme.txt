@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.6.7
+Stable tag: 2.6.8
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,13 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.6.8 =
+- Fix [API]: Unified all API endpoints to use `/api/v1` base path. The verify endpoint changed from `/v1/verify` to `/api/v1/captcha/verify-nonce`. Affects key validation, trial creation, telemetry, shadow mode, and blacklist retrieval.
+- New [API]: Introduced separate `F12_CAPTCHA_CLIENT_URL` constant to decouple the behavior client script URL from the API base URL. The client.js loader now reads `client_url` from localized data with fallback to `url`.
+- New [Mail-Log]: API response metadata (verdict, confidence, reason codes) is now forwarded to mail log entries for both blocked and passed submissions, enabling better audit trail and debugging.
+- Fix [Settings]: Added `invalidate_settings_cache` hook at `init` priority 99 to ensure the settings cache is rebuilt after UI page filters register their defaults.
+- New [Debug]: Added detailed debug logging in the API spam check flow for nonce detection, API request/response, and verdict evaluation. Temporary logging to `error_log` for troubleshooting integration issues.
+
 = 2.6.7 =
 - Fix [Translations]: Fixed 4 German strings that were mistakenly used in the French (fr_FR) translation files instead of French. Affected strings: "Enable Mail Logging…", "Also block partial matches…", "The analytics page…", "Synchronized with WordPress Disallowed Comment Keys".
 - Fix [Translations]: Fixed incorrect French translation for relative time indicator "in" — changed from "dans" to "en" (e.g. "en 5 minutes").

@@ -116,9 +116,9 @@ class Shadow_Mode {
 		// SilentShield shadow endpoint is deployed on the API side.
 
 		if ( defined( 'F12_CAPTCHA_SHADOW_API_LIVE' ) && F12_CAPTCHA_SHADOW_API_LIVE ) {
-			$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
+			$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
 
-			wp_remote_post( rtrim( $base_url, '/' ) . '/api/v1/shadow/check', [
+			wp_remote_post( rtrim( $base_url, '/' ) . '/shadow/check', [
 				'timeout'  => 2,
 				'blocking' => false, // Fire-and-forget
 				'body'     => wp_json_encode( [

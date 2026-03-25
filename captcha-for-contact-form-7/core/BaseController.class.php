@@ -213,6 +213,25 @@ abstract class BaseController {
 		$html = $protection->get_captcha();
 		$protection->clear_context();
 
+		// When the SilentShield API is enabled, inject a hidden behavior_nonce field
+		// and a small script that labels the parent form for the behavior-captcha.js
+		// library. The library only tracks forms with data-ss-init="1" — without this,
+		// no behavior data is collected and no nonce is generated.
+		if ( $protection->has_module( 'api-validator' ) ) {
+			$html .= '<input type="hidden" name="behavior_nonce" value="" />';
+			$html .= '<script>
+(function(){
+	var el = document.currentScript;
+	if (!el) return;
+	var form = el.closest("form");
+	if (!form || form.dataset.ssInit === "1") return;
+	form.dataset.ssInit = "1";
+	form.dataset.ssMode = "protect";
+	form.dataset.ssSource = "rule";
+})();
+</script>';
+		}
+
 		return $html;
 	}
 

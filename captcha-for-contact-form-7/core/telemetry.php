@@ -127,8 +127,8 @@ function send_telemetry_snapshot(): void {
 			'payload' => $payload,
 		]);
 
-		$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
-		$response = wp_remote_post( rtrim( $base_url, '/' ) . '/api/telemetry/snapshot', [
+		$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
+		$response = wp_remote_post( rtrim( $base_url, '/' ) . '/telemetry/snapshot', [
 			'headers' => [
 				'Content-Type' => 'application/json; charset=utf-8',
 			],

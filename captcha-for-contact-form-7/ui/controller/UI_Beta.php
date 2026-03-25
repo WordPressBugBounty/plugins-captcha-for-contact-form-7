@@ -47,8 +47,8 @@ namespace f12_cf7_captcha {
 				}
 			}
 
-			$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io';
-			$api_endpoint = rtrim( $base_url, '/' ) . '/api/keys/validate';
+			$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
+			$api_endpoint = rtrim( $base_url, '/' ) . '/keys/validate';
 
 			$request_body = wp_json_encode( [ 'key' => $api_key ] );
 
@@ -468,7 +468,7 @@ namespace f12_cf7_captcha {
                 <h2>
 					<?php esc_html_e( 'Captcha Protection (v2)', 'captcha-for-contact-form-7' ); ?>
                     <?php
-                    $is_production = ! defined( 'F12_CAPTCHA_API_URL' ) || F12_CAPTCHA_API_URL === 'https://api.silentshield.io';
+                    $is_production = ! defined( 'F12_CAPTCHA_API_URL' ) || F12_CAPTCHA_API_URL === 'https://api.silentshield.io/api/v1';
                     if ( $is_production ) : ?>
                         <span style="display:inline-block;margin-left:10px;padding:2px 10px;font-size:12px;font-weight:600;border-radius:4px;background:#46b450;color:#fff;vertical-align:middle;">LIVE</span>
                     <?php else : ?>
