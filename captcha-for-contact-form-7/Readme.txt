@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.6.5
+Stable tag: 2.6.7
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,15 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.6.7 =
+- Fix [Translations]: Fixed 4 German strings that were mistakenly used in the French (fr_FR) translation files instead of French. Affected strings: "Enable Mail Logging…", "Also block partial matches…", "The analytics page…", "Synchronized with WordPress Disallowed Comment Keys".
+- Fix [Translations]: Fixed incorrect French translation for relative time indicator "in" — changed from "dans" to "en" (e.g. "en 5 minutes").
+- Fix [UI]: Fixed overflow-hidden on the individual forms list (FormsPage) which prevented scrolling when the list exceeded viewport height. Replaced with overflow-auto.
+- Fix [Settings]: Fixed settings cache race condition where `Protection::init_modules()` called `get_settings()` before UI pages registered their filter defaults, caching an empty array. The REST API then returned `[]` instead of `{ global: {...}, beta: {...} }`, causing the admin UI to show empty settings. The cache is now invalidated on `init` (priority 99) after UI page filters are registered.
+
+= 2.6.6 =
+- Fix [Translations]: Fixed `_load_textdomain_just_in_time` notice introduced in WordPress 6.7. Translation loading for UI pages (e.g. Upgrade page) was triggered too early during plugin initialization. The `do_action('_ui_after_load_pages')` call in `UI_Manager` is now deferred to the `init` hook, ensuring `__()` is only called after translations are available.
+
 = 2.6.5 =
 - New [Templates]: Captcha image now uses transparent PNG background, blending seamlessly with all template styles (Standard, Compact, Clean, Dark Card, Gradient Dark). Dark templates (Gradient Dark) use light text colors for readability.
 - New [Templates]: Classic templates (0–2) from v2.3.x are now visible and selectable in the template picker alongside the modern templates, ensuring backward compatibility for existing users after updates.

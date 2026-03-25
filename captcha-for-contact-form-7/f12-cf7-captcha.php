@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.6.5
+ * Version: 2.6.7
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.6.5' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.6.7' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -357,6 +357,11 @@ class CF7Captcha {
 			plugins_url( 'ui/assets/icon-captcha-20x20.png', __FILE__ )
 		);
 		$this->logger->debug( "UI Manager registered", [ 'plugin' => 'f12-cf7-captcha' ] );
+
+		// Invalidate early settings cache after UI pages register their filter defaults.
+		// Protection::init_modules() calls get_settings() before UI pages exist,
+		// caching an empty array. This ensures the cache is rebuilt with full defaults.
+		add_action( 'init', [ $this, 'invalidate_settings_cache' ], 99 );
 
 		// React Admin SPA (SilentShield v2 UI)
 		require_once plugin_dir_path( __FILE__ ) . 'ui/ReactApp.php';

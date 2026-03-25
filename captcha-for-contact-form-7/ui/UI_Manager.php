@@ -162,9 +162,15 @@ namespace f12_cf7_captcha\ui {
 				$this->UI_Message            = new UI_Message( $this );
 				$this->UI_Menu               = new UI_Menu( $this );
 
-				// Called after all Pages have been initialized
-
-				do_action( $this->get_domain() . '_ui_after_load_pages', $this );
+				// Called after all Pages have been initialized.
+				// Defer to 'init' so that translation functions (__(), etc.) are available.
+				if ( did_action( 'init' ) ) {
+					do_action( $this->get_domain() . '_ui_after_load_pages', $this );
+				} else {
+					add_action( 'init', function () {
+						do_action( $this->get_domain() . '_ui_after_load_pages', $this );
+					} );
+				}
 
 				// Add Filter to get all settings
 				add_filter( $this->get_domain() . '_get_settings', [ $this, 'get_settings' ] );
