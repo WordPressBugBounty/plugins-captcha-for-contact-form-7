@@ -63,7 +63,7 @@ namespace f12_cf7_captcha {
 
 			?>
 			<div class="section-container">
-				<h2><?php esc_html_e( 'Form Settings', 'captcha-for-contact-form-7' ); ?></h2>
+				<h2><?php esc_html_e( 'Form Settings', 'captcha-for-contact-form-7' ); ?><?php UI_Documentation::help_link( '#ss-overrides' ); ?></h2>
 				<div class="section-wrapper">
 					<div class="section advanced">
 						<?php

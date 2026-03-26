@@ -115,8 +115,9 @@ class Whitelist_Validator extends BaseProtection {
 				'plugin' => 'f12-cf7-captcha',
 				'email'  => $value
 			] );
-		}
 
+			return true;
+		}
 
 		$this->get_logger()->debug( "Whitelist check: email not in whitelist", [
 			'plugin' => 'f12-cf7-captcha',
@@ -298,8 +299,8 @@ class Whitelist_Validator extends BaseProtection {
 
 		// Get the whitelist settings - emails/IPs from global, roles via resolved context
 		$settings               = get_option( 'f12-cf7-captcha-settings', [] );
-		$whitelisted_emails     = isset( $settings['global']['protection_whitelist_emails'] ) ? explode( "\n", trim( $settings['global']['protection_whitelist_emails'] ) ) : [];
-		$whitelisted_ips        = isset( $settings['global']['protection_whitelist_ips'] ) ? explode( "\n", $settings['global']['protection_whitelist_ips'] ) : [];
+		$whitelisted_emails     = isset( $settings['global']['protection_whitelist_emails'] ) ? preg_split( '/[\s,]+/', trim( $settings['global']['protection_whitelist_emails'] ), -1, PREG_SPLIT_NO_EMPTY ) : [];
+		$whitelisted_ips        = isset( $settings['global']['protection_whitelist_ips'] ) ? preg_split( '/[\s,]+/', trim( $settings['global']['protection_whitelist_ips'] ), -1, PREG_SPLIT_NO_EMPTY ) : [];
 		$whitelisted_admin_role = (int) $this->get_protection_setting( 'protection_whitelist_role_admin' );
 		$whitelisted_logged_in  = (int) $this->get_protection_setting( 'protection_whitelist_role_logged_in' );
 
@@ -344,12 +345,10 @@ class Whitelist_Validator extends BaseProtection {
 
 				return true;
 			} else {
-				$this->get_logger()->debug( "User logged in but not admin - no exception", [
+				$this->get_logger()->debug( "User logged in but not admin - continuing with IP/email whitelist checks", [
 					'plugin' => 'f12-cf7-captcha',
 					'user'   => $current_user->user_login
 				] );
-
-				return false;
 			}
 		} else {
 			$this->get_logger()->info( "Validation not skipped: no user logged in or admin whitelist disabled", [

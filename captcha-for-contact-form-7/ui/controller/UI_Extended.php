@@ -425,6 +425,7 @@ namespace f12_cf7_captcha {
             <div class="section-container">
                 <h2>
 					<?php esc_html_e( 'Available Protection Services', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-integrations' ); ?>
                 </h2>
                 <div class="section-wrapper">
                     <div class="section advanced">
@@ -924,12 +925,13 @@ namespace f12_cf7_captcha {
 
                 <h3>
 					<?php esc_html_e( 'Asset Loading', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-start' ); ?>
                 </h3>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_global_asset_loading"><strong><?php esc_html_e( 'Global Asset Loading', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_global_asset_loading"><strong><?php esc_html_e( 'Global Asset Loading', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'When enabled, the plugin loads its CSS and JS on every page. Enable this if captchas are missing on certain pages.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable global loading of all plugin assets (CSS/JS) on all pages. Use this if the automatic form detection does not work on certain pages.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -954,7 +956,7 @@ namespace f12_cf7_captcha {
                         </div>
                         <div class="option">
                             <div class="label">
-                                <label for="protection_asset_loading_urls"><strong><?php esc_html_e( 'Custom URL Paths', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_asset_loading_urls"><strong><?php esc_html_e( 'Custom URL Paths', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'One URL path per line (e.g. /my-login/). Plugin assets will always be loaded on pages matching these paths.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'URL paths (one per line) where assets should always be loaded. Use this for custom login pages or pages where form detection fails.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -975,6 +977,7 @@ namespace f12_cf7_captcha {
 
                 <h3>
 					<?php esc_html_e( 'Minor Protection Services', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-modules' ); ?>
                 </h3>
                 <div class="section-wrapper">
                     <div class="section">
@@ -1085,12 +1088,13 @@ namespace f12_cf7_captcha {
             <div class="section-container">
                 <h3>
 					<?php esc_html_e( 'Protection Rules', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-modules' ); ?>
                 </h3>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_rules_url_enable"><strong><?php esc_html_e( 'URL Limiter', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_rules_url_enable"><strong><?php esc_html_e( 'URL Limiter', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'Blocks form submissions that contain more URLs than the configured limit. Useful against link spam.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable the URL Limiter to limit the number of allowed links in your forms.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1166,7 +1170,7 @@ namespace f12_cf7_captcha {
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_rules_bbcode_enable"><strong><?php esc_html_e( 'BBCode Limiter', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_rules_bbcode_enable"><strong><?php esc_html_e( 'BBCode Limiter', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'Blocks submissions containing BBCode tags like [url], [b], [img]. Common in automated spam.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable the BBCode limiter to mark BBCode as Spam on your website.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1225,7 +1229,7 @@ namespace f12_cf7_captcha {
 
                         <div class="option">
                             <div class="label">
-                                <label for="protection_rules_blacklist_enable"><strong><?php esc_html_e( 'Blacklist', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_rules_blacklist_enable"><strong><?php esc_html_e( 'Blacklist', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'Blocks submissions containing words from the blacklist. Enable "Greedy mode" to also match partial words (e.g. "spam" matches "spammer").', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable the Blacklist for your forms. This allows you to define custom text combinations as spam.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1360,12 +1364,13 @@ namespace f12_cf7_captcha {
             <div class="section-container">
                 <h3>
 					<?php esc_html_e( 'IP Protection', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-modules' ); ?>
                 </h3>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_ip_enable"><strong><?php esc_html_e( 'IP Protection', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_ip_enable"><strong><?php esc_html_e( 'IP Protection', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'Limits how often an IP can submit forms. Blocks IPs that exceed the limit for a configurable duration.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable the IP Protection to automatically stop bots from submitting any forms as long as they are blocked.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1516,12 +1521,13 @@ namespace f12_cf7_captcha {
             <div class="section-container">
                 <h3>
 					<?php esc_html_e( 'Logs', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-logging' ); ?>
                 </h3>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_log_enable"><strong><?php esc_html_e( 'Submission Logging', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_log_enable"><strong><?php esc_html_e( 'Submission Logging', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'Logs all form submissions (passed and blocked) for debugging. Disable in production to save database space.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable the logs if you need further informations about verified and blocked submissions.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1580,12 +1586,12 @@ namespace f12_cf7_captcha {
             </div>
 
             <div class="section-container">
-                <h3><?php esc_html_e( 'Detailed Tracking', 'captcha-for-contact-form-7' ); ?></h3>
+                <h3><?php esc_html_e( 'Detailed Tracking', 'captcha-for-contact-form-7' ); ?><?php UI_Documentation::help_link( '#ss-logging' ); ?></h3>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_detailed_tracking"><strong><?php esc_html_e( 'Enable Detailed Block Tracking', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_detailed_tracking"><strong><?php esc_html_e( 'Enable Detailed Block Tracking', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'Required for the Analytics page. Logs each blocked submission with module name, reason code and IP hash.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'When enabled, every blocked submission is logged with a machine-readable reason code and a human-readable explanation of why it was blocked. This allows you to analyze exactly which protection methods are working and why.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1636,7 +1642,7 @@ namespace f12_cf7_captcha {
                         </div>
                         <div class="option">
                             <div class="label">
-                                <label for="protection_log_plaintext"><strong><?php esc_html_e( 'Disable Log Anonymization (Debug Mode)', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_log_plaintext"><strong><?php esc_html_e( 'Disable Log Anonymization (Debug Mode)', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'When enabled, IP addresses are stored in plain text instead of as hashes. Only use for debugging - not recommended in production (GDPR).', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'When enabled, email addresses and IP addresses are stored in plain text in the submission logs instead of being masked. This allows you to identify which user was blocked and contact them if needed.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1672,12 +1678,12 @@ namespace f12_cf7_captcha {
 
             <div class="section-container">
                 <!-- Whitelist Section -->
-                <h3><?php esc_html_e( 'Whitelist Settings', 'captcha-for-contact-form-7' ); ?></h3>
+                <h3><?php esc_html_e( 'Whitelist Settings', 'captcha-for-contact-form-7' ); ?><?php UI_Documentation::help_link( '#ss-whitelist' ); ?></h3>
                 <div class="section-wrapper">
                     <div class="section">
                         <div class="option">
                             <div class="label">
-                                <label for="protection_whitelist_emails"><strong><?php esc_html_e( 'Whitelist Email Addresses', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_whitelist_emails"><strong><?php esc_html_e( 'Whitelist Email Addresses', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'One email per line. If any form field contains a whitelisted email, the entire submission skips all protection checks.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p><?php esc_html_e( 'Add email addresses that should bypass all CAPTCHA checks, one per line.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1691,7 +1697,7 @@ namespace f12_cf7_captcha {
 
                         <div class="option">
                             <div class="label">
-                                <label for="protection_whitelist_ips"><strong><?php esc_html_e( 'Whitelist IP Addresses', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_whitelist_ips"><strong><?php esc_html_e( 'Whitelist IP Addresses', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'One IP per line. Whitelisted IPs skip all protection checks. Your current IP is shown below.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p><?php esc_html_e( 'Add IP addresses that should bypass all CAPTCHA checks, one per line.', 'captcha-for-contact-form-7' ); ?></p>
                                 <label><strong><?php esc_html_e( 'Your Current IP Address', 'captcha-for-contact-form-7' ); ?></strong></label>
                                 <p><?php echo esc_html( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' ); ?></p>
@@ -1707,7 +1713,7 @@ namespace f12_cf7_captcha {
 
                         <div class="option">
                             <div class="label">
-                                <label for="protection_blacklist_ips"><strong><?php esc_html_e( 'Backlist IP Addresses', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_blacklist_ips"><strong><?php esc_html_e( 'Backlist IP Addresses', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'One IP per line. Blacklisted IPs are immediately blocked from submitting any form. The whitelist takes priority over the blacklist.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p><?php esc_html_e( 'Add IP addresses that should be blocked automatically, one per line.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1721,7 +1727,7 @@ namespace f12_cf7_captcha {
 
                         <div class="option">
                             <div class="label">
-                                <label for="protection_whitelist_role_admin"><strong><?php esc_html_e( 'Whitelist for Administrator Role', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_whitelist_role_admin"><strong><?php esc_html_e( 'Whitelist for Administrator Role', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'When enabled, administrators skip all protection checks including captcha, timer and JS validation.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable this option to automatically whitelist all administrators while they are logged into the website.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">
@@ -1749,7 +1755,7 @@ namespace f12_cf7_captcha {
 
                         <div class="option">
                             <div class="label">
-                                <label for="protection_whitelist_role_logged_in"><strong><?php esc_html_e( 'Whitelist for Logged-In Users', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <label for="protection_whitelist_role_logged_in"><strong><?php esc_html_e( 'Whitelist for Logged-In Users', 'captcha-for-contact-form-7' ); ?></strong><?php UI_Documentation::tooltip( __( 'When enabled, all logged-in users (any role) skip all protection checks. Disable if you want to protect forms even for registered users.', 'captcha-for-contact-form-7' ) ); ?></label>
                                 <p style="padding-right:20px;"><?php esc_html_e( 'Enable this option to automatically whitelist all Logged-in Users.', 'captcha-for-contact-form-7' ); ?></p>
                             </div>
                             <div class="input">

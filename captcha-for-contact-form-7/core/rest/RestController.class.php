@@ -1159,6 +1159,15 @@ class RestController extends BaseModul {
 					$current[ $container ] = [];
 				}
 
+				// Textarea fields that must preserve newlines
+				$textarea_keys = [
+					'protection_rules_blacklist_value',
+					'protection_whitelist_emails',
+					'protection_whitelist_ips',
+					'protection_blacklist_ips',
+					'protection_asset_loading_urls',
+				];
+
 				foreach ( $body[ $container ] as $key => $value ) {
 					$sanitized_key   = sanitize_text_field( $key );
 					if ( is_array( $value ) ) {
@@ -1167,6 +1176,8 @@ class RestController extends BaseModul {
 						$sanitized_value = $value;
 					} elseif ( is_bool( $value ) ) {
 						$sanitized_value = $value ? 1 : 0;
+					} elseif ( in_array( $sanitized_key, $textarea_keys, true ) ) {
+						$sanitized_value = sanitize_textarea_field( (string) $value );
 					} else {
 						$sanitized_value = sanitize_text_field( (string) $value );
 					}

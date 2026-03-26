@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.6.8
+ * Version: 2.6.9
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.6.8' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.6.9' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -660,9 +660,9 @@ class CF7Captcha {
 		// Check if the API is actually reachable (uses the same transient as Protection::init_modules)
 		$api_reachable = $api_enabled && get_transient( 'f12_captcha_api_health' ) !== 'fail';
 
+		// Load API client.js when the API is enabled and reachable
 		if ( $api_enabled && $api_reachable ) {
 			$this->get_logger()->info( "Behavior API enabled" );
-			// Insert JavaScript
 			wp_enqueue_script(
 				'f12-cf7-captcha-client',
 				plugin_dir_url( __FILE__ ) . 'core/assets/client.js',
@@ -672,7 +672,6 @@ class CF7Captcha {
 			);
 			wp_script_add_data( 'f12-cf7-captcha-client', 'strategy', 'defer' );
 
-			// Provide data for the script locally
 			$api_url = defined( 'F12_CAPTCHA_API_URL' )
 				? F12_CAPTCHA_API_URL
 				: 'https://api.silentshield.io/api/v1';
@@ -697,47 +696,46 @@ class CF7Captcha {
 				'styles'  => [],
 				'context' => ( is_admin() ? 'admin' : ( is_user_logged_in() ? 'frontend-logged-in' : 'frontend-guest' ) )
 			] );
-		}else{
-			// v1: only load assets when a form is detected on the page
-			if ( ! $this->should_load_assets() ) {
-				return;
-			}
-
-			// Hole aktive Komponenten aus dem Compatibility-Modul
-			$active_components = [];
-			try {
-				$compatibility = $this->get_module('compatibility');
-				if ( method_exists( $compatibility, 'get_active_component_names' ) ) {
-					$active_components = $compatibility->get_active_component_names();
-				}
-			} catch ( \Exception $e ) {
-				$this->logger->error( 'Compatibility module not available', [
-					'plugin' => 'f12-cf7-captcha',
-					'error'  => $e->getMessage(),
-				] );
-			}
-
-			$atts = array(
-				'resturl'    => rest_url( 'f12-cf7-captcha/v1/' ),
-				'restnonce'  => wp_create_nonce( 'wp_rest' ),
-				'components' => $active_components,
-			);
-
-			wp_enqueue_script(
-				'f12-cf7-captcha-reload',
-				plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha-cf7.js',
-				array( 'jquery' ),
-				FORGE12_CAPTCHA_VERSION,
-				true
-			);
-			wp_script_add_data( 'f12-cf7-captcha-reload', 'strategy', 'defer' );
-
-			wp_localize_script(
-				'f12-cf7-captcha-reload',
-				'f12_cf7_captcha',
-				$atts
-			);
 		}
+
+		// Always load local protection JS (handles JS protection, captcha, timer, form intercepts, etc.)
+		if ( ! $this->should_load_assets() ) {
+			return;
+		}
+
+		$active_components = [];
+		try {
+			$compatibility = $this->get_module('compatibility');
+			if ( method_exists( $compatibility, 'get_active_component_names' ) ) {
+				$active_components = $compatibility->get_active_component_names();
+			}
+		} catch ( \Exception $e ) {
+			$this->logger->error( 'Compatibility module not available', [
+				'plugin' => 'f12-cf7-captcha',
+				'error'  => $e->getMessage(),
+			] );
+		}
+
+		$atts = array(
+			'resturl'    => rest_url( 'f12-cf7-captcha/v1/' ),
+			'restnonce'  => wp_create_nonce( 'wp_rest' ),
+			'components' => $active_components,
+		);
+
+		wp_enqueue_script(
+			'f12-cf7-captcha-reload',
+			plugin_dir_url( __FILE__ ) . 'core/assets/f12-cf7-captcha-cf7.js',
+			array( 'jquery' ),
+			FORGE12_CAPTCHA_VERSION,
+			true
+		);
+		wp_script_add_data( 'f12-cf7-captcha-reload', 'strategy', 'defer' );
+
+		wp_localize_script(
+			'f12-cf7-captcha-reload',
+			'f12_cf7_captcha',
+			$atts
+		);
 
 		wp_enqueue_style(
 			'f12-cf7-captcha-style',

@@ -467,6 +467,7 @@ namespace f12_cf7_captcha {
             <div class="section-container">
                 <h2>
 					<?php esc_html_e( 'Captcha Protection (v2)', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-api' ); ?>
                     <?php
                     $is_production = ! defined( 'F12_CAPTCHA_API_URL' ) || F12_CAPTCHA_API_URL === 'https://api.silentshield.io/api/v1';
                     if ( $is_production ) : ?>

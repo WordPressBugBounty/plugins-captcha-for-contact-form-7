@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.6.8
+Stable tag: 2.6.9
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,18 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.6.9 =
+- Fix [Whitelist]: Email whitelist never matched — the `is_whitelisted_email()` method logged the match but was missing the `return true` statement, so whitelisted emails were still checked by all protection modules.
+- Fix [Whitelist]: Admin role check caused early return that blocked IP and email whitelist checks. When admin whitelist was enabled and a non-admin user submitted a form, the method returned `false` immediately instead of continuing to check IP/email whitelists.
+- Fix [Whitelist/Blacklist]: REST API settings save (`handle_settings_save`) used `sanitize_text_field()` for textarea fields (whitelist emails, whitelist IPs, blacklist IPs), which strips newlines. Entries saved via the React admin UI were merged into a single line and never matched. Now uses `sanitize_textarea_field()` for these fields, matching the PHP form handler behavior.
+- Fix [Whitelist/Blacklist]: IP and email parsing now uses `preg_split('/[\s,]+/')` instead of `explode("\n")`, so entries separated by spaces or commas (e.g. from previously corrupted saves) are correctly recognized.
+- Fix [Protection]: SilentShield API mode and local protection modules (JavaScript, Timer, Captcha, etc.) can now run simultaneously. Previously, enabling the API disabled all local modules and prevented the local JS from loading, causing false `NO_JAVASCRIPT` blocks on login and other forms.
+- Fix [Assets]: Local protection script (`f12-cf7-captcha-cf7.js`) is now always loaded when a form is detected, even when the SilentShield API client (`client.js`) is also active. Previously the two were mutually exclusive.
+- New [Documentation]: Added in-plugin Help page (SilentShield > Help) with full user guide covering all protection modules, integrations, whitelist/blacklist, per-form overrides, API mode, logging and FAQ.
+- New [Documentation]: Contextual help links (info icon) added to all section headings on Settings, Dashboard, API and Forms pages, linking directly to the relevant documentation section.
+- New [Documentation]: Inline tooltips on 14 key settings fields (whitelist, blacklist, IP protection, content rules, logging, asset loading) explaining each option on hover.
+- New [Translations]: German (de_DE, de_DE_formal) and French (fr_FR) translations added for all documentation strings.
+
 = 2.6.8 =
 - Fix [API]: Unified all API endpoints to use `/api/v1` base path. The verify endpoint changed from `/v1/verify` to `/api/v1/captcha/verify-nonce`. Affects key validation, trial creation, telemetry, shadow mode, and blacklist retrieval.
 - New [API]: Introduced separate `F12_CAPTCHA_CLIENT_URL` constant to decouple the behavior client script URL from the API base URL. The client.js loader now reads `client_url` from localized data with fallback to `url`.

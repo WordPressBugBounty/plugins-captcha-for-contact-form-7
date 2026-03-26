@@ -119,11 +119,8 @@ class Protection extends BaseModul {
 
 		if ( $api->is_enabled() && ! empty( $api_key ) ) {
 			if ( $this->is_api_reachable( $api_key ) ) {
-				// API is reachable — use API mode exclusively
-				$moduls = [
-					'api-validator'       => $api,
-					'whitelist-validator' => $moduls['whitelist-validator'],
-				];
+				// API is reachable — keep api-validator alongside locally enabled modules
+				// so that API and local protections (JS, timer, captcha, etc.) can coexist.
 			} else {
 				// API is unreachable — fallback to all local modules (without api-validator)
 				unset( $moduls['api-validator'] );

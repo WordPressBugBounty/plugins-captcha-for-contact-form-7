@@ -320,6 +320,7 @@ namespace f12_cf7_captcha {
             <div class="section-container">
                 <h2>
 					<?php esc_html_e( 'Captcha Protection', 'captcha-for-contact-form-7' ); ?>
+					<?php UI_Documentation::help_link( '#ss-modules' ); ?>
                 </h2>
                 <div class="section-wrapper">
                     <div class="section">

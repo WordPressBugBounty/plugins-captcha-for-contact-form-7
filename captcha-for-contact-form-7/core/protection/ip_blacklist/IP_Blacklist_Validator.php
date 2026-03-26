@@ -87,7 +87,7 @@ class IP_Blacklist_Validator extends BaseProtection
 		// Load blacklist entries from settings
 		$settings          = get_option('f12-cf7-captcha-settings', []);
 		$blacklist_raw     = $settings['global']['protection_blacklist_ips'] ?? '';
-		$blacklisted_ips   = array_filter(array_map('trim', explode("\n", $blacklist_raw)));
+		$blacklisted_ips   = preg_split( '/[\s,]+/', trim( $blacklist_raw ), -1, PREG_SPLIT_NO_EMPTY );
 
 		// Check if user IP is on blacklist
 		if (!empty($user_ip) && in_array($user_ip, $blacklisted_ips, true)) {
