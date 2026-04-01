@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.6.9
+Stable tag: 2.6.11
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,16 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.6.11 =
+- Fix [Settings]: Global settings (including integration enable/disable toggles) were not loaded on non-admin pages (wp-login.php, frontend). The settings cache only included values from the `f12-cf7-captcha_settings` filter defaults, which are only registered on admin pages. DB settings containers not covered by filter defaults were silently dropped. All `get_settings()` calls returned `null` on the login page, causing every protection module to fall back to its enabled default. This also meant integration toggle settings and per-module overrides were ignored on the login page.
+- New [Forms]: Added master toggle to enable/disable entire integrations (WordPress Login, WooCommerce, Avada, CF7, etc.) directly from the Forms page. Previously, only per-module overrides were available — there was no way to completely deactivate protection for a specific integration via the UI.
+- Fix [Cleanup]: Data Cleanup page showed all counts as zero. The `handle_cleanup_counts` endpoint called `get_count()` on Cleaner classes (`CaptchaCleaner`, `IPLogCleaner`, `IPBanCleaner`, `CaptchaTimerCleaner`) which do not have this method. The resulting `Error` was silently caught. Added `get_count()` delegate methods to all four Cleaner classes.
+- New [API]: New REST endpoint `POST /integration/toggle` to programmatically enable or disable integrations by setting their global settings key.
+- New [API]: The `/forms/discover` endpoint now returns `enabled` and `settings_key` per integration, so the UI can display and toggle the integration status.
+
+= 2.6.10 =
+- Fix [Telemetry]: Disabling telemetry in Advanced Settings no longer stops the daily telemetry cron job from running. The cron was scheduled unconditionally on every page load and `send_telemetry_snapshot()` never checked the setting — data was still sent to the API even when telemetry was turned off. Now the cron is only registered when telemetry is enabled, removed immediately when disabled, and the send function includes a guard check as defense-in-depth.
+
 = 2.6.9 =
 - Fix [Whitelist]: Email whitelist never matched — the `is_whitelisted_email()` method logged the match but was missing the `return true` statement, so whitelisted emails were still checked by all protection modules.
 - Fix [Whitelist]: Admin role check caused early return that blocked IP and email whitelist checks. When admin whitelist was enabled and a non-admin user submitted a form, the method returned `false` immediately instead of continuing to check IP/email whitelists.

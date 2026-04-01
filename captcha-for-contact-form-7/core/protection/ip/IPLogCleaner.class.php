@@ -30,6 +30,15 @@ class IPLogCleaner extends BaseModul {
 
 
 	/**
+	 * Get the number of IP log records.
+	 *
+	 * @return int
+	 */
+	public function get_count(): int {
+		return ( new IPLog( $this->Controller->get_logger() ) )->get_count();
+	}
+
+	/**
 	 * Clean the IP log by deleting records older than 3 weeks.
 	 *
 	 * @return int The number of records deleted.

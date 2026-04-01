@@ -107,6 +107,16 @@ abstract class BaseController {
 	}
 
 	/**
+	 * Get the settings key used to enable/disable this integration.
+	 *
+	 * @return string The settings key.
+	 */
+	public function get_settings_key(): string
+	{
+		return $this->settings_key;
+	}
+
+	/**
 	 * Initializes the WordPress plugin.
 	 *
 	 * This method checks if the plugin is enabled and then invokes the on_init() method.

@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.6.9
+ * Version: 2.6.11
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.6.9' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.6.11' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -127,9 +127,17 @@ class CF7Captcha {
 			// Load Settings for Blacklist
 			$settings['global']['protection_rules_blacklist_value'] = get_option( 'disallowed_keys', '' );
 
+			// Merge DB values into defaults (defaults provide base, DB overrides)
 			foreach ( $default as $key => $data ) {
 				if ( isset( $settings[ $key ] ) ) {
 					$default[ $key ] = array_merge( $data, $settings[ $key ] );
+				}
+			}
+
+			// Ensure DB settings not covered by defaults are also included
+			foreach ( $settings as $key => $data ) {
+				if ( ! isset( $default[ $key ] ) && is_array( $data ) ) {
+					$default[ $key ] = $data;
 				}
 			}
 

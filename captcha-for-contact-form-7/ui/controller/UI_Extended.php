@@ -387,6 +387,15 @@ namespace f12_cf7_captcha {
 			$settings['global']['telemetry'] = ( isset( $_POST['telemetry'] ) && (int) $_POST['telemetry'] === 1 ) ? 1 : 0;
 			$this->get_logger()->debug( 'Telemetry setting updated.', [ 'telemetry' => $settings['global']['telemetry'] ] );
 
+			// Schedule or unschedule the telemetry cron based on the new setting
+			if ( $settings['global']['telemetry'] === 1 ) {
+				if ( ! wp_next_scheduled( 'f12_cf7_captcha_daily_telemetry' ) ) {
+					wp_schedule_event( time(), 'daily', 'f12_cf7_captcha_daily_telemetry' );
+				}
+			} else {
+				wp_clear_scheduled_hook( 'f12_cf7_captcha_daily_telemetry' );
+			}
+
 			// Process the blacklist values
 			$blacklist = $settings['global']['protection_rules_blacklist_value'] ?? '';
 			// Set the value in the settings array to an empty string, as it is stored separately

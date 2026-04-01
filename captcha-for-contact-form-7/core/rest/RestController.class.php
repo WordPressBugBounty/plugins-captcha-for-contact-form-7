@@ -301,6 +301,23 @@ class RestController extends BaseModul {
 			'args'                => [],
 		] );
 
+		register_rest_route( self::NAMESPACE, '/integration/toggle', [
+			'methods'             => 'POST',
+			'callback'            => [ $this, 'handle_integration_toggle' ],
+			'permission_callback' => [ $this, 'validate_admin_request' ],
+			'args'                => [
+				'integration_id' => [
+					'required'          => true,
+					'type'              => 'string',
+					'sanitize_callback' => 'sanitize_text_field',
+				],
+				'enabled'        => [
+					'required' => true,
+					'type'     => 'boolean',
+				],
+			],
+		] );
+
 		// Dashboard stats endpoint (admin-only)
 		register_rest_route( self::NAMESPACE, '/dashboard/stats', [
 			'methods'             => 'GET',
@@ -767,6 +784,83 @@ class RestController extends BaseModul {
 
 			return new WP_Error(
 				'overrides_save_failed',
+				$e->getMessage(),
+				[ 'status' => 500 ]
+			);
+		}
+	}
+
+	/**
+	 * Toggle an integration on or off by setting its settings_key in global settings.
+	 *
+	 * @param WP_REST_Request $request
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_integration_toggle( WP_REST_Request $request ) {
+		$rate_check = $this->check_rate_limit( 'integration_toggle', self::RATE_LIMIT_ADMIN_MAX );
+		if ( $rate_check !== null ) {
+			return $rate_check;
+		}
+
+		try {
+			$integration_id = $request->get_param( 'integration_id' );
+			$enabled        = (bool) $request->get_param( 'enabled' );
+
+			// Find the integration controller to get its settings_key
+			/** @var \f12_cf7_captcha\core\Compatibility $compatibility */
+			$compatibility = $this->Controller->get_module( 'compatibility' );
+			$components    = $compatibility->get_components();
+
+			$settings_key = '';
+			foreach ( $components as $component ) {
+				if ( ! isset( $component['object'] ) ) {
+					continue;
+				}
+				$object = $component['object'];
+				if ( $object->get_id() === $integration_id && method_exists( $object, 'get_settings_key' ) ) {
+					$settings_key = $object->get_settings_key();
+					break;
+				}
+			}
+
+			if ( empty( $settings_key ) ) {
+				return new WP_Error(
+					'integration_not_found',
+					sprintf( 'Integration "%s" not found or has no settings key.', $integration_id ),
+					[ 'status' => 404 ]
+				);
+			}
+
+			// Update the global settings
+			$settings = get_option( 'f12-cf7-captcha-settings', [] );
+			if ( ! isset( $settings['global'] ) ) {
+				$settings['global'] = [];
+			}
+			$settings['global'][ $settings_key ] = $enabled ? 1 : 0;
+			update_option( 'f12-cf7-captcha-settings', $settings );
+
+			// Audit log
+			AuditLog::log(
+				AuditLog::TYPE_SETTINGS,
+				'INTEGRATION_TOGGLED',
+				AuditLog::SEVERITY_INFO,
+				sprintf(
+					'Integration "%s" %s by user #%d',
+					$integration_id,
+					$enabled ? 'enabled' : 'disabled',
+					get_current_user_id()
+				),
+				[ 'integration_id' => $integration_id, 'settings_key' => $settings_key, 'enabled' => $enabled ]
+			);
+
+			return new WP_REST_Response( [
+				'status'  => 'success',
+				'enabled' => $enabled,
+			], 200 );
+		} catch ( \Throwable $e ) {
+			return new WP_Error(
+				'integration_toggle_failed',
 				$e->getMessage(),
 				[ 'status' => 500 ]
 			);
@@ -1275,11 +1369,22 @@ class RestController extends BaseModul {
 					$forms = $this->discover_forms_for_integration( $id );
 				}
 
+				// Read integration enable/disable status from global settings
+				$settings_key = method_exists( $object, 'get_settings_key' ) ? $object->get_settings_key() : '';
+				$enabled      = true;
+				if ( ! empty( $settings_key ) ) {
+					$raw = $this->Controller->get_settings( $settings_key, 'global' );
+					// Default to enabled (1) when not explicitly set
+					$enabled = ( $raw === '' || $raw === null ) ? true : ( (int) $raw === 1 );
+				}
+
 				$integrations[] = [
-					'id'       => $id,
-					'name'     => $name,
-					'detected' => $detected,
-					'forms'    => $forms,
+					'id'           => $id,
+					'name'         => $name,
+					'detected'     => $detected,
+					'enabled'      => $enabled,
+					'settings_key' => $settings_key,
+					'forms'        => $forms,
 				];
 			}
 

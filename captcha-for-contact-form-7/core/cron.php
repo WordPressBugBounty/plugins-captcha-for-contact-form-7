@@ -23,19 +23,33 @@ add_filter( 'cron_schedules', function ( $schedules ) {
 function add_cron_jobs() {
 	$logger = Logger::getInstance();
 
-	// 🔹 Daily Telemetry Job
-	if ( ! wp_next_scheduled( 'f12_cf7_captcha_daily_telemetry' ) ) {
-		wp_schedule_event( time(), 'daily', 'f12_cf7_captcha_daily_telemetry' );
-		$logger->info( "Cron job registered", [
-			'plugin'   => 'f12-cf7-captcha',
-			'job'      => 'f12_cf7_captcha_daily_telemetry',
-			'interval' => 'daily'
-		] );
+	// 🔹 Daily Telemetry Job — only schedule when telemetry is enabled
+	$settings = get_option( 'f12-cf7-captcha-settings', [] );
+	$telemetry_enabled = ! empty( $settings['global']['telemetry'] ) && (int) $settings['global']['telemetry'] === 1;
+
+	if ( $telemetry_enabled ) {
+		if ( ! wp_next_scheduled( 'f12_cf7_captcha_daily_telemetry' ) ) {
+			wp_schedule_event( time(), 'daily', 'f12_cf7_captcha_daily_telemetry' );
+			$logger->info( "Cron job registered", [
+				'plugin'   => 'f12-cf7-captcha',
+				'job'      => 'f12_cf7_captcha_daily_telemetry',
+				'interval' => 'daily'
+			] );
+		} else {
+			$logger->debug( "Cron job already exists", [
+				'plugin' => 'f12-cf7-captcha',
+				'job'    => 'f12_cf7_captcha_daily_telemetry'
+			] );
+		}
 	} else {
-		$logger->debug( "Cron job already exists", [
-			'plugin' => 'f12-cf7-captcha',
-			'job'    => 'f12_cf7_captcha_daily_telemetry'
-		] );
+		// Telemetry disabled — ensure cron is removed
+		if ( wp_next_scheduled( 'f12_cf7_captcha_daily_telemetry' ) ) {
+			wp_clear_scheduled_hook( 'f12_cf7_captcha_daily_telemetry' );
+			$logger->info( "Cron job unscheduled (telemetry disabled)", [
+				'plugin' => 'f12-cf7-captcha',
+				'job'    => 'f12_cf7_captcha_daily_telemetry',
+			] );
+		}
 	}
 
 	// Weekly IP Clear

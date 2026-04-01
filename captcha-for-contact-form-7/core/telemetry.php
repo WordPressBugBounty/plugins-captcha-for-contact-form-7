@@ -119,6 +119,14 @@ function build_telemetry_payload(): array {
 function send_telemetry_snapshot(): void {
 	$logger = Logger::getInstance();
 
+	// Bail out if telemetry is disabled in the settings.
+	$settings = get_option( 'f12-cf7-captcha-settings', [] );
+	if ( empty( $settings['global']['telemetry'] ) || (int) $settings['global']['telemetry'] !== 1 ) {
+		$logger->info( 'Telemetry is disabled, skipping snapshot.', [ 'plugin' => FORGE12_CAPTCHA_SLUG ] );
+		wp_clear_scheduled_hook( 'f12_cf7_captcha_daily_telemetry' );
+		return;
+	}
+
 	try {
 		$payload = build_telemetry_payload();
 

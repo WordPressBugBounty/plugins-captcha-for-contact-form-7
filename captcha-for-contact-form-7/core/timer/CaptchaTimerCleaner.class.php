@@ -30,6 +30,15 @@ class CaptchaTimerCleaner extends BaseModul
 		$this->get_logger()->info('Constructor completed.');
 	}
     /**
+     * Get the number of timer records.
+     *
+     * @return int
+     */
+    public function get_count(): int {
+        return ( new CaptchaTimer( $this->get_logger() ) )->get_count();
+    }
+
+    /**
      * Clean all captchas older than 1 day
      *
      * @return int The number of captchas deleted

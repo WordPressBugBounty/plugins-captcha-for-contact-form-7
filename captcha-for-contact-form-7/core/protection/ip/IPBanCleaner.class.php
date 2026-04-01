@@ -37,6 +37,15 @@ class IPBanCleaner extends BaseModul {
 
 
 	/**
+	 * Get the number of IP ban records.
+	 *
+	 * @return int
+	 */
+	public function get_count(): int {
+		return ( new IPBan( $this->get_logger() ) )->get_count();
+	}
+
+	/**
 	 * Cleans IP bans.
 	 *
 	 * This method retrieves the date and time three weeks ago, formats it to 'Y-m-d H:i:s' format,

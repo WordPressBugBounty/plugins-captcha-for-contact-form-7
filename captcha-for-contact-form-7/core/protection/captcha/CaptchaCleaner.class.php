@@ -125,6 +125,18 @@ class CaptchaCleaner extends BaseModul {
 	}
 
 	/**
+	 * Get the number of captcha records.
+	 *
+	 * @param int $validated Filter: -1 = all, 0 = unvalidated, 1 = validated.
+	 *
+	 * @return int
+	 */
+	public function get_count( int $validated = -1 ): int {
+		$captcha = new Captcha( $this->Controller->get_logger(), '' );
+		return $captcha->get_count( $validated );
+	}
+
+	/**
 	 * Clean all expired Captchas
 	 *
 	 * This method deletes all Captchas that are older than 1 day.
