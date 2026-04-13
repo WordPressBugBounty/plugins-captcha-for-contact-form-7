@@ -145,7 +145,7 @@ abstract class BaseController {
 		$setting_value = $this->Controller->get_settings($this->settings_key, 'global');
 
 		if ($setting_value === '' || $setting_value === null) {
-			$setting_value = 1;
+			$setting_value = 0;
 		}
 
 		$is_active = $is_installed && (int) $setting_value === 1;

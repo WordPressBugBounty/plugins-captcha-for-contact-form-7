@@ -1288,6 +1288,11 @@ class RestController extends BaseModul {
 			update_option( 'f12-cf7-captcha-settings', $current );
 			$this->Controller->invalidate_settings_cache();
 
+			// Sync cron jobs immediately so toggling telemetry
+			// (or other cron-dependent settings) takes effect
+			// without waiting for the next page load.
+			\f12_cf7_captcha\add_cron_jobs();
+
 			// Audit: log settings change
 			if ( ! empty( $changed ) ) {
 				AuditLog::log(
@@ -1371,11 +1376,11 @@ class RestController extends BaseModul {
 
 				// Read integration enable/disable status from global settings
 				$settings_key = method_exists( $object, 'get_settings_key' ) ? $object->get_settings_key() : '';
-				$enabled      = true;
+				$enabled      = false;
 				if ( ! empty( $settings_key ) ) {
 					$raw = $this->Controller->get_settings( $settings_key, 'global' );
-					// Default to enabled (1) when not explicitly set
-					$enabled = ( $raw === '' || $raw === null ) ? true : ( (int) $raw === 1 );
+					// Default to disabled when not explicitly set
+					$enabled = ( $raw === '' || $raw === null ) ? false : ( (int) $raw === 1 );
 				}
 
 				$integrations[] = [

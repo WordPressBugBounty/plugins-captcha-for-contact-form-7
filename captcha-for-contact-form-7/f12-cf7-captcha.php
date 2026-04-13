@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.6.11
+ * Version: 2.7.0
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.6.11' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.7.0' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -447,7 +447,7 @@ class CF7Captcha {
 	 */
 	public function wp_plugin_action_links( $links ) {
 		$action_links = array(
-			'settings' => '<a href="' . admin_url( 'admin.php?page=f12-cf7-captcha' ) . '" aria-label="' . esc_attr__( 'View Settings', 'captcha-for-contact-form-7' ) . '">' . esc_html__( 'Settings', 'captcha-for-contact-form-7' ) . '</a>',
+			'settings' => '<a href="' . admin_url( 'admin.php?page=silentshield-admin' ) . '" aria-label="' . esc_attr__( 'View Settings', 'captcha-for-contact-form-7' ) . '">' . esc_html__( 'Settings', 'captcha-for-contact-form-7' ) . '</a>',
 		);
 
 		$merged = array_merge( $action_links, $links );

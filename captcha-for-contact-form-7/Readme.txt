@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.6.11
+Stable tag: 2.7.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,21 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.7.0 =
+- Fix [Admin UI]: Resolved sidebar/navigation not rendering on sites with WooCommerce or other React-based plugins. The plugin now uses WordPress' built-in React instead of bundling its own copy, preventing duplicate React instance conflicts that broke context providers.
+- Fix [Cron]: "Daily Telemetry" cron job no longer runs when telemetry is disabled. Previously, disabling telemetry in the admin UI only took effect on the next page load; the cron could still fire in between. Cron state is now synced immediately when settings are saved.
+- Fix [Cron]: Audit log no longer shows "Daily Telemetry completed" entries when telemetry is disabled. The audit hook for the telemetry cron is now only registered when telemetry is active.
+
+= 2.6.12 =
+- Fix [Settings]: Plugin action link ("Settings" in plugin list) now correctly opens the new React admin UI instead of the removed legacy page.
+- Fix [Dashboard]: "View Audit Log" link in the dashboard widget now points to the new Audit Log page instead of the removed legacy page.
+- Fix [Navigation]: Old admin page URLs (e.g. `admin.php?page=f12-cf7-captcha`, `f12-cf7-captcha-extended`, `f12-cf7-captcha-audit-log`) now redirect to their React equivalents instead of showing a permissions error.
+- Fix [Forms]: Integration presets (WooCommerce, Fluent Forms, JetForm, etc.) no longer default to "enabled" when the setting has not been explicitly saved. Previously, unsaved settings defaulted to enabled, making it appear as though integrations were active even when the corresponding plugin was not installed.
+- Fix [Dashboard]: Internal telemetry errors (e.g. `TELEMETRY_UNEXPECTED_RESPONSE`) are no longer shown in the "Recent Issues" section of the dashboard widget. These technical messages are not actionable by end users.
+- Improved [Dashboard]: Protection Score widget is now more compact — score circle reduced from 120px to 72px, stats displayed beside the circle instead of below, and module list uses smaller type for a tighter layout.
+- Improved [Settings]: Added descriptive help text to all numeric fields in Advanced Settings (IP Rate Limiting, Content Rules, Mail Log Retention, Block Log Retention, Audit Log Retention) so users understand what each value controls.
+- Improved [Cleanup]: Every cleanup action now shows a description below the button label explaining exactly what it does (e.g. "Removes log entries older than 3 weeks").
+
 = 2.6.11 =
 - Fix [Settings]: Global settings (including integration enable/disable toggles) were not loaded on non-admin pages (wp-login.php, frontend). The settings cache only included values from the `f12-cf7-captcha_settings` filter defaults, which are only registered on admin pages. DB settings containers not covered by filter defaults were silently dropped. All `get_settings()` calls returned `null` on the login page, causing every protection module to fall back to its enabled default. This also meant integration toggle settings and per-module overrides were ignored on the login page.
 - New [Forms]: Added master toggle to enable/disable entire integrations (WordPress Login, WooCommerce, Avada, CF7, etc.) directly from the Forms page. Previously, only per-module overrides were available — there was no way to completely deactivate protection for a specific integration via the UI.

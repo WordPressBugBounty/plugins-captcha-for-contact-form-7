@@ -196,9 +196,9 @@ namespace f12_cf7_captcha {
 			$spam        = (int) ( $counters['checks_spam'] ?? 0 );
 			$spam_pct    = $total > 0 ? round( ( $spam / $total ) * 100, 1 ) : 0;
 			?>
-			<div style="text-align:center; padding:10px 0 20px;">
-				<!-- Score circle -->
-				<div style="position:relative; width:120px; height:120px; margin:0 auto;">
+			<div style="display:flex; align-items:center; gap:16px; padding:8px 0 12px;">
+				<!-- Score circle (compact) -->
+				<div style="position:relative; width:72px; height:72px; flex-shrink:0;">
 					<svg viewBox="0 0 36 36" style="transform:rotate(-90deg);">
 						<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
 						      fill="none" stroke="#e5e7eb" stroke-width="3" />
@@ -208,37 +208,37 @@ namespace f12_cf7_captcha {
 						      stroke-linecap="round" />
 					</svg>
 					<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-						<div style="font-size:28px; font-weight:700; color:<?php echo esc_attr( $color ); ?>;">
+						<div style="font-size:20px; font-weight:700; color:<?php echo esc_attr( $color ); ?>;">
 							<?php echo esc_html( $score ); ?>
 						</div>
-						<div style="font-size:11px; color:#64748b;">/<?php echo esc_html( $max ); ?></div>
+						<div style="font-size:9px; color:#64748b;">/<?php echo esc_html( $max ); ?></div>
 					</div>
 				</div>
 
-				<!-- Mini stats row -->
-				<div style="display:flex; justify-content:center; gap:24px; margin-top:16px; font-size:13px; color:#475569;">
+				<!-- Mini stats (beside circle) -->
+				<div style="display:flex; gap:16px; font-size:12px; color:#475569;">
 					<div>
 						<strong><?php echo esc_html( number_format_i18n( $total ) ); ?></strong>
-						<div style="font-size:11px; color:#94a3b8;"><?php esc_html_e( 'Checks', 'captcha-for-contact-form-7' ); ?></div>
+						<div style="font-size:10px; color:#94a3b8;"><?php esc_html_e( 'Checks', 'captcha-for-contact-form-7' ); ?></div>
 					</div>
 					<div>
 						<strong style="color:#dc2626;"><?php echo esc_html( number_format_i18n( $spam ) ); ?></strong>
-						<div style="font-size:11px; color:#94a3b8;"><?php esc_html_e( 'Blocked', 'captcha-for-contact-form-7' ); ?></div>
+						<div style="font-size:10px; color:#94a3b8;"><?php esc_html_e( 'Blocked', 'captcha-for-contact-form-7' ); ?></div>
 					</div>
 					<div>
 						<strong><?php echo esc_html( $spam_pct ); ?>%</strong>
-						<div style="font-size:11px; color:#94a3b8;"><?php esc_html_e( 'Spam Rate', 'captcha-for-contact-form-7' ); ?></div>
+						<div style="font-size:10px; color:#94a3b8;"><?php esc_html_e( 'Spam Rate', 'captcha-for-contact-form-7' ); ?></div>
 					</div>
 				</div>
 			</div>
 
-			<!-- Module list -->
-			<div style="border-top:1px solid #e5e7eb; padding-top:12px;">
+			<!-- Module list (compact) -->
+			<div style="border-top:1px solid #e5e7eb; padding-top:8px;">
 				<?php foreach ( $data['items'] as $item ) :
 					$is_api = ! empty( $item['api'] );
 					?>
-					<div style="display:flex; align-items:center; justify-content:space-between; padding:5px 0; font-size:13px;">
-						<div style="display:flex; align-items:center; gap:6px;">
+					<div style="display:flex; align-items:center; justify-content:space-between; padding:2px 0; font-size:12px;">
+						<div style="display:flex; align-items:center; gap:4px;">
 							<?php if ( $item['active'] ) : ?>
 								<span style="color:#16a34a;">&#10003;</span>
 							<?php else : ?>
@@ -247,11 +247,11 @@ namespace f12_cf7_captcha {
 							<span style="<?php echo ! $item['active'] ? 'color:#94a3b8;' : ''; ?>">
 								<?php echo esc_html( $item['label'] ); ?>
 								<?php if ( $is_api && ! $data['api_active'] ) : ?>
-									<span style="background:#dbeafe; color:#1d4ed8; font-size:10px; padding:1px 5px; border-radius:3px; margin-left:4px;">API</span>
+									<span style="background:#dbeafe; color:#1d4ed8; font-size:9px; padding:1px 4px; border-radius:3px; margin-left:3px;">API</span>
 								<?php endif; ?>
 							</span>
 						</div>
-						<span style="font-size:12px; color:<?php echo $item['active'] ? '#16a34a' : '#94a3b8'; ?>; font-weight:600;">
+						<span style="font-size:11px; color:<?php echo $item['active'] ? '#16a34a' : '#94a3b8'; ?>; font-weight:600;">
 							+<?php echo esc_html( $item['active'] ? $item['points'] : $item['max'] ); ?>
 						</span>
 					</div>
@@ -262,6 +262,12 @@ namespace f12_cf7_captcha {
 			// Recent audit issues
 			$audit_log     = new \f12_cf7_captcha\core\log\AuditLog( \Forge12\Shared\Logger::getInstance() );
 			$recent_issues = $audit_log->get_recent_issues( 5 );
+			// Filter out internal telemetry/cron errors that are not actionable by end users
+			$hidden_codes  = [ 'TELEMETRY_UNEXPECTED_RESPONSE', 'TELEMETRY_CRON_FAILED' ];
+			$recent_issues = array_filter( $recent_issues, function ( $issue ) use ( $hidden_codes ) {
+				return ! in_array( $issue['event_code'], $hidden_codes, true );
+			} );
+			$recent_issues = array_values( $recent_issues );
 			if ( ! empty( $recent_issues ) ) :
 				$severity_styles = [
 					'warning'  => 'background:#fef9c3; color:#92400e; border-color:#fde68a;',
@@ -287,7 +293,7 @@ namespace f12_cf7_captcha {
 				</div>
 				<?php endforeach; ?>
 				<div style="text-align:right; margin-top:6px;">
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=f12-cf7-captcha-audit-log' ) ); ?>" style="font-size:11px; color:#3b82f6;">
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=silentshield-audit-log' ) ); ?>" style="font-size:11px; color:#3b82f6;">
 						<?php esc_html_e( 'View Audit Log', 'captcha-for-contact-form-7' ); ?> &rarr;
 					</a>
 				</div>

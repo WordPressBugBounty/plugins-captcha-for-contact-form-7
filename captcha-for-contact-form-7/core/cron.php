@@ -127,7 +127,7 @@ function add_cron_jobs() {
 	}
 
 	// Register audit bookend hooks for all cron jobs
-	register_cron_audit_hooks();
+	register_cron_audit_hooks( $telemetry_enabled );
 }
 
 /**
@@ -171,15 +171,27 @@ function run_cron_with_audit( string $job_name, callable $callback ): void {
  * Fires a "start" action at priority 0 and a "completed" action at priority 9999
  * to capture timing for each cron hook execution.
  */
-function register_cron_audit_hooks(): void {
+function register_cron_audit_hooks( bool $telemetry_enabled = false ): void {
+	// Prevent duplicate hook registration when add_cron_jobs() is called
+	// more than once per request (e.g. plugins_loaded + REST settings save).
+	static $registered = false;
+	if ( $registered ) {
+		return;
+	}
+	$registered = true;
+
 	$hooks = [
 		'weeklyIPClear'                    => 'Weekly IP / Log Cleanup',
 		'dailyCaptchaClear'                => 'Daily Captcha Cleanup',
 		'dailyCaptchaTimerClear'           => 'Daily Captcha Timer Cleanup',
-		'f12_cf7_captcha_daily_telemetry'  => 'Daily Telemetry',
 		'f12_cf7_captcha_monthly_report'   => 'Monthly Report',
 		'f12_cf7_captcha_weekly_report'    => 'Weekly Report',
 	];
+
+	// Only audit telemetry cron when telemetry is actually enabled
+	if ( $telemetry_enabled ) {
+		$hooks['f12_cf7_captcha_daily_telemetry'] = 'Daily Telemetry';
+	}
 
 	foreach ( $hooks as $hook => $label ) {
 		// Record start time at lowest priority

@@ -42,6 +42,9 @@ class UI_ReactApp {
 		// Hide old PHP UI submenu pages
 		add_action( 'admin_menu', [ $this, 'hide_old_submenu_pages' ], 99 );
 
+		// Redirect old page slugs to new React pages
+		add_action( 'admin_init', [ $this, 'redirect_old_pages' ] );
+
 		// Highlight the correct submenu item for subpages
 		add_filter( 'submenu_file', [ $this, 'highlight_submenu' ] );
 	}
@@ -138,6 +141,29 @@ class UI_ReactApp {
 
 		// Also hide the default "dashboard" submenu that duplicates the main menu
 		remove_submenu_page( 'f12-cf7-captcha', 'f12-cf7-captcha' );
+	}
+
+	/**
+	 * Redirect old PHP admin page slugs to their React equivalents.
+	 */
+	public function redirect_old_pages(): void {
+		if ( ! isset( $_GET['page'] ) ) {
+			return;
+		}
+
+		$redirects = [
+			'f12-cf7-captcha'                           => 'silentshield-admin',
+			'f12-cf7-captcha_f12-cf7-captcha-extended'  => 'silentshield-protection',
+			'f12-cf7-captcha-extended'                  => 'silentshield-protection',
+			'f12-cf7-captcha-audit-log'                 => 'silentshield-audit-log',
+			'f12-cf7-captcha_f12-cf7-captcha-audit-log' => 'silentshield-audit-log',
+		];
+
+		$page = sanitize_text_field( wp_unslash( $_GET['page'] ) );
+		if ( isset( $redirects[ $page ] ) ) {
+			wp_safe_redirect( admin_url( 'admin.php?page=' . $redirects[ $page ] ) );
+			exit;
+		}
 	}
 
 	/**
@@ -247,11 +273,21 @@ class UI_ReactApp {
 		}
 
 		// JS (type=module for Vite output)
+		// React & ReactDOM are provided by WordPress (wp-includes) so every
+		// plugin on the page shares the same React instance — no duplicate-
+		// context bugs when WooCommerce or other React-based plugins are active.
 		if ( file_exists( $js_file ) ) {
+			$deps = [ 'react', 'react-dom', 'wp-i18n' ];
+
+			// react-jsx-runtime was registered in WP 6.6.
+			if ( wp_script_is( 'react-jsx-runtime', 'registered' ) ) {
+				$deps[] = 'react-jsx-runtime';
+			}
+
 			wp_enqueue_script(
 				'silentshield-admin',
 				$this->react_dist_url . 'silentshield-admin.js',
-				[ 'wp-i18n' ],
+				$deps,
 				$js_ver,
 				true
 			);
