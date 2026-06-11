@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 6.9.1
 Requires PHP: 7.4
-Stable tag: 2.7.0
+Stable tag: 2.7.3
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,10 +174,24 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.7.3 =
+- Fix [WooCommerce Checkout]: The JavaScript protection could wrongly reject legitimate checkouts ("JavaScript protection not correct") and require several clicks on "Place order". The captcha and its timing fields (`js_start_time`/`js_end_time`) are rendered inside the order review block, which WooCommerce re-renders on every `updated_checkout` AJAX (address, shipping or payment changes). The page-load init only ran once, so after a refresh `js_start_time` was empty and the timestamp fallback collapsed start and end to the same value (zero duration). The checkout now re-seeds `js_start_time` on every `updated_checkout` and falls back to the stable page-load time, so the submitted duration is always valid.
+- Fix [Compatibility]: Resolved a conflict with Germanized for WooCommerce where enabling "WooCommerce Login" or "WooCommerce Registration" protection broke the order withdrawal/Widerruf form (`?wc-ajax=eu_owb_woocommerce_order_withdrawal_request`), which failed with an HTTP 500 error and no success/error message. The frontend submit interceptor was bound to the generic `form.woocommerce-form` class and therefore also hijacked third-party WooCommerce forms that ship their own AJAX handling. It now only targets the WooCommerce login (`woocommerce-form-login`) and registration (`woocommerce-form-register`) forms it actually protects.
+
+= 2.7.2 =
+- Fix [Forms]: Comments and other default WordPress forms now set the JavaScript timing field (`js_end_time`) at the moment of submission instead of on page load. Previously the timestamp was pre-filled during init, making it identical to `js_start_time` and rendering the time-based bot detection ineffective for these forms.
+- Fix [Forms]: Default forms (comments, JetForm, Ultimate Member, generic forms) no longer ran the captcha workflow on page load. The workflow is now correctly triggered by a native submit listener, so the captcha is verified only when the user actually submits.
+- Fix [Forms]: Resolved an issue where default forms with a submit control named `submit` (e.g. the WordPress comment form's "Post Comment" button) could not be submitted, because the control shadowed the form's `submit()` method. The form is now submitted natively via the prototype method, which also avoids re-entrant submit events.
+- Fix [IP Protection]: IP rate limiting no longer wrongly blocks legitimate visitors from the third submission onward. The time check compared the gap between the two *previous* submissions instead of the time since the last one, so the current request's actual timing was ignored — once a visitor's first two submissions were close together, every following submission (e.g. the third comment on a post) was rejected with "IP protection" regardless of how long they waited. The check now correctly measures the time elapsed since the visitor's last submission.
+
+= 2.7.1 =
+- Improved [Translations]: French (fr_FR) translations overhauled — replaced anglicisms with correct French terminology throughout ("spam" → "indésirables", "bots" → "robots", "plan" → "offre", "plugin" → "extension", "clé API" → "clé d'API", "paramètres" → "réglages", "analyse comportementale IA" → "analyse comportementale par IA", "espace réservé" → "texte indicatif", "étiquette" → "libellé"). Fixed typos and grammar errors in community-contributed translations. Regenerated MO and JSON files.
+
 = 2.7.0 =
 - Fix [Admin UI]: Resolved sidebar/navigation not rendering on sites with WooCommerce or other React-based plugins. The plugin now uses WordPress' built-in React instead of bundling its own copy, preventing duplicate React instance conflicts that broke context providers.
 - Fix [Cron]: "Daily Telemetry" cron job no longer runs when telemetry is disabled. Previously, disabling telemetry in the admin UI only took effect on the next page load; the cron could still fire in between. Cron state is now synced immediately when settings are saved.
 - Fix [Cron]: Audit log no longer shows "Daily Telemetry completed" entries when telemetry is disabled. The audit hook for the telemetry cron is now only registered when telemetry is active.
+- Fix [Forms]: Integration names (Avada, WooCommerce, Elementor, etc.) are no longer passed through WordPress translation. This caused brand names to be incorrectly translated by community language packs — e.g. "Avada" was displayed as "Optionen" on German sites.
 
 = 2.6.12 =
 - Fix [Settings]: Plugin action link ("Settings" in plugin list) now correctly opens the new React admin UI instead of the removed legacy page.

@@ -83,7 +83,7 @@ abstract class BaseController {
 	 */
 	public function get_name(): string
 	{
-		return __($this->name, 'captcha-for-contact-form-7');
+		return $this->name;
 	}
 
 	/**

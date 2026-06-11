@@ -309,7 +309,7 @@ class IPValidator extends BaseProtection {
 			return false;
 		}
 
-		// Check for log entries to automatically ban the user if the limit is reached.
+		// Load the last submission for this IP to rate-limit against.
 		$IP_Log_Last = $this->create_ip_log()->get_last_entry_by_hash($hash_current, $hash_previous);
 
 		// skip if no entries has been found yet
@@ -327,36 +327,20 @@ class IPValidator extends BaseProtection {
 			return true;
 		}
 
-		// Get the second last entry
-		$IP_Log_Second_Last = $this->create_ip_log()->get_last_entry_by_hash($hash_current, $hash_previous, 1);
+		// Compare the CURRENT submission against the last one. Using the gap between
+		// the two previous submissions here would ignore the current request entirely
+		// and falsely block every submission once two past submits were close together.
+		$diff = time() - $IP_Log_Last->get_submission_timestamp();
 
-		// skip if no entry has been found
-		if (null === $IP_Log_Second_Last) {
-			$this->get_logger()->debug('No second-to-last log entry found - creating new one', [
-				'hash_current'  => $hash_current,
-				'class'         => __CLASS__,
-				'method'        => __METHOD__,
-			]);
-
-			// create a new log entry
-			$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
-			$IPLog->save();
-
-			return true;
-		}
-
-		$diff = $IP_Log_Last->get_submission_timestamp() - $IP_Log_Second_Last->get_submission_timestamp();
-
-		$this->get_logger()->debug('Time difference between last submits', [
-			'last_ts'         => $IP_Log_Last->get_submission_timestamp(),
-			'second_last_ts'  => $IP_Log_Second_Last->get_submission_timestamp(),
-			'diff'            => $diff,
-			'allowed'         => $allowed_time_between,
-			'class'           => __CLASS__,
-			'method'          => __METHOD__,
+		$this->get_logger()->debug('Time since last submit', [
+			'last_ts'  => $IP_Log_Last->get_submission_timestamp(),
+			'diff'     => $diff,
+			'allowed'  => $allowed_time_between,
+			'class'    => __CLASS__,
+			'method'   => __METHOD__,
 		]);
 
-		// skip if the time between two submissions was bigger then the minimum time required
+		// skip if enough time has passed since the last submission
 		if ($diff > $allowed_time_between) {
 			$this->get_logger()->debug('Time difference OK - validation passed', [
 				'diff'    => $diff,
@@ -364,6 +348,11 @@ class IPValidator extends BaseProtection {
 				'class'   => __CLASS__,
 				'method'  => __METHOD__,
 			]);
+
+			// create a new log entry
+			$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
+			$IPLog->save();
+
 			return true;
 		}
 
