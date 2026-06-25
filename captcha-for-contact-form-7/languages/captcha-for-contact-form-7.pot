@@ -3046,3 +3046,223 @@ msgstr ""
 #: ui/controller/UI_Documentation.php
 msgid "can be overridden by"
 msgstr ""
+
+#: ui/react-app (privacy)
+msgid "GDPR status: All good"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Your current configuration meets the checked privacy requirements."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "GDPR status: Improvements recommended"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "There are a few points you should address to be on the safe side."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "GDPR status: Action required"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Some points carry an elevated risk and should be resolved promptly."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Copied to clipboard"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Paste the snippet into your privacy policy."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Copy failed"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Please select and copy the text manually."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "For your configuration"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Loading privacy status …"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Privacy"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Status, recommendations and ready-to-use snippets for your privacy policy."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Fill in the [ … ] placeholders before publishing."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Determined automatically from your current configuration."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Open"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Confirmations"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Points the plugin cannot detect automatically. Confirm them once done."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "The privacy snippet is included in my privacy policy."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "A data processing agreement (DPA, Art. 28 GDPR) with the API provider is in place."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Note: Confirmations apply to the entire website and are recorded in the audit log with timestamp and user."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Snippets"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Snippet A — Local mode (without API)"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Snippet B — With SilentShield API"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "IP storage pseudonymized"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "IP addresses are stored only in salted-hashed form, never in plain text."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Plain-text logging active"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Form data is stored unmasked and may contain personal data. Disable it or strictly limit retention."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Open logging setting"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Logs are masked"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Sensitive form fields (email, password, IP) are masked before storage."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Retention period not limited"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "At least one active log has no automatic deletion deadline. Configure a retention limit."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Configure retention period"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Retention period configured"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Logs are deleted automatically once the configured period expires."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Privacy notice included"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "You confirmed that the appropriate privacy snippet is included in your privacy policy."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Privacy notice recommended"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Because data is transmitted to the SilentShield API, this must be stated in your privacy policy. Use the snippet below and confirm."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "The processing of IP addresses should be stated in your privacy policy. Use the snippet below and confirm."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Show snippet"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Processing in Germany"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "The SilentShield API processes data exclusively on servers in Germany (Hetzner) — no third-country transfer."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Data processing agreement in place"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "You confirmed that a DPA (Art. 28 GDPR) has been concluded with the API provider."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Data processing agreement required"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "When the API is active, a data processing agreement (Art. 28 GDPR) with the provider is mandatory. Conclude it and confirm."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Learn more"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Open privacy details"
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Legal note: The text snippets, checks and recommendations provided are intended solely for general guidance and do not constitute legal advice. They do not replace an individual review by a lawyer or a data protection officer. No liability is assumed for their accuracy, completeness or timeliness. Ensuring legally compliant implementation on your website is your sole responsibility."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Not legal advice – no warranty. Please have it reviewed by a lawyer."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Spam protection (SilentShield / Captcha for Contact Form 7)\n\nTo protect our forms against automated submissions (spam), we use the “SilentShield” plugin. When a form is submitted, the following data is processed:\n\n- your IP address – exclusively in shortened and hashed form, in order to detect repeated or mass submissions;\n- technical verification features such as timestamps of when the form is loaded and submitted, browser and JavaScript signals, and a hidden verification field (honeypot).\n\nThis data is processed exclusively on our own server or in our website database and is not transmitted to third parties. It serves solely to detect and prevent abusive, automated access.\n\nThe legal basis is our legitimate interest in preventing spam and abuse (Art. 6(1)(f) GDPR). The data is automatically deleted after [30 / 60 / 90] days."
+msgstr ""
+
+#: ui/react-app (privacy)
+msgid "Spam protection with the SilentShield API\n\nTo protect our forms against spam and bots, we use the “SilentShield” service. When a form is loaded and submitted, technical characteristics of your access are processed and transmitted to the SilentShield API for assessment:\n\n- your IP address;\n- behavioural and device information (e.g. timestamps, interaction and input signals, browser properties);\n- the URL of the page accessed.\n\nBased on this data, SilentShield determines whether the input is likely human or automated and returns an assessment result.\n\nThe provider and recipient of the data is Forge12 Interactive GmbH, Josefstr. 37, 78166 Donaueschingen, which carries out the processing as a processor on our behalf (data processing agreement pursuant to Art. 28 GDPR). Processing takes place exclusively on servers in Germany (Hetzner Online GmbH); no transfer to third countries takes place.\n\nThe legal basis is our legitimate interest in preventing spam and abuse (Art. 6(1)(f) GDPR). The transmitted technical access data is stored by SilentShield only for as long as is necessary for spam detection (generally a maximum of 14 days, unless security-relevant events require longer storage) and is then deleted.\n\nFurther information: https://silentshield.io/en/privacy"
+msgstr ""

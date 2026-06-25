@@ -62,25 +62,6 @@ class Api extends BaseProtection {
             return false;
         }
 
-        // DEBUG: Log all POST keys to identify nonce delivery issues
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Debug logging only
-        $post_keys = array_keys( $_POST );
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Debug logging only
-        $has_behavior_nonce = isset( $_POST['behavior_nonce'] );
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Debug logging only
-        $has_formData = isset( $_POST['formData'] );
-        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Debug logging only
-        $has_data = isset( $_POST['data'] );
-
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log, WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Temporary debug logging
-        error_log( sprintf(
-            '[SilentShield DEBUG] is_spam() called. POST keys: [%s] | behavior_nonce present: %s | formData present: %s | data present: %s',
-            implode( ', ', $post_keys ),
-            $has_behavior_nonce ? 'YES' : 'NO',
-            $has_formData ? 'YES' : 'NO',
-            $has_data ? 'YES' : 'NO'
-        ) );
-
         // Determine behavior_nonce (directly or from formData)
         $nonce = null;
 
@@ -88,45 +69,36 @@ class Api extends BaseProtection {
         if ( ! empty( $_POST['behavior_nonce'] ) ) {
             // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling compatibility controller
             $nonce = sanitize_text_field( wp_unslash( $_POST['behavior_nonce'] ) );
-            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-            error_log( sprintf( '[SilentShield DEBUG] behavior_nonce found in $_POST: %s', substr( $nonce, 0, 16 ) . '...' ) );
         // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the calling compatibility controller
         } elseif ( ! empty( $_POST['formData'] ) || ! empty( $_POST['data'] ) ) {
 			// Avada & Fluent Forms special cases. Avada uses "formData". FluentForms uses "data"
 	        // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the calling compatibility controller; sanitized below
 	        $raw = isset( $_POST['formData'] ) ? wp_unslash( $_POST['formData'] ) : wp_unslash( $_POST['data'] );
 
-            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-            error_log( sprintf( '[SilentShield DEBUG] Trying formData/data fallback. Raw type: %s, length: %d', gettype( $raw ), is_string( $raw ) ? strlen( $raw ) : 0 ) );
-
 	        // Extract only behavior_nonce instead of parsing the entire string (prevents DoS via deeply nested keys)
 	        if ( is_string( $raw ) && preg_match( '/(?:^|&)behavior_nonce=([^&]*)/', $raw, $matches ) ) {
 		        $nonce = sanitize_text_field( urldecode( $matches[1] ) );
-                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-                error_log( sprintf( '[SilentShield DEBUG] behavior_nonce extracted from formData: %s', substr( $nonce, 0, 16 ) . '...' ) );
-	        } else {
-                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-                error_log( '[SilentShield DEBUG] behavior_nonce NOT found in formData/data string' );
-            }
+	        }
         }
 
         if ( empty( $nonce ) ) {
             $is_spam = true; // no nonce -> suspicious / block
 
-            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-            error_log( '[SilentShield DEBUG] RESULT: No nonce found -> marking as spam' );
-
             // Log missing nonce to block log
             $this->maybe_log_api_block( 'API_NO_NONCE', 'No behavior nonce was submitted with the form' );
+
+            // Report the block to the API so no-JS / no-nonce bots — which never
+            // load the widget and therefore never emit any telemetry — are still
+            // counted in the "bots blocked" statistics. Fire-and-forget: the
+            // submission is already blocked locally, so we neither wait for nor
+            // depend on the response.
+            $this->report_block_to_api( $api_key, 'no_nonce' );
         } else {
             // Use verbose=1 when detailed tracking is enabled to get score breakdown
             $endpoint = $this->api_endpoint;
             if ( BlockLog::is_enabled() ) {
                 $endpoint .= ( strpos( $endpoint, '?' ) === false ? '?' : '&' ) . 'verbose=1';
             }
-
-            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-            error_log( sprintf( '[SilentShield DEBUG] Calling verify-nonce API: %s | nonce: %s | api-key: %s***', $endpoint, substr( $nonce, 0, 16 ) . '...', substr( $api_key, 0, 8 ) ) );
 
             $response = wp_remote_post( $endpoint, [
                 'headers' => [
@@ -139,9 +111,6 @@ class Api extends BaseProtection {
 
             if ( is_wp_error( $response ) ) {
                 $fail_closed = apply_filters( 'f12-cf7-captcha-api-fail-closed', false );
-
-                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-                error_log( sprintf( '[SilentShield DEBUG] API request FAILED (WP_Error): %s | fail_mode: %s', $response->get_error_message(), $fail_closed ? 'closed' : 'open' ) );
 
                 $this->get_logger()->error( 'API request failed', [
                     'plugin'    => 'f12-cf7-captcha',
@@ -167,16 +136,6 @@ class Api extends BaseProtection {
                 $http_code = wp_remote_retrieve_response_code( $response );
                 $this->last_api_response = $data;
 
-                // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-                error_log( sprintf(
-                    '[SilentShield DEBUG] API response: HTTP %d | ok=%s | verdict=%s | confidence=%s | body=%s',
-                    $http_code,
-                    isset( $data['ok'] ) ? ( $data['ok'] ? 'true' : 'false' ) : 'MISSING',
-                    $data['verdict'] ?? 'MISSING',
-                    $data['confidence'] ?? 'MISSING',
-                    substr( $raw_body, 0, 500 )
-                ) );
-
                 // Audit HTTP error responses or unparseable JSON
                 if ( $http_code >= 400 || $data === null ) {
                     AuditLog::log(
@@ -193,14 +152,6 @@ class Api extends BaseProtection {
                 }
 
                 if ( empty( $data['ok'] ) || $data['verdict'] !== 'human' ) {
-                    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-                    error_log( sprintf(
-                        '[SilentShield DEBUG] RESULT: SPAM | empty(ok)=%s | verdict!==human: %s | reason_codes: %s',
-                        empty( $data['ok'] ) ? 'true' : 'false',
-                        ( $data['verdict'] ?? 'null' ) !== 'human' ? 'true' : 'false',
-                        implode( ', ', $data['reason_codes'] ?? [] )
-                    ) );
-
                     $this->get_logger()->info( 'Spam-Check completed. Found spam.', [
                         'plugin'       => 'f12-cf7-captcha',
                         'protection'   => 'API',
@@ -227,14 +178,49 @@ class Api extends BaseProtection {
 
                     $this->maybe_log_api_block( $reason_code, $detail, $extra );
                 } else {
-                    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Temporary debug logging
-                    error_log( sprintf( '[SilentShield DEBUG] RESULT: CLEAN | verdict=human | confidence=%s', $data['confidence'] ?? '?' ) );
                     $is_spam = false;
                 }
             }
         }
 
         return $is_spam;
+    }
+
+    /**
+     * Report a locally-blocked submission to the SilentShield API.
+     *
+     * Used for the no-nonce case: a bot that submits a protected form without
+     * ever loading the widget JS. Such requests carry no behavior nonce, are
+     * blocked locally, and would otherwise be invisible to the SilentShield
+     * "bots blocked" statistics. Fire-and-forget (non-blocking) so it never
+     * delays the request — the submission is already rejected regardless.
+     *
+     * @param string $api_key The API key.
+     * @param string $reason  Machine-readable block reason (e.g. "no_nonce").
+     */
+    private function report_block_to_api( string $api_key, string $reason ): void {
+        $base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
+        $endpoint = rtrim( $base_url, '/' ) . '/captcha/report-block';
+
+        $page_url = '';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only stats report; no state change
+        if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- esc_url_raw sanitizes
+            $page_url = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
+        }
+
+        wp_remote_post( $endpoint, [
+            'headers'  => [
+                'Content-Type' => 'application/json',
+                'api-key'      => $api_key,
+            ],
+            'body'     => wp_json_encode( [
+                'reason'   => $reason,
+                'page_url' => $page_url,
+            ] ),
+            'timeout'  => 1,
+            'blocking' => false,
+        ] );
     }
 
     /**

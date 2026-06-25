@@ -331,6 +331,21 @@ class Protection extends BaseModul {
 	}
 
 	/**
+	 * Whether the SilentShield API is currently active.
+	 *
+	 * Single source of truth for the "API active" gate used by both the
+	 * analytics recording (is_spam) and the REST/analytics display side. The
+	 * api-validator module only survives init_modules() when the API is enabled,
+	 * has a key, AND is reachable — so its mere presence already encodes the full
+	 * gate; everything else can just ask here instead of re-deriving it.
+	 *
+	 * @return bool
+	 */
+	public function is_api_active(): bool {
+		return $this->has_module( 'api-validator' );
+	}
+
+	/**
 	 * Retrieves the specified module based on its name.
 	 *
 	 * @param string $name The name of the module to retrieve.
@@ -429,6 +444,8 @@ class Protection extends BaseModul {
 
 		$is_spam         = false;
 		$spam_modul_name = '';
+		$api_flagged     = false;
+		$local_flagged   = false;
 
 		// Iterate through all modules
 		foreach ( $this->_modules as $name => $modul ) {
@@ -441,6 +458,13 @@ class Protection extends BaseModul {
 
 				// Increment module counter
 				self::$pending_deltas[ $name ] = ( self::$pending_deltas[ $name ] ?? 0 ) + 1;
+
+				// Track API vs. local hits for the "API exclusive" analytics below.
+				if ( $name === 'api-validator' ) {
+					$api_flagged = true;
+				} else {
+					$local_flagged = true;
+				}
 
 				// Only first module sets error message + logging
 				if ( $spam_modul_name === '' ) {
@@ -456,9 +480,18 @@ class Protection extends BaseModul {
 			}
 		}
 
+		// API-exclusive analytics — only recorded when the API is actually active.
+		// is_api_active() is the shared gate (see init_modules()): nothing is
+		// recorded while the API is off, and the display side uses the same check.
+		if ( $this->is_api_active() ) {
+			foreach ( self::classify_api_block( $api_flagged, $local_flagged ) as $counter_key ) {
+				self::$pending_deltas[ $counter_key ] = ( self::$pending_deltas[ $counter_key ] ?? 0 ) + 1;
+			}
+		}
+
 		// Collect API response data for logging (available for both spam and clean)
 		$api_response = null;
-		if ( $this->has_module( 'api-validator' ) ) {
+		if ( $this->is_api_active() ) {
 			/** @var Api $api_module */
 			$api_module   = $this->get_module( 'api-validator' );
 			$api_response = $api_module->get_last_api_response();
@@ -700,5 +733,60 @@ class Protection extends BaseModul {
 
 		update_option( 'f12_cf7_captcha_telemetry_counters', $current, false );
 		self::$pending_deltas = [];
+	}
+
+	/**
+	 * Classify a finished validation into the API telemetry counters to bump.
+	 *
+	 * Pure decision logic, extracted from is_spam() so it can be unit-tested in
+	 * isolation:
+	 *  - 'api_blocks_total'     — the API flagged this submission as spam.
+	 *  - 'api_exclusive_blocks' — the API flagged it AND no local module did, i.e.
+	 *                             spam that local protection alone would have missed.
+	 *
+	 * The caller is responsible for the "API active" gate; this only encodes the
+	 * api-vs-local classification.
+	 *
+	 * @param bool $api_flagged   Whether the api-validator reported spam.
+	 * @param bool $local_flagged Whether any local module reported spam.
+	 *
+	 * @return string[] Counter keys to increment (empty when the API did not flag).
+	 */
+	public static function classify_api_block( bool $api_flagged, bool $local_flagged ): array {
+		if ( ! $api_flagged ) {
+			return [];
+		}
+
+		$keys = [ 'api_blocks_total' ];
+
+		if ( ! $local_flagged ) {
+			$keys[] = 'api_exclusive_blocks';
+		}
+
+		return $keys;
+	}
+
+	/**
+	 * Measured "API exclusive" statistics for the Analytics page.
+	 *
+	 * Unlike Shadow Mode (which shows an estimate while the API is OFF), these are
+	 * real counts of blocks the API made that no local module would have stopped.
+	 * Only meaningful while the API is active — the recording side is gated on
+	 * has_module('api-validator'), so the counters stay flat when the API is off.
+	 *
+	 * @return array{exclusive:int, api_total:int, overlap:int, exclusive_pct:int}
+	 */
+	public static function get_api_exclusive_stats(): array {
+		$c         = get_option( 'f12_cf7_captcha_telemetry_counters', [] );
+		$c         = is_array( $c ) ? $c : [];
+		$exclusive = (int) ( $c['api_exclusive_blocks'] ?? 0 );
+		$api_total = (int) ( $c['api_blocks_total'] ?? 0 );
+
+		return [
+			'exclusive'     => $exclusive,                          // caught only by the API
+			'api_total'     => $api_total,                          // all API blocks
+			'overlap'       => max( 0, $api_total - $exclusive ),   // API + local together
+			'exclusive_pct' => $api_total > 0 ? (int) round( $exclusive / $api_total * 100 ) : 0,
+		];
 	}
 }

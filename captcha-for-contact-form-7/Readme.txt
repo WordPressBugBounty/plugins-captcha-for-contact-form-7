@@ -3,9 +3,9 @@ Contributors: forge12
 Donate link: https://www.paypal.com/donate?hosted_button_id=MGZTVZH3L5L2G
 Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, elementor, woocommerce, anti-spam
 Requires at least: 5.2
-Tested up to: 6.9.1
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.7.3
+Stable tag: 2.7.5
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,14 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.7.5 =
+- Fix [Forms]: Enabling WordPress Comments, JetFormBuilder or Ultimate Member protection no longer attaches the captcha submit interceptor to unrelated forms — most notably the WooCommerce "Add to cart" form (`form.cart`), which could be blocked or delayed. These three integrations relied on the generic default-forms handler, which bound to *every* form on the page that wasn't explicitly excluded (an exclusion list that could never be complete). Each integration now has its own dedicated module that targets only its own forms (comment form, JetFormBuilder forms, Ultimate Member login/registration), and the generic handler is no longer activated as a side effect.
+
+= 2.7.4 =
+- New [Analytics]: When the SilentShield API is active, the Analytics page now shows an "API Exclusive Blocks" section with measured numbers — how many spam submissions the API blocked that none of the local rules (Captcha, Timer, IP, Honeypot, …) would have stopped, plus the overlap and total API blocks. Both the recording and the section are only active while the API is enabled and reachable. This complements Shadow Mode, which shows an estimate while the API is off.
+- New [Analytics]: Bots that submit a protected form without ever loading the widget (no behavior nonce — typically scripts that POST directly without running JavaScript) are now reported to the SilentShield API so they are counted in the "bots blocked" statistics instead of being silently dropped. The submission is still blocked locally exactly as before; the report is fire-and-forget and never delays the request.
+- Maintenance: Removed temporary debug logging from the SilentShield API validator (no longer writes diagnostic lines, including nonce/API-key prefixes, to the PHP error log).
+
 = 2.7.3 =
 - Fix [WooCommerce Checkout]: The JavaScript protection could wrongly reject legitimate checkouts ("JavaScript protection not correct") and require several clicks on "Place order". The captcha and its timing fields (`js_start_time`/`js_end_time`) are rendered inside the order review block, which WooCommerce re-renders on every `updated_checkout` AJAX (address, shipping or payment changes). The page-load init only ran once, so after a refresh `js_start_time` was empty and the timestamp fallback collapsed start and end to the same value (zero duration). The checkout now re-seeds `js_start_time` on every `updated_checkout` and falls back to the stable page-load time, so the submitted duration is always valid.
 - Fix [Compatibility]: Resolved a conflict with Germanized for WooCommerce where enabling "WooCommerce Login" or "WooCommerce Registration" protection broke the order withdrawal/Widerruf form (`?wc-ajax=eu_owb_woocommerce_order_withdrawal_request`), which failed with an HTTP 500 error and no success/error message. The frontend submit interceptor was bound to the generic `form.woocommerce-form` class and therefore also hijacked third-party WooCommerce forms that ship their own AJAX handling. It now only targets the WooCommerce login (`woocommerce-form-login`) and registration (`woocommerce-form-register`) forms it actually protects.

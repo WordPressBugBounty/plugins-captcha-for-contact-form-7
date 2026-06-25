@@ -340,6 +340,11 @@ class IPValidator extends BaseProtection {
 			'method'   => __METHOD__,
 		]);
 
+		// Record this submission before deciding the verdict — both the "passed"
+		// and the rate-limit path below operate on the same persisted entry.
+		$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
+		$IPLog->save();
+
 		// skip if enough time has passed since the last submission
 		if ($diff > $allowed_time_between) {
 			$this->get_logger()->debug('Time difference OK - validation passed', [
@@ -349,16 +354,8 @@ class IPValidator extends BaseProtection {
 				'method'  => __METHOD__,
 			]);
 
-			// create a new log entry
-			$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
-			$IPLog->save();
-
 			return true;
 		}
-
-		// create a new log entry
-		$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
-		$IPLog->save();
 
 		// Check if there are >= max_retries entries for the given IP within retry period, if yes - block it
 		$count_in_period = $IPLog->get_count($hash_current, $hash_previous, 0, $max_retry_period);

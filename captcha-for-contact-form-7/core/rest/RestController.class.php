@@ -293,6 +293,27 @@ class RestController extends BaseModul {
 			'args'                => [],
 		] );
 
+		// GDPR acknowledgements (admin-only) — site-level compliance confirmations
+		// (privacy notice added, AVV in place). Persisted server-side so they are
+		// authoritative across admins/browsers, unlike a per-browser flag.
+		register_rest_route( self::NAMESPACE, '/gdpr/acknowledgements', [
+			[
+				'methods'             => 'GET',
+				'callback'            => [ $this, 'handle_gdpr_acks_get' ],
+				'permission_callback' => [ $this, 'validate_admin_request' ],
+				'args'                => [],
+			],
+			[
+				'methods'             => 'POST',
+				'callback'            => [ $this, 'handle_gdpr_acks_save' ],
+				'permission_callback' => [ $this, 'validate_admin_request' ],
+				'args'                => [
+					'privacy_ack' => [ 'required' => false, 'type' => 'boolean' ],
+					'avv_ack'     => [ 'required' => false, 'type' => 'boolean' ],
+				],
+			],
+		] );
+
 		// Form discovery endpoint (admin-only)
 		register_rest_route( self::NAMESPACE, '/forms/discover', [
 			'methods'             => 'GET',
@@ -889,6 +910,17 @@ class RestController extends BaseModul {
 			$log      = $this->get_block_log();
 			$overview = $log->get_overview();
 
+			// API-exclusive analytics — only attached while the API is active, so
+			// the React side can hide the section entirely when the API is off.
+			// Same gate as the recording side (Protection::is_api_active()).
+			$protection = $this->Controller->get_module( 'protection' );
+			$api_active = $protection && $protection->is_api_active();
+
+			$overview['api_active']    = (bool) $api_active;
+			$overview['api_exclusive'] = $api_active
+				? \f12_cf7_captcha\core\protection\Protection::get_api_exclusive_stats()
+				: null;
+
 			return new WP_REST_Response( $overview, 200 );
 		} catch ( \Throwable $e ) {
 			return new WP_Error( 'analytics_error', $e->getMessage(), [ 'status' => 500 ] );
@@ -1307,6 +1339,110 @@ class RestController extends BaseModul {
 			return new WP_REST_Response( [ 'status' => 'success' ], 200 );
 		} catch ( \Throwable $e ) {
 			return new WP_Error( 'settings_error', $e->getMessage(), [ 'status' => 500 ] );
+		}
+	}
+
+	/**
+	 * Option key holding the site-level GDPR acknowledgements.
+	 */
+	private const GDPR_ACKS_OPTION = 'f12_cf7_captcha_gdpr_acks';
+
+	/**
+	 * Normalize the stored GDPR acknowledgements into a stable shape.
+	 *
+	 * @param mixed $raw Raw option value.
+	 *
+	 * @return array{privacy_ack:bool,avv_ack:bool,privacy_ack_at:int,avv_ack_at:int,privacy_ack_by:int,avv_ack_by:int}
+	 */
+	private function normalize_gdpr_acks( $raw ): array {
+		$raw = is_array( $raw ) ? $raw : [];
+
+		return [
+			'privacy_ack'    => ! empty( $raw['privacy_ack'] ),
+			'avv_ack'        => ! empty( $raw['avv_ack'] ),
+			'privacy_ack_at' => (int) ( $raw['privacy_ack_at'] ?? 0 ),
+			'avv_ack_at'     => (int) ( $raw['avv_ack_at'] ?? 0 ),
+			'privacy_ack_by' => (int) ( $raw['privacy_ack_by'] ?? 0 ),
+			'avv_ack_by'     => (int) ( $raw['avv_ack_by'] ?? 0 ),
+		];
+	}
+
+	/**
+	 * GDPR: Read the site-level acknowledgements.
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_gdpr_acks_get( WP_REST_Request $request ) {
+		$rate_check = $this->check_rate_limit( 'gdpr_acks_get', self::RATE_LIMIT_ADMIN_MAX );
+		if ( $rate_check !== null ) {
+			return $rate_check;
+		}
+
+		try {
+			return new WP_REST_Response(
+				$this->normalize_gdpr_acks( get_option( self::GDPR_ACKS_OPTION, [] ) ),
+				200
+			);
+		} catch ( \Throwable $e ) {
+			return new WP_Error( 'gdpr_acks_error', $e->getMessage(), [ 'status' => 500 ] );
+		}
+	}
+
+	/**
+	 * GDPR: Update one or both acknowledgements.
+	 *
+	 * Only the keys present in the request are touched. Each actual change is
+	 * stamped with the current user + time and written to the audit log, so the
+	 * site keeps an accountability trail (Art. 5(2) GDPR).
+	 *
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function handle_gdpr_acks_save( WP_REST_Request $request ) {
+		$rate_check = $this->check_rate_limit( 'gdpr_acks_save', self::RATE_LIMIT_ADMIN_MAX );
+		if ( $rate_check !== null ) {
+			return $rate_check;
+		}
+
+		try {
+			$current = $this->normalize_gdpr_acks( get_option( self::GDPR_ACKS_OPTION, [] ) );
+			$user_id = get_current_user_id();
+			$now     = time();
+			$changed = [];
+
+			foreach ( [ 'privacy_ack', 'avv_ack' ] as $key ) {
+				$value = $request->get_param( $key );
+				if ( $value === null ) {
+					continue; // key not part of this request
+				}
+				$value = (bool) $value;
+				if ( $value === $current[ $key ] ) {
+					continue; // no change
+				}
+				$current[ $key ]         = $value;
+				$current[ $key . '_at' ] = $value ? $now : 0;
+				$current[ $key . '_by' ] = $value ? $user_id : 0;
+				$changed[]               = $key . '=' . ( $value ? '1' : '0' );
+			}
+
+			if ( ! empty( $changed ) ) {
+				update_option( self::GDPR_ACKS_OPTION, $current, false );
+
+				AuditLog::log(
+					AuditLog::TYPE_SETTINGS,
+					'GDPR_ACK_UPDATED',
+					AuditLog::SEVERITY_INFO,
+					sprintf(
+						'GDPR acknowledgement updated by user #%d: %s',
+						$user_id,
+						implode( ', ', $changed )
+					),
+					[ 'changed' => $changed, 'user_id' => $user_id ]
+				);
+			}
+
+			return new WP_REST_Response( $current, 200 );
+		} catch ( \Throwable $e ) {
+			return new WP_Error( 'gdpr_acks_error', $e->getMessage(), [ 'status' => 500 ] );
 		}
 	}
 
