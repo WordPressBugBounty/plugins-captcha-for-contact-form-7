@@ -594,32 +594,24 @@ class RestController extends BaseModul {
 				);
 			}
 
-			$code = $Captcha->get_code();
-
 			if ( $method === 'math' ) {
-				// Convert math formula to speech-friendly text
-				$text = str_replace(
-					[ '+', '-', '*', '=' ],
-					[
-						' ' . __( 'plus', 'captcha-for-contact-form-7' ) . ' ',
-						' ' . __( 'minus', 'captcha-for-contact-form-7' ) . ' ',
-						' ' . __( 'times', 'captcha-for-contact-form-7' ) . ' ',
-						' ' . __( 'equals', 'captcha-for-contact-form-7' ) . ' ',
-					],
-					$code
-				);
-
-				// Math code is the result (a number), not the formula.
-				// We need to reconstruct something speakable from the DOM, but the code
-				// is just the answer. The frontend will read the formula from the DOM for math.
-				// This endpoint is primarily for image captchas.
+				// Math captchas are read out client-side: the frontend speaks the
+				// formula straight from the visible DOM (see AudioCaptcha.js), so it
+				// never calls this endpoint for math. We therefore must NOT echo the
+				// captcha code here — for math the stored code is the bare answer,
+				// and returning it would disclose the solution to any caller.
 				return new WP_REST_Response( [
 					'type' => 'math',
-					'text' => $code,
 				], 200 );
 			}
 
 			if ( $method === 'image' ) {
+				// Image captchas cannot be read from the DOM, so the audio
+				// accessibility feature must spell out the characters. This inherently
+				// reveals the answer to the (rate-limited) caller — that trade-off is
+				// the whole point of an accessible audio challenge.
+				$code = $Captcha->get_code();
+
 				// Spell out characters individually with pauses (dots)
 				$chars = str_split( $code );
 				$spelled = implode( '. ', $chars ) . '.';

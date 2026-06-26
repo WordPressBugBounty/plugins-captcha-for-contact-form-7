@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.7.5
+Stable tag: 2.7.6
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -174,6 +174,10 @@ Collected fields:
 ---
 
 == Changelog ==
+= 2.7.6 =
+- Security [Audio Captcha]: The accessibility audio endpoint (`/captcha/audio`) no longer returns the captcha solution for math challenges. The math answer was never used by the frontend (math formulas are read aloud directly from the page), so this code path only disclosed the solution to direct API callers. Image captchas still spell out their characters — that is the intended purpose of the audio accessibility feature and remains protected by the existing per-IP rate limit.
+- Security [SilentShield]: Documented that the frontend `beta_captcha_api_key` is a publishable, domain-bound client key (comparable to a reCAPTCHA site key), intentionally exposed to the browser so the behavioral client script can run. It carries no administrative or sensitive authority.
+
 = 2.7.5 =
 - Fix [Forms]: Enabling WordPress Comments, JetFormBuilder or Ultimate Member protection no longer attaches the captcha submit interceptor to unrelated forms — most notably the WooCommerce "Add to cart" form (`form.cart`), which could be blocked or delayed. These three integrations relied on the generic default-forms handler, which bound to *every* form on the page that wasn't explicitly excluded (an exclusion list that could never be complete). Each integration now has its own dedicated module that targets only its own forms (comment form, JetFormBuilder forms, Ultimate Member login/registration), and the generic handler is no longer activated as a side effect.
 

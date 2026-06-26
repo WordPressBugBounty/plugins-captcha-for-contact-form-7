@@ -3,7 +3,7 @@
  * Plugin Name: SilentShield – Captcha & Anti-Spam for WordPress (CF7, WPForms, Elementor, WooCommerce)
  * Plugin URI: https://www.forge12.com/product/wordpress-captcha/
  * Description: SilentShield is an all-in-one spam protection plugin. Protects WordPress login, registration, comments, and popular form plugins (CF7, WPForms, Elementor, WooCommerce) with captcha, honeypot, blacklist, IP blocking, and whitelisting for logged-in users.
- * Version: 2.7.5
+ * Version: 2.7.6
  * Requires PHP: 7.4
  * Author: Forge12 Interactive GmbH
  * Author URI: https://www.forge12.com
@@ -13,7 +13,7 @@
 namespace f12_cf7_captcha;
 
 
-define( 'FORGE12_CAPTCHA_VERSION', '2.7.5' );
+define( 'FORGE12_CAPTCHA_VERSION', '2.7.6' );
 define( 'FORGE12_CAPTCHA_SLUG', 'f12-cf7-captcha' );
 define( 'FORGE12_CAPTCHA_BASENAME', plugin_basename( __FILE__ ) );
 
@@ -688,6 +688,14 @@ class CF7Captcha {
 				? F12_CAPTCHA_CLIENT_URL
 				: 'https://api.silentshield.io';
 
+			// NOTE: `beta_captcha_api_key` is a PUBLISHABLE, domain-bound client key,
+			// not a secret credential. It is exposed to the browser by design — the
+			// SilentShield client.js runs in the visitor's browser and must present
+			// the key to api.silentshield.io to collect behavioral telemetry, exactly
+			// like a Google reCAPTCHA site key or a Stripe publishable key. The key
+			// grants no administrative or sensitive authority: server-side it can only
+			// trigger captcha verification/telemetry for its own bound domain, so
+			// disclosure to page visitors carries no privileged-access risk.
 			wp_localize_script(
 				'f12-cf7-captcha-client',
 				'f12_client_data',
