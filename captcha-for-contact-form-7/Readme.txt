@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.7.6
+Stable tag: 2.10.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -155,10 +155,11 @@ See the [docs/](docs/) directory in the plugin folder for complete documentation
 == Privacy & Telemetry ==
 - No cookies, no user tracking.
 - Encrypted IP storage (max. 2 months, only for spam defense).
-- Telemetry is optional and anonymized.
-- You can disable telemetry anytime in plugin settings.
+- Every transmission described below is optional and can be switched off in the plugin settings.
+- The plugin's built-in Privacy page shows which of these are active on your site, what that means, and gives you ready-made privacy-policy snippets in 25 languages.
 
-Collected fields:
+**1. Plugin statistics** (setting "Telemetry")
+Anonymous, no personal data, sent at most once a day:
 - `plugin_slug`, `plugin_version`
 - `snapshot_date`
 - `settings_json` (anonymized config – only boolean/integer flags, no free-text)
@@ -167,13 +168,45 @@ Collected fields:
 - `counters_json` (spam events)
 - `wp_version`, `php_version`, `locale`
 
+**2. AI-crawler observation** (setting "Observe AI crawlers", on by default; `SILENTSHIELD_OBSERVER` to force off)
+Sent only for requests identified as an AI crawler — never for your human visitors. Delivered after the page has already been sent to the visitor:
+- `ua` (the crawler's User-Agent), `ip`, `path` (without query string), `method`
+- The IP address is pseudonymised on the server (daily keyed hash) and never stored in the clear.
+
+**3. Blocked-request reports** (only with "Block AI crawlers (enforce)" on; follows the observation setting above)
+Same fields as (2), plus the outcome (`deny` / `throttle`), for every request enforcement turned away. Note that a block rule which is not restricted to a specific crawler can also catch a human visitor — that request is then reported in the same way.
+
+**4. Form assessment** (only with the SilentShield API enabled)
+See the API snippet on the plugin's Privacy page for the full description.
+
 **GDPR / DSGVO Compliance**
-- Basis: *Art. 6 Abs. 1 lit. f DSGVO* (legitimate interest – plugin optimization).
-- No personal data, no cookies, no user tracking.
+- Basis: *Art. 6 Abs. 1 lit. f DSGVO* (legitimate interest – spam defense and plugin optimization).
+- Recipient and processor for (2)–(4): Forge12 Interactive GmbH, Josefstr. 37, 78166 Donaueschingen. Processing takes place exclusively on servers in Germany (Hetzner); no third-country transfer.
+- (2)–(4) transmit an IP address and therefore require a data processing agreement (Art. 28 GDPR) and a note in your privacy policy. The plugin's Privacy page tracks both.
+- No cookies, no user tracking.
 
 ---
 
 == Changelog ==
+= 2.10.0 =
+- Fix [Comments]: With comment protection enabled, the captcha was applied to every comment WordPress creates — not just the ones a visitor types into the comment form. A comment added by an importer, by the WordPress app or block editor, by WP-CLI, by a scheduled task or by another plugin carries no captcha field, was therefore treated as spam, and the request was answered with "403 Forbidden" — which could take down whatever feature that other plugin was in the middle of. The captcha now applies only to real comment-form submissions. Nothing changes for the comment form itself: spam is still blocked exactly as before.
+- Fix [AI-Agent Enforcement]: Two kinds of rule you can set in your SilentShield dashboard were saved and displayed as active, but the plugin never applied them. Rules by purpose were only matched against a crawler's older category label, so blocking "AI agents" had no effect at all — the agent-type crawlers (ChatGPT-User, Claude-User, Perplexity-User, Meta, Mistral and others) are filed under a different label. And rules against faked identities were skipped entirely. Both now work. **If you already had either rule switched on, those requests will start being blocked after this update** — which is what the setting promised all along. Nothing else changes: rules that were working keep working exactly as before.
+- Fix [AI-Agent Enforcement]: A crawler is only treated as a forgery when we can actually see where the request came from, its operator publishes IP ranges for the same address type (IPv4/IPv6), and the request comes from outside all of them. A crawler we cannot check stays "unverified" and is never accused — so a genuine bot is not blocked because we happen to hold only part of its address list.
+- Fix [AI-Agent Enforcement]: Sites behind Cloudflare, an nginx front-end or any other reverse proxy are no longer at risk of turning away real crawlers. Your server sees the proxy's address there, not the crawler's, which would make every well-behaved bot look like a forgery. The plugin now recognises that situation and withholds the "forged" verdict; if you have set `F12_TRUSTED_PROXY_HEADER` in wp-config.php, it uses that header to find the real address instead — which also makes "verified" work behind a proxy for the first time.
+- New [AI-Agent Enforcement]: The plugin now reports to your dashboard which kinds of rule this version can carry out. If you save a rule that needs a newer plugin, the dashboard says so instead of showing it as active.
+- New [AI-Agent Enforcement]: Blocked requests are reported to your dashboard, so the "blocked bots" report has data. The report is sent after the visitor's response has already been delivered, so it costs no page speed, and it follows the "Observe AI crawlers" setting: switch that off and blocking keeps working while the reporting stops. Transmitted are user agent, IP address, path and method of the blocked request; the IP is pseudonymised on the server.
+
+= 2.9.0 =
+- New [AI-Agent Enforcement]: The plugin can now actually enforce the block rules you set in your SilentShield dashboard — previously it could only observe. When enabled, disallowed AI bots receive a 403 (throttled ones a 429) based on the signed policy your dashboard publishes. The policy is fetched and its Ed25519 signature verified server-side (libsodium), cached, and refreshed off the request path, so pages are not slowed down. Bots are identified by their User-Agent and only treated as "verified" when their source IP is in the operator's published range. Toggle under Advanced → "Block AI crawlers (enforce)" (OFF by default — a deliberate choice; define `SILENTSHIELD_ENFORCER` as `false` in wp-config.php to force it off). Fail-open by design: any error, an unverifiable policy, or "observe" mode never blocks a request.
+
+= 2.8.0 =
+- New [AI-Agent Observation]: The plugin can now record which AI agents/crawlers (GPTBot, ClaudeBot, PerplexityBot and others) visit your site and show them in your SilentShield dashboard. It runs entirely server-side, sets no cookies, blocks nothing, and only sends data for detected bots — never for your human visitors. IP addresses are pseudonymised server-side. The telemetry is sent after the page has already been delivered to the visitor, so page speed is unaffected. Toggle under Advanced → "Observe AI crawlers" (on by default; define `SILENTSHIELD_OBSERVER` as `false` in wp-config.php to force it off). Legal basis: legitimate interest (Art. 6(1)(f) GDPR).
+- New [AI-Agent Observation]: The list of known AI crawlers refreshes itself once a day from the SilentShield bot directory (off the request path, with an embedded fallback list), so new crawlers are recognised without a plugin update.
+- New [AI-Agent Observation]: A one-time, dismissible admin notice announces the feature and links to the setting — no silent telemetry.
+
+= 2.7.7 =
+- Fix [Translations]: Resolved the `_load_textdomain_just_in_time` notice (WordPress 6.7+) for the `captcha-for-contact-form-7` domain. Four protection validators (behavior/API, captcha, multiple-submission and timer) translated their failure message inside their constructor, which runs on `after_setup_theme` — before `init` — and therefore triggered translation loading too early. The message is now resolved on the `init` hook via the new `set_message_on_init()` helper, while keeping the literal `__()` strings visible to the translation extractor.
+
 = 2.7.6 =
 - Security [Audio Captcha]: The accessibility audio endpoint (`/captcha/audio`) no longer returns the captcha solution for math challenges. The math answer was never used by the frontend (math formulas are read aloud directly from the page), so this code path only disclosed the solution to direct API callers. Image captchas still spell out their characters — that is the intended purpose of the audio accessibility feature and remains protected by the existing per-IP rate limit.
 - Security [SilentShield]: Documented that the frontend `beta_captcha_api_key` is a publishable, domain-bound client key (comparable to a reCAPTCHA site key), intentionally exposed to the browser so the behavioral client script can run. It carries no administrative or sensitive authority.

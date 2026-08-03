@@ -29,7 +29,9 @@ class Multiple_Submission_Validator extends BaseProtection {
 		$this->get_logger()->info('Loading submodule: CaptchaTimerCleaner.');
 		new CaptchaTimerCleaner($Controller);
 
-		$this->set_message(__('multiple-submission-protection', 'captcha-for-contact-form-7'));
+		$this->set_message_on_init(function () {
+			return __('multiple-submission-protection', 'captcha-for-contact-form-7');
+		});
 		$this->get_logger()->debug('Message for multiple submission set.', [
 			'message_key' => 'multiple-submission-protection',
 		]);

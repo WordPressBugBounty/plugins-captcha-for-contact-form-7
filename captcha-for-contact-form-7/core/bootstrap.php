@@ -14,6 +14,15 @@ require_once __DIR__ . '/weekly_report.php';
 require_once __DIR__ . '/upgrade.php';
 require_once __DIR__ . '/review.php';
 
+// Passive AI-agent observation (plan/54 Inc1). The class is autoloaded; boot()
+// only registers hooks and is fail-open by design.
+core\observe\Agent_Observer::boot();
+
+// AI-agent policy ENFORCEMENT (plan/64 Inc3). Default OFF via global.agent_enforce;
+// blocks disallowed bots (403/429) per the signed policy bundle. Fail-open,
+// monitor mode never blocks. Only registers hooks here.
+core\enforce\Agent_Enforcer::boot();
+
 /**
  * Allow data: protocol in wp_kses for captcha images
  * This is needed because some themes/plugins process images and break data: URLs

@@ -22,7 +22,9 @@ class Timer_Validator extends BaseProtection {
 			'method' => __METHOD__,
 		]);
 
-		$this->set_message(__('timer-protection', 'captcha-for-contact-form-7'));
+		$this->set_message_on_init(function () {
+			return __('timer-protection', 'captcha-for-contact-form-7');
+		});
 		$this->get_logger()->debug('Message for timer protection set.', [
 			'message_key' => 'timer-protection',
 		]);

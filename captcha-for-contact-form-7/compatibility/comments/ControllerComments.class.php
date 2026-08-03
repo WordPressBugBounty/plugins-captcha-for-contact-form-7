@@ -35,6 +35,16 @@ class ControllerComments extends BaseController
     {
         $commentdata = $args[0];
 
+        // `preprocess_comment` fires for EVERY comment WordPress creates, not
+        // just the ones a visitor typed into the comment form — an importer, a
+        // REST client, WP-CLI, a cron job or another plugin's AJAX handler all
+        // land here too. Those carry none of our fields, so the protection
+        // chain would judge them spam and kill the request with a 403, taking
+        // an unrelated feature down with it.
+        if (!$this->is_comment_form_submission()) {
+            return $commentdata;
+        }
+
         $spam_message = $this->check_spam();
 
         if ($spam_message !== null) {
@@ -46,5 +56,33 @@ class ControllerComments extends BaseController
         }
 
         return $commentdata;
+    }
+
+    /**
+     * Whether the comment being processed was actually submitted through a
+     * comment form, and may therefore be held to the captcha.
+     *
+     * The signature we look for is the comment form's own fields. Every real
+     * submission carries them — `wp-comments-post.php` rejects the comment
+     * outright without `comment_post_ID`, and an AJAX comment form posts the
+     * same field names — so requiring them costs no protection: a spammer
+     * cannot drop them and still have a comment created. Programmatic
+     * insertion, which is what we want to leave alone, never has them.
+     *
+     * Contexts that are never a visitor submitting a form are ruled out up
+     * front, so the field check is not the only thing standing between an
+     * import and a fatal 403.
+     */
+    protected function is_comment_form_submission(): bool
+    {
+        if (wp_doing_cron()
+            || (defined('WP_CLI') && WP_CLI)
+            || (defined('REST_REQUEST') && REST_REQUEST)
+        ) {
+            return false;
+        }
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- presence check only; the value is never read
+        return isset($_POST['comment_post_ID'], $_POST['comment']);
     }
 }

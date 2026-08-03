@@ -60,7 +60,9 @@ class Captcha_Validator extends BaseProtection {
 			throw $e;
 		}
 
-		$this->set_message(__('captcha-protection', 'captcha-for-contact-form-7'));
+		$this->set_message_on_init(function () {
+			return __('captcha-protection', 'captcha-for-contact-form-7');
+		});
 
 		$this->get_logger()->info(
 			"__construct(): Initialization completed",

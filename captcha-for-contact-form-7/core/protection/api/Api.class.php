@@ -22,7 +22,9 @@ class Api extends BaseProtection {
 
 	public function __construct( CF7Captcha $Controller ) {
 		parent::__construct( $Controller );
-		$this->set_message( __( 'behavior-protection', 'captcha-for-contact-form-7' ) );
+		$this->set_message_on_init( function () {
+			return __( 'behavior-protection', 'captcha-for-contact-form-7' );
+		} );
 
 		$base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
 		$this->api_endpoint = rtrim( $base_url, '/' ) . '/captcha/verify-nonce';

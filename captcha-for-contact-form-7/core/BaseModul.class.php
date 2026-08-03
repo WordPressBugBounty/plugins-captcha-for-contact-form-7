@@ -80,6 +80,37 @@ abstract class BaseModul {
 	}
 
 	/**
+	 * Assign a translatable message, deferring the actual translation until the
+	 * `init` hook has fired.
+	 *
+	 * Protection validators are instantiated from Protection::init_modules(),
+	 * which runs on `f12_cf7_captcha_compatibilities_loaded` (fired during
+	 * `after_setup_theme`) — i.e. before `init`. Calling __() that early makes
+	 * WordPress 6.7+ emit a `_load_textdomain_just_in_time` "called incorrectly"
+	 * notice, because the text domain would be loaded before translations are
+	 * available. get_message() is only consumed during form validation (well
+	 * after `init`), so resolving the string on `init` is safe.
+	 *
+	 * The $resolver closure must contain the literal __() call so the i18n
+	 * string extractor can still pick up the msgid.
+	 *
+	 * @param callable $resolver Returns the translated message string.
+	 *
+	 * @return void
+	 */
+	protected function set_message_on_init(callable $resolver): void
+	{
+		if (did_action('init')) {
+			$this->set_message((string) $resolver());
+			return;
+		}
+
+		add_action('init', function () use ($resolver) {
+			$this->set_message((string) $resolver());
+		});
+	}
+
+	/**
 	 * Get a protection setting resolved through the current context hierarchy.
 	 *
 	 * Falls back to reading from global settings if no context is set on Protection.

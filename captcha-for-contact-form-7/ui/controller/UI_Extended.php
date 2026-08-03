@@ -126,6 +126,14 @@ namespace f12_cf7_captcha {
 
 				// Telemetry
 				'telemetry'                                => 1,
+
+				// AI-agent observation (plan/54 Inc1) — default on; actual sending
+				// is additionally gated by the server-side ingest flag.
+				'agent_observe'                            => 1,
+
+				// AI-agent enforcement (plan/64 Inc3) — default OFF. Blocks
+				// disallowed bots per the signed policy; an explicit opt-in.
+				'agent_enforce'                            => 0,
 			];
 
 			// Add the default settings under the 'global' key to the passed array.
@@ -319,6 +327,8 @@ namespace f12_cf7_captcha {
 				'protection_captcha_template',
 				// This value should be treated as an integer
                 'telemetry',
+				'agent_observe',
+				'agent_enforce',
 				'protection_whitelist_role_admin',
 				'protection_whitelist_role_logged_in',
 				'protection_global_asset_loading',
@@ -333,7 +343,7 @@ namespace f12_cf7_captcha {
 			$this->get_logger()->debug( 'Processing all POST values and sanitizing them.' );
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
 			foreach ( $_POST as $key => $value ) {
-				if ( strpos( $key, 'protection_' ) === 0 || in_array( $key, [ 'telemetry' ], true ) ) {
+				if ( strpos( $key, 'protection_' ) === 0 || in_array( $key, [ 'telemetry', 'agent_observe', 'agent_enforce' ], true ) ) {
 					if ( is_array( $value ) ) {
 						$settings['global'][ $key ] = array_map( 'sanitize_text_field', $value );
 					} else {
@@ -386,6 +396,16 @@ namespace f12_cf7_captcha {
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
 			$settings['global']['telemetry'] = ( isset( $_POST['telemetry'] ) && (int) $_POST['telemetry'] === 1 ) ? 1 : 0;
 			$this->get_logger()->debug( 'Telemetry setting updated.', [ 'telemetry' => $settings['global']['telemetry'] ] );
+
+			// AI-agent observation toggle (unchecked checkbox sends no POST value).
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
+			$settings['global']['agent_observe'] = ( isset( $_POST['agent_observe'] ) && (int) $_POST['agent_observe'] === 1 ) ? 1 : 0;
+			$this->get_logger()->debug( 'Agent observation setting updated.', [ 'agent_observe' => $settings['global']['agent_observe'] ] );
+
+			// AI-agent enforcement toggle (default off; unchecked = no POST value).
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified in admin form submission
+			$settings['global']['agent_enforce'] = ( isset( $_POST['agent_enforce'] ) && (int) $_POST['agent_enforce'] === 1 ) ? 1 : 0;
+			$this->get_logger()->debug( 'Agent enforcement setting updated.', [ 'agent_enforce' => $settings['global']['agent_enforce'] ] );
 
 			// Schedule or unschedule the telemetry cron based on the new setting
 			if ( $settings['global']['telemetry'] === 1 ) {
@@ -1815,6 +1835,96 @@ namespace f12_cf7_captcha {
 											// Default = active (1), only if explicitly 0 -> deactivated
 											$is_checked = ( ( $settings[ $field_name ] ?? 1 ) == 1 ) ? 'checked="checked"' : '';
 											$name       = __( 'Enable Telemetry', 'captcha-for-contact-form-7' );
+
+											echo sprintf(
+												'<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>',
+												esc_attr( $field_name ),
+												esc_attr( $field_name ),
+												esc_attr( $is_checked )
+											);
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php echo esc_html( $name ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container">
+                <!-- AI-Agent Observation Section (plan/54 Inc1) -->
+                <h3><?php esc_html_e( 'AI-Agent Observation', 'captcha-for-contact-form-7' ); ?></h3>
+                <div class="section-wrapper">
+                    <div class="section">
+                        <div class="option">
+                            <div class="label">
+                                <label for="agent_observe"><strong><?php esc_html_e( 'Observe AI crawlers', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;">
+									<?php esc_html_e( 'Record which AI agents (e.g. GPTBot, ClaudeBot, PerplexityBot) crawl your site and show them in your SilentShield dashboard. This runs entirely on the server, sets no cookies, blocks nothing, and only sends data for detected bots — never for your human visitors. IP addresses are pseudonymised. Legal basis: legitimate interest (Art. 6(1)(f) GDPR).', 'captcha-for-contact-form-7' ); ?>
+                                </p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <!-- TOGGLE -->
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'agent_observe';
+											// Default = active (1), only if explicitly 0 -> deactivated
+											$is_checked = ( ( $settings[ $field_name ] ?? 1 ) == 1 ) ? 'checked="checked"' : '';
+											$name       = __( 'Observe AI crawlers', 'captcha-for-contact-form-7' );
+
+											echo sprintf(
+												'<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>',
+												esc_attr( $field_name ),
+												esc_attr( $field_name ),
+												esc_attr( $is_checked )
+											);
+											?>
+                                            <label for="<?php esc_attr_e( $field_name ); ?>"
+                                                   class="toggle-label"></label>
+                                        </div>
+                                        <label for="<?php esc_attr_e( $field_name ); ?>">
+											<?php echo esc_html( $name ); ?>
+                                        </label>
+                                        <label class="overlay" for="<?php esc_attr_e( $field_name ); ?>"></label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-container">
+                <!-- AI-Agent Enforcement Section (plan/64 Inc3) -->
+                <h3><?php esc_html_e( 'AI-Agent Enforcement', 'captcha-for-contact-form-7' ); ?></h3>
+                <div class="section-wrapper">
+                    <div class="section">
+                        <div class="option">
+                            <div class="label">
+                                <label for="agent_enforce"><strong><?php esc_html_e( 'Block AI crawlers (enforce)', 'captcha-for-contact-form-7' ); ?></strong></label>
+                                <p style="padding-right:20px;">
+									<?php esc_html_e( 'Actually enforce the block rules you set in your SilentShield dashboard: disallowed AI bots get a 403 (throttled ones a 429). This runs on every front-end request and can block traffic — it is off by default and a deliberate choice. Only bots identifiable by their User-Agent and verifiable by their published IP ranges can be enforced; AI browsers on residential connections cannot. Leave this off to only observe.', 'captcha-for-contact-form-7' ); ?>
+                                </p>
+                            </div>
+                            <div class="input">
+                                <div class="toggle-item-wrapper">
+                                    <!-- TOGGLE -->
+                                    <div class="f12-checkbox-toggle">
+                                        <div class="toggle-container">
+											<?php
+											$field_name = 'agent_enforce';
+											// Default = OFF (0); only an explicit 1 enables enforcement.
+											$is_checked = ( ( $settings[ $field_name ] ?? 0 ) == 1 ) ? 'checked="checked"' : '';
+											$name       = __( 'Block AI crawlers (enforce)', 'captcha-for-contact-form-7' );
 
 											echo sprintf(
 												'<input name="%s" type="checkbox" value="1" id="%s" class="toggle-button" %s>',
