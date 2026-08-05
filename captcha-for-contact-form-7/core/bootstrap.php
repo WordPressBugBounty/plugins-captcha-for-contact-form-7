@@ -14,6 +14,7 @@ require_once __DIR__ . '/weekly_report.php';
 require_once __DIR__ . '/upgrade.php';
 require_once __DIR__ . '/feedback.php';
 require_once __DIR__ . '/review.php';
+require_once __DIR__ . '/setup_notice.php';
 require_once __DIR__ . '/deactivation_survey.php';
 
 // Passive AI-agent observation (plan/54 Inc1). The class is autoloaded; boot()

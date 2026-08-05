@@ -115,6 +115,12 @@ namespace f12_cf7_captcha {
 				'protection_audit_log_retention'           => 90,
 				'protection_log_plaintext'                 => 0,
 
+				// Raw SilentShield API responses in the audit log. Off by default:
+				// this writes one row per verified submission, and a busy site
+				// would fill the audit log with rows nobody reads. Failed calls
+				// are audited with their body either way.
+				'protection_api_log_responses'             => 0,
+
 				// Mail logging
 				'protection_mail_log_enable'              => 0,
 				'protection_mail_log_sent'                => 1,
@@ -339,6 +345,7 @@ namespace f12_cf7_captcha {
 				'protection_global_asset_loading',
 				'protection_detailed_tracking',
 				'protection_log_plaintext',
+				'protection_api_log_responses',
 				'protection_api_shadow_mode',
 				'protection_mail_log_enable',
 				'protection_mail_log_sent',

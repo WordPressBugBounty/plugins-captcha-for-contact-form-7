@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.11.0
+Stable tag: 2.12.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -188,6 +188,11 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.12.0 =
+- Fix [Admin]: On sites whose permalinks are set to "Plain", several screens inside the plugin were simply empty — the Audit Log, the Mail Log and the Analytics figures showed nothing at all, no matter how much had actually been recorded. The records were never lost; the plugin was asking WordPress for them with a malformed address and getting nothing back. All of those screens fill in again after this update. Sites using any other permalink setting were never affected.
+- New [Setup]: A newly installed plugin protects nothing until you switch on the form plugins you use, and until now nothing said so — it sat in your plugin list marked "active" while every form on the site was still wide open. There is now a notice in the WordPress admin, and a panel on the SilentShield dashboard, naming the form plugins found on your site and linking straight to the screen where you turn them on. Nothing is enabled for you: switching on something like the WordPress login form uninvited is how people end up locked out of their own site. Both disappear as soon as anything is protected.
+- New [Logging]: When the SilentShield API is in use, its answer to each check is now written to the Audit Log — verdict, confidence and the server's actual reply — so a decision can be examined afterwards instead of being taken on trust. Failed calls are always recorded, including what came back; recording the successful ones as well is a new switch under Advanced → Logging & Tracking, off by default because it writes one entry per submission. Submissions turned away for carrying no behaviour token are logged now too: that is the most common reason a form is blocked, and it previously left no trace at all.
+
 = 2.11.0 =
 - New [Protection]: The hidden fields the plugin adds to your forms — the honeypot and the two JavaScript timing fields — no longer carry the same names on every site. They are now named per page load, derived from a signed token, so a spam script can no longer be built once against the fixed names and pointed at every site running this plugin.
 - Fix [JavaScript protection]: The page age a submission claimed was taken from a hidden field that anyone could set to any value, which meant a form could be fetched once and re-submitted for as long as the spammer liked. That age now comes from a token signed with your site's own secret and is rejected once it is older than 24 hours. Submissions that carry no token at all — form HTML held in a page cache, or rendered before this update — keep being accepted as before, so nothing breaks when you update.

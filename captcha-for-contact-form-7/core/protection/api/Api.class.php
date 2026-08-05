@@ -89,6 +89,19 @@ class Api extends BaseProtection {
             // Log missing nonce to block log
             $this->maybe_log_api_block( 'API_NO_NONCE', 'No behavior nonce was submitted with the form' );
 
+            // Audit it as well. The block log above is silently dropped unless
+            // protection_detailed_tracking is on, which it is not by default —
+            // so without this the most common block reason leaves no trace at
+            // all, and a site whose client.js never loaded looks identical to
+            // one that is merely being hit by no-JS bots.
+            AuditLog::log(
+                AuditLog::TYPE_API,
+                'API_NO_NONCE',
+                AuditLog::SEVERITY_WARNING,
+                'Submission blocked: no behavior nonce was submitted. Either the visitor ran no JavaScript, or client.js failed to load from the SilentShield API.',
+                [ 'endpoint' => $this->api_endpoint ]
+            );
+
             // Report the block to the API so no-JS / no-nonce bots — which never
             // load the widget and therefore never emit any telemetry — are still
             // counted in the "bots blocked" statistics. Fire-and-forget: the
@@ -138,17 +151,35 @@ class Api extends BaseProtection {
                 $http_code = wp_remote_retrieve_response_code( $response );
                 $this->last_api_response = $data;
 
-                // Audit HTTP error responses or unparseable JSON
-                if ( $http_code >= 400 || $data === null ) {
+                // Failed calls are always audited — they are rare, and the body is
+                // the only thing that explains them. Successful ones are opt-in via
+                // protection_api_log_responses, because that would otherwise write a
+                // row per submission and bury the audit log on a busy site.
+                //
+                // Either way the body is recorded: the block and mail logs keep a
+                // whitelist of fields, so a verdict cannot be reconstructed from them
+                // once the API starts returning something the whitelist does not know.
+                $is_error = ( $http_code >= 400 || $data === null );
+
+                if ( $is_error || self::should_log_responses() ) {
                     AuditLog::log(
                         AuditLog::TYPE_API,
-                        'API_VERIFY_ERROR_RESPONSE',
-                        $http_code >= 500 ? AuditLog::SEVERITY_ERROR : AuditLog::SEVERITY_WARNING,
-                        sprintf( 'SilentShield verify API returned HTTP %d', $http_code ),
+                        $is_error ? 'API_VERIFY_ERROR_RESPONSE' : 'API_VERIFY_RESPONSE',
+                        $is_error
+                            ? ( $http_code >= 500 ? AuditLog::SEVERITY_ERROR : AuditLog::SEVERITY_WARNING )
+                            : AuditLog::SEVERITY_INFO,
+                        $is_error
+                            ? sprintf( 'SilentShield verify API returned HTTP %d', $http_code )
+                            : sprintf(
+                                'SilentShield verify API returned HTTP %d, verdict=%s',
+                                $http_code,
+                                isset( $data['verdict'] ) ? (string) $data['verdict'] : 'unknown'
+                            ),
                         [
-                            'endpoint'  => $this->api_endpoint,
-                            'http_code' => $http_code,
-                            'body_null' => $data === null,
+                            'endpoint'      => $this->api_endpoint,
+                            'http_code'     => $http_code,
+                            'body_null'     => $data === null,
+                            'response_body' => self::truncate_body( $raw_body ),
                         ]
                     );
                 }
@@ -239,6 +270,39 @@ class Api extends BaseProtection {
 
         $block_log = new BlockLog( $this->get_logger() );
         $block_log->log( 'api', $reason_code, $detail, $extra );
+    }
+
+    /**
+     * Whether successful API responses should be written to the audit log.
+     *
+     * @return bool
+     */
+    private static function should_log_responses(): bool {
+        $enabled = CF7Captcha::get_instance()->get_settings( 'protection_api_log_responses', 'global' );
+
+        return (int) $enabled === 1;
+    }
+
+    /**
+     * Cap an API response body to a size that is safe to store.
+     *
+     * The audit log's `context` column is TEXT and the whole context is written
+     * as one JSON blob, so an unbounded body could push the row over the limit
+     * and take the surrounding fields down with it. A kilobyte comfortably holds
+     * a verdict with its score breakdown, which is what anyone reads this for.
+     *
+     * @param string $body Raw response body.
+     *
+     * @return string Body, truncated with a marker if it was too long.
+     */
+    private static function truncate_body( string $body ): string {
+        $limit = 1024;
+
+        if ( strlen( $body ) <= $limit ) {
+            return $body;
+        }
+
+        return substr( $body, 0, $limit ) . '… [truncated]';
     }
 
 }
