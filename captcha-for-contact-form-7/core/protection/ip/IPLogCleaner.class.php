@@ -18,7 +18,8 @@ class IPLogCleaner extends BaseModul {
 	{
 		parent::__construct($Controller);
 
-		add_action('weeklyIPClear', [$this, 'clean']);
+		// Wrapped: clean() returns a deleted-row count, which an action callback must not.
+		add_action('weeklyIPClear', function () { $this->clean(); });
 
 		$this->get_logger()->info('Instance created and hook registered', [
 			'hook'   => 'weeklyIPClear',

@@ -31,28 +31,21 @@ class IP_Blacklist_Validator extends BaseProtection
 		]);
 	}
 
+	/**
+	 * Like the whitelist, this has no on/off setting — the filter is the only way off.
+	 */
 	protected function is_enabled(): bool
 	{
-		$is_enabled = true;
+		$this->get_logger()->info('IP blacklist is enabled.', [
+			'class' => __CLASS__,
+			'method' => __METHOD__,
+		]);
 
-		if ($is_enabled) {
-			$this->get_logger()->info('IP blacklist is enabled.', [
-				'class' => __CLASS__,
-				'method' => __METHOD__,
-			]);
-		} else {
-			$this->get_logger()->warning('IP blacklist is disabled.', [
-				'class' => __CLASS__,
-				'method' => __METHOD__,
-			]);
-		}
+		$result = apply_filters('f12-cf7-captcha-skip-validation-ip-blacklist', true);
 
-		$result = apply_filters('f12-cf7-captcha-skip-validation-ip-blacklist', $is_enabled);
-
-		if ($is_enabled && !$result) {
+		if (!$result) {
 			$this->get_logger()->debug('IP blacklist skipped by filter.', [
 				'filter' => 'f12-cf7-captcha-skip-validation-ip-blacklist',
-				'original_state' => $is_enabled,
 			]);
 		}
 

@@ -76,8 +76,7 @@ class IPLog
      * @param string $previous_hash The previous hash to match against the "hash" column in the database.
      * @param int    $seconds       The number of seconds to subtract from the current time. Defaults to 0.
      *
-     * @return array An array of timestamps for matching records. If no records are found, an empty array is
-     *               returned.
+     * @return IPLog|null The last matching entry, or null when there is none.
      * @throws RuntimeException|\Exception If global $wpdb is not defined.
      * @deprecated
      */
@@ -222,13 +221,15 @@ class IPLog
 
 
 	/**
-     * Resets the table by deleting all rows.
-     *
-     * @return bool True if the table is successfully reset, false otherwise.
-     * @throws RuntimeException If WPDB is not defined.
-     * @global wpdb $wpdb The WordPress database object.
-     */
-	public function reset_table(): bool
+	 * Empty the IP log table.
+	 *
+	 * Returns the row count rather than a success flag, for the same reason as
+	 * IPBan::reset_table(): the cleaner passes this straight on as the number of deleted
+	 * entries, and a bool arrived there as 1.
+	 *
+	 * @return int Number of deleted rows; 0 when the query failed.
+	 */
+	public function reset_table(): int
 	{
 		global $wpdb;
 
@@ -241,7 +242,7 @@ class IPLog
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 		$result = $wpdb->query(sprintf("DELETE FROM %s", $table));
 
-		return (bool) $result;
+		return false === $result ? 0 : (int) $result;
 	}
 
 
@@ -326,19 +327,6 @@ class IPLog
 	public function get_id(): int
 	{
 		return $this->id;
-	}
-
-
-    /**
-     * Sets the ID value.
-     *
-     * @param int $id The ID value to be set.
-     *
-     * @return void
-     */
-	private function set_id(int $id): void
-	{
-		$this->id = $id;
 	}
 
 

@@ -37,8 +37,11 @@ namespace f12_cf7_captcha\ui {
 		/**
 		 * Constructor
 		 *
-		 * @param UI     $UI
-		 * @param string $domain
+		 * @param UI_Manager $UI_Manager
+		 * @param string     $slug
+		 * @param string     $title
+		 * @param int        $position
+		 * @param string     $class
 		 */
 		public function __construct( UI_Manager $UI_Manager, $slug, $title, $position = 10, $class = '' ) {
 			$this->UI_Manager = $UI_Manager;

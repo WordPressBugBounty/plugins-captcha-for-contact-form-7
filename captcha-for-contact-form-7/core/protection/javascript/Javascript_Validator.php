@@ -4,6 +4,7 @@ namespace f12_cf7_captcha\core\protection\javascript;
 
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
+use f12_cf7_captcha\core\protection\Field_Token;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -11,6 +12,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Javascript_Validator extends BaseProtection
 {
+    /**
+     * Smallest accepted gap between the js start and end timestamps, in seconds.
+     *
+     * Deliberately tiny, because this gap is *not* how long the visitor spent on the form.
+     * js_start_time is written when the captcha initialises, which measurements on the E2E
+     * suite put only 0.35–0.83 s before the submit even for a scripted run — so a threshold
+     * anywhere near "human filling speed" would reject real people on slow devices.
+     *
+     * All this rejects is the degenerate machine case of two timestamps written in the same
+     * breath. Enforcing a real minimum dwell time is the Timer module's job
+     * (protection_time_ms): it measures server-side from render and cannot be forged.
+     */
+    private const DEFAULT_MIN_DURATION = 0.05;
+
+    /**
+     * Slack allowed when a token looks like it was issued in the future.
+     *
+     * Only covers the server's own clock being adjusted between render and submit (NTP step,
+     * load-balanced nodes drifting). Client clocks never enter this comparison.
+     */
+    private const CLOCK_SKEW_TOLERANCE = 300;
+
     /**
      * @var array<string, float>
      */
@@ -28,6 +51,16 @@ class Javascript_Validator extends BaseProtection
     ];
 
     /**
+     * Verified token from the submitted data, or null when the submission carried none.
+     *
+     * Null is not by itself suspicious: form HTML rendered before this plugin version, held
+     * in a full-page cache, or produced by an integration that injects the timing fields on
+     * its own (Fluent Forms conversational) legitimately has no token. Those fall back to the
+     * legacy fixed field names and the legacy (delta-only) checks.
+     */
+    private ?Field_Token $Token = null;
+
+    /**
      * Private constructor for the class.
      *
      * Initializes the PHP and JS components and sets up a filter for the f12-cf7-captcha-log-data hook.
@@ -40,6 +73,12 @@ class Javascript_Validator extends BaseProtection
 		$this->get_logger()->info('Constructor started.', [
 			'class'  => __CLASS__,
 			'method' => __METHOD__,
+		]);
+
+		$this->Token = Field_Token::from_request($this->collect_request_data());
+
+		$this->get_logger()->debug('Field token resolved from request.', [
+			'has_token' => $this->Token !== null ? 'yes' : 'no',
 		]);
 
 		$this->init_php();
@@ -142,58 +181,10 @@ class Javascript_Validator extends BaseProtection
 			'method' => __METHOD__,
 		]);
 
-		$start = 0.0;
-		$end = 0.0;
+		$data = $this->collect_request_data();
 
-		// Standard-Verarbeitung
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-		if (isset($_POST['js_start_time']) && isset($_POST['js_end_time'])) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-			$start = (float) sanitize_text_field( wp_unslash( $_POST['js_start_time'] ) );
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-			$end = (float) sanitize_text_field( wp_unslash( $_POST['js_end_time'] ) );
-			$this->get_logger()->debug('Standard JS timer data found in $_POST.', [
-				'start' => $start,
-				'end' => $end,
-			]);
-		}
-
-		// Avada-specific processing
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-		if (isset($_POST['formData']) && !is_array($_POST['formData'])) {
-			$this->get_logger()->debug('Avada-specific FormData structure detected.');
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
-			parse_str( wp_unslash( $_POST['formData'] ), $form_data );
-			$form_data = array_map( 'sanitize_text_field', $form_data );
-
-			if (isset($form_data['js_start_time']) && isset($form_data['js_end_time'])) {
-				$start = (float)$form_data['js_start_time'];
-				$end = (float)$form_data['js_end_time'];
-				$this->get_logger()->debug('JS timer data found in Avada FormData.', [
-					'start' => $start,
-					'end' => $end,
-				]);
-			}
-		}
-
-		// Fluent Forms-specific processing
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-		if (isset($_POST['data']) && defined('FLUENTFORM') && is_string($_POST['data'])) {
-			$this->get_logger()->debug('Fluent Forms-specific data structure detected.');
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
-			$decodedFormData = urldecode( wp_unslash( $_POST['data'] ) );
-			parse_str($decodedFormData, $form_data);
-
-			if (isset($form_data['js_start_time'])) {
-				$start = (float)$form_data['js_start_time'];
-				$this->get_logger()->debug('JS start time found in Fluent Forms data.', ['start' => $start]);
-			}
-
-			if (isset($form_data['js_end_time'])) {
-				$end = (float)$form_data['js_end_time'];
-				$this->get_logger()->debug('JS end time found in Fluent Forms data.', ['end' => $end]);
-			}
-		}
+		$start = (float) ( $this->read_field($data, Field_Token::SLOT_JS_START) ?? 0.0 );
+		$end   = (float) ( $this->read_field($data, Field_Token::SLOT_JS_END) ?? 0.0 );
 
 		$this->set_start_time('js', $start);
 		$this->set_end_time('js', $end);
@@ -202,6 +193,65 @@ class Javascript_Validator extends BaseProtection
 			'js_start' => $this->get_start_time('js'),
 			'js_end' => $this->get_end_time('js'),
 		]);
+	}
+
+	/**
+	 * Flatten every place a form plugin might have hidden our fields into one array.
+	 *
+	 * Avada posts the whole form url-encoded inside `formData`, Fluent Forms inside `data`.
+	 * Collecting them once here means the token lookup and every field read see the same view
+	 * of the request, instead of each consumer re-parsing the same payloads.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function collect_request_data(): array
+	{
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
+		$data = (array) wp_unslash($_POST);
+
+		// Avada: the real fields live url-encoded inside `formData`.
+		if (isset($data['formData']) && is_string($data['formData'])) {
+			parse_str($data['formData'], $form_data);
+			$data = array_merge($data, $form_data);
+		}
+
+		// Fluent Forms: same idea, but url-encoded twice and inside `data`.
+		if (isset($data['data']) && is_string($data['data']) && defined('FLUENTFORM')) {
+			parse_str(urldecode($data['data']), $form_data);
+			$data = array_merge($data, $form_data);
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Read one protected field, preferring the rotated name and falling back to the legacy one.
+	 *
+	 * The fallback is what keeps this change from blocking real visitors on rollout: form HTML
+	 * that was rendered (or cached) before the update carries the old fixed names and no token,
+	 * and must keep validating exactly as it did before.
+	 *
+	 * @param array  $data The flattened request data.
+	 * @param string $slot One of the Field_Token::SLOT_* constants.
+	 *
+	 * @return string|null The raw value, or null when the field is absent under either name.
+	 */
+	private function read_field(array $data, string $slot): ?string
+	{
+		if ($this->Token !== null) {
+			$rotated = $this->Token->field_name($slot);
+
+			if (isset($data[$rotated]) && is_scalar($data[$rotated])) {
+				return sanitize_text_field((string) $data[$rotated]);
+			}
+		}
+
+		// Legacy slot names double as the fallback field names.
+		if (isset($data[$slot]) && is_scalar($data[$slot])) {
+			return sanitize_text_field((string) $data[$slot]);
+		}
+
+		return null;
 	}
 
     /**
@@ -266,47 +316,7 @@ class Javascript_Validator extends BaseProtection
 			'method' => __METHOD__,
 		]);
 
-		$start = 0.0;
-
-		// Standard processing (e.g. for Contact Form 7)
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-		if (isset($_POST['php_start_time'])) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-			$start = (float) sanitize_text_field( wp_unslash( $_POST['php_start_time'] ) );
-			$this->get_logger()->debug('Standard PHP start time found in $_POST.', [
-				'start' => $start,
-			]);
-		}
-
-		// Avada-specific processing
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-		if (isset($_POST['formData'])) {
-			$this->get_logger()->debug('Avada-specific FormData structure detected.');
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
-			parse_str( wp_unslash( $_POST['formData'] ), $form_data );
-			$form_data = array_map( 'sanitize_text_field', $form_data );
-
-			if (isset($form_data['php_start_time'])) {
-				$start = (float)$form_data['php_start_time'];
-				$this->get_logger()->debug('PHP start time found in Avada FormData.', [
-					'start' => $start,
-				]);
-			}
-		}
-
-		// Fluent Forms-specific processing
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
-		if (isset($_POST['data']) && defined('FLUENTFORM') && is_string($_POST['data'])) {
-			$this->get_logger()->debug('Fluent Forms-specific data structure detected.');
-			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified by the form plugin; sanitized after parse_str()
-			$decodedFormData = urldecode( wp_unslash( $_POST['data'] ) );
-			parse_str($decodedFormData, $form_data);
-
-			if (isset($form_data['php_start_time'])) {
-				$start = (float)$form_data['php_start_time'];
-				$this->get_logger()->debug('PHP start time found in Fluent Forms data.', ['start' => $start]);
-			}
-		}
+		$start = (float) ( $this->read_field($this->collect_request_data(), Field_Token::SLOT_PHP_START) ?? 0.0 );
 
 		$this->set_start_time('php', $start);
 
@@ -346,10 +356,15 @@ class Javascript_Validator extends BaseProtection
 		$time = $this->get_start_time('php');
 		$this->get_logger()->debug('PHP start time value: ' . $time);
 
+		$Token = Field_Token::current();
+
+		// The `js_start_time` / `js_end_time` CSS classes stay fixed while the `name` attributes
+		// rotate: the browser-side code selects by class, so it keeps working untouched, and a
+		// bot still cannot know under which names to POST without reading this markup.
 		$additional_fields = [
-			'<input type="hidden" name="php_start_time" value="' . esc_attr($time) . '" />',
-			'<input type="hidden" name="js_end_time" class="js_end_time" value="" />',
-			'<input type="hidden" name="js_start_time" class="js_start_time" value="" />'
+			'<input type="hidden" name="' . esc_attr($Token->field_name(Field_Token::SLOT_PHP_START)) . '" value="' . esc_attr((string) $time) . '" />',
+			'<input type="hidden" name="' . esc_attr($Token->field_name(Field_Token::SLOT_JS_END)) . '" class="js_end_time" value="" />',
+			'<input type="hidden" name="' . esc_attr($Token->field_name(Field_Token::SLOT_JS_START)) . '" class="js_start_time" value="" />'
 		];
 
 		$output = implode("", $additional_fields);
@@ -554,17 +569,11 @@ class Javascript_Validator extends BaseProtection
 			]);
 		}
 
-		// Check JavaScript time difference
-		$js_difference = $this->get_difference('js');
-		if ((string)$js_difference === '0' || (string)$js_difference === '0.0') {
-			if ($debug) {
-				$this->get_logger()->warning('JS time difference is zero. Possibly a bot or technical issue.');
-			}
-			return false;
-		}
+		$start = $this->get_start_time('js');
+		$end   = $this->get_end_time('js');
 
 		// Check if start time was captured
-		if ($this->get_start_time('js') == 0.0) {
+		if ($start <= 0.0) {
 			if ($debug) {
 				$this->get_logger()->warning('JS start time was not captured.');
 			}
@@ -572,11 +581,66 @@ class Javascript_Validator extends BaseProtection
 		}
 
 		// Check if end time was captured
-		if ($this->get_end_time('js') == 0.0) {
+		if ($end <= 0.0) {
 			if ($debug) {
 				$this->get_logger()->warning('JS end time was not captured.');
 			}
 			return false;
+		}
+
+		// Both timestamps come from the *same* client clock, so their difference is meaningful
+		// even when that clock is wrong. The absolute values are not — they are never compared
+		// against the server clock, because a visitor with a skewed system clock is a real
+		// visitor, not a bot.
+		$duration = $end - $start;
+
+		// Previously this compared the difference rounded to whole milliseconds against "0",
+		// which let a *negative* duration through — an end time before the start time was
+		// treated as valid.
+		if ($duration <= 0.0) {
+			if ($debug) {
+				$this->get_logger()->warning('JS end time is not after the start time. Classified as bot.', [
+					'duration' => $duration,
+				]);
+			}
+			return false;
+		}
+
+		$minimum = $this->get_min_duration();
+		if ($duration < $minimum) {
+			if ($debug) {
+				$this->get_logger()->warning('Form filled in faster than humanly possible.', [
+					'duration' => $duration,
+					'minimum'  => $minimum,
+				]);
+			}
+			return false;
+		}
+
+		// The signed token is the only value in the submission a bot cannot fabricate, so the
+		// page-age check hangs off it rather than off the submitted php_start_time.
+		if ($this->Token !== null) {
+			$age = $this->Token->get_age();
+
+			if ($age < -self::CLOCK_SKEW_TOLERANCE) {
+				if ($debug) {
+					$this->get_logger()->warning('Token was issued in the future. Classified as bot.', [
+						'age' => $age,
+					]);
+				}
+				return false;
+			}
+
+			$max_age = $this->get_max_token_age();
+			if ($age > $max_age) {
+				if ($debug) {
+					$this->get_logger()->warning('Token is stale — form HTML is older than the allowed window.', [
+						'age'     => $age,
+						'max_age' => $max_age,
+					]);
+				}
+				return false;
+			}
 		}
 
 		if ($debug) {
@@ -584,6 +648,26 @@ class Javascript_Validator extends BaseProtection
 		}
 
 		return true;
+	}
+
+	/**
+	 * Smallest accepted time between form render and submit, in seconds.
+	 *
+	 * @filter f12-cf7-captcha-js-min-duration
+	 */
+	private function get_min_duration(): float
+	{
+		return (float) apply_filters('f12-cf7-captcha-js-min-duration', self::DEFAULT_MIN_DURATION);
+	}
+
+	/**
+	 * Largest accepted age of the signed token, in seconds.
+	 *
+	 * @filter f12-cf7-captcha-token-max-age
+	 */
+	private function get_max_token_age(): int
+	{
+		return (int) apply_filters('f12-cf7-captcha-token-max-age', Field_Token::DEFAULT_MAX_AGE);
 	}
 
     /**

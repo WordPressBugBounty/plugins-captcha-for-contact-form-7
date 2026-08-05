@@ -172,7 +172,11 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 */
 	public function get(): string
 	{
-		if (empty($this->_captcha)) {
+		// Not empty(): the answer to "5 - 5 = ?" is 0, which empty() calls empty. This method
+		// feeds set_code() when the captcha is stored, so a zero answer was saved as an empty
+		// expected value and the captcha became unsolvable — a visitor typing the correct "0"
+		// was rejected. Roughly one math captcha in sixty.
+		if ($this->_captcha === null || $this->_captcha === '') {
 			$this->get_logger()->warning(
 				"get(): No captcha set",
 				[
@@ -245,7 +249,7 @@ class CaptchaMathGenerator extends CaptchaGenerator {
 	 *              otherwise.
 	 * @throws \Exception
 	 */
-	public function is_valid(string $captcha_code, string $captcha_hash): bool
+	public function is_valid(string $captcha_code, string $captcha_hash = ''): bool
 	{
 		/** @var UserData $User_Data */
 		$User_Data  = $this->Controller->get_module('user-data');

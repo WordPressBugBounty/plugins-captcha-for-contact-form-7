@@ -16,7 +16,7 @@ namespace f12_cf7_captcha\ui {
 		private $hide_submit_button = false;
 
 		/**
-		 * @return mixed
+		 * @return void
 		 */
 		protected function maybe_save(): void {
 			$this->get_logger()->info( 'Starting the "Maybe Save" process to save settings if the nonce is valid.', [

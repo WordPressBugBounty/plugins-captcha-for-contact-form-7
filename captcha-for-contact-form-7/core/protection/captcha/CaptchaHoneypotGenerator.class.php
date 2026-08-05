@@ -64,7 +64,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	/**
 	 * Get the Value of the captcha
 	 *
-	 * @return string|void
+	 * @return string
 	 */
 	public function get(): string
 	{
@@ -107,7 +107,9 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	 */
 	public function is_valid(string $captcha_code, string $captcha_hash = ''): bool
 	{
-		$result = empty($captcha_code);
+		// A trap field is valid exactly when it came back untouched. empty() was too generous
+		// here: it also accepts "0", so a bot writing a zero into every input walked through.
+		$result = trim($captcha_code) === '';
 
 		// Masking: only 1st and last position visible
 		$length = strlen($captcha_code);
@@ -133,8 +135,20 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 	 *
 	 * @return string The generated form field HTML.
 	 */
-	public function get_field( string $field_name ): string {
-		$captcha = sprintf( '<input id="%s" type="text" style="visibility:hidden!important; opacity:1!important; height:0!important; width:0!important; margin:0!important; padding:0!important;" name="%s" value=""/>', esc_attr( $field_name ), esc_attr( $field_name ) );
+	public function get_field( string $field_name, array $args = [] ): string {
+		// Moved off-screen rather than hidden via `visibility:hidden`. That literal was a
+		// reliable tell — a scraper only had to look for it in the style attribute to know
+		// which input to leave alone. Positioning keeps it out of sight without the giveaway
+		// and, unlike a CSS class, does not depend on a stylesheet having loaded (a honeypot
+		// that becomes visible would get filled in by real people and block them).
+		//
+		// tabindex/aria-hidden keep keyboard and screen-reader users from ever reaching it;
+		// autocomplete="off" plus the opaque rotated name keep browser autofill out.
+		$captcha = sprintf(
+			'<input id="%s" type="text" name="%s" value="" tabindex="-1" aria-hidden="true" autocomplete="off" style="position:absolute!important; left:-9999px!important; top:auto!important; height:1px!important; width:1px!important; overflow:hidden!important;"/>',
+			esc_attr( $field_name ),
+			esc_attr( $field_name )
+		);
 
 		$this->get_logger()->debug(
 			"get_field(): Honeypot field generated",
@@ -183,7 +197,7 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 			[
 				'plugin'   => 'f12-cf7-captcha',
 				'class'    => __CLASS__,
-				'response' => empty($response) ? '(empty)' : '(set)'
+				'response' => '(empty)'
 			]
 		);
 

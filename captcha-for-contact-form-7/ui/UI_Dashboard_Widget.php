@@ -204,14 +204,14 @@ namespace f12_cf7_captcha {
 						      fill="none" stroke="#e5e7eb" stroke-width="3" />
 						<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
 						      fill="none" stroke="<?php echo esc_attr( $color ); ?>" stroke-width="3"
-						      stroke-dasharray="<?php echo esc_attr( $pct ); ?>, 100"
+						      stroke-dasharray="<?php echo esc_attr( (string) $pct ); ?>, 100"
 						      stroke-linecap="round" />
 					</svg>
 					<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
 						<div style="font-size:20px; font-weight:700; color:<?php echo esc_attr( $color ); ?>;">
-							<?php echo esc_html( $score ); ?>
+							<?php echo esc_html( (string) $score ); ?>
 						</div>
-						<div style="font-size:9px; color:#64748b;">/<?php echo esc_html( $max ); ?></div>
+						<div style="font-size:9px; color:#64748b;">/<?php echo esc_html( (string) $max ); ?></div>
 					</div>
 				</div>
 
@@ -226,7 +226,7 @@ namespace f12_cf7_captcha {
 						<div style="font-size:10px; color:#94a3b8;"><?php esc_html_e( 'Blocked', 'captcha-for-contact-form-7' ); ?></div>
 					</div>
 					<div>
-						<strong><?php echo esc_html( $spam_pct ); ?>%</strong>
+						<strong><?php echo esc_html( (string) $spam_pct ); ?>%</strong>
 						<div style="font-size:10px; color:#94a3b8;"><?php esc_html_e( 'Spam Rate', 'captcha-for-contact-form-7' ); ?></div>
 					</div>
 				</div>

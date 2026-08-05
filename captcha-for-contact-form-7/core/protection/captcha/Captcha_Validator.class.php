@@ -4,6 +4,7 @@ namespace f12_cf7_captcha\core\protection\captcha;
 
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
+use f12_cf7_captcha\core\protection\Field_Token;
 use f12_cf7_captcha\core\timer\CaptchaTimerCleaner;
 use f12_cf7_captcha\core\UserData;
 
@@ -132,20 +133,15 @@ class Captcha_Validator extends BaseProtection {
 	 */
 	public function get_captcha_cleaner(): CaptchaCleaner
 	{
-		if ($this->_Captcha_Cleaner instanceof CaptchaCleaner) {
-			$this->get_logger()->debug(
-				"get_captcha_cleaner(): CaptchaCleaner instance returned",
-				[
-					'plugin' => 'f12-cf7-captcha',
-					'class'  => get_class($this->_Captcha_Cleaner)
-				]
-			);
-		} else {
-			$this->get_logger()->warning(
-				"get_captcha_cleaner(): No valid CaptchaCleaner instance available",
-				['plugin' => 'f12-cf7-captcha']
-			);
-		}
+		// The property is typed and set in the constructor, so there is no "not available"
+		// case to warn about.
+		$this->get_logger()->debug(
+			"get_captcha_cleaner(): CaptchaCleaner instance returned",
+			[
+				'plugin' => 'f12-cf7-captcha',
+				'class'  => get_class($this->_Captcha_Cleaner)
+			]
+		);
 
 		return $this->_Captcha_Cleaner;
 	}
@@ -225,23 +221,22 @@ class Captcha_Validator extends BaseProtection {
 			return false;
 		}
 
-		$array_post_data = $args[0];
-		$field_name      = $this->get_field_name();
+		$array_post_data   = $args[0];
+		$validation_method = $this->get_validation_method();
+		$field_name        = $this->resolve_submitted_field_name($array_post_data, $validation_method);
 
-		if (!isset($array_post_data[$field_name])) {
+		if ($field_name === null) {
 			if ($debug) {
 				$this->get_logger()->info(
 					"is_spam(): Field not present - spam detected",
 					[
 						'plugin'     => 'f12-cf7-captcha',
-						'field_name' => $field_name
+						'field_name' => $this->get_field_name()
 					]
 				);
 			}
 			return true;
 		}
-
-		$validation_method = $this->get_validation_method();
 
 		// Honeypot -> no hash expected
 		if ($validation_method !== 'honey' && !isset($array_post_data[$field_name . '_hash'])) {
@@ -316,8 +311,9 @@ class Captcha_Validator extends BaseProtection {
 			return '';
 		}
 
-		$field_name = $this->get_field_name();
-		$generator  = $this->get_generator();
+		$validation_method = $this->get_validation_method();
+		$field_name        = $this->get_render_field_name($validation_method);
+		$generator         = $this->get_generator($validation_method);
 
 		$this->get_logger()->info(
 			"get_captcha(): Captcha field being generated",
@@ -447,6 +443,58 @@ class Captcha_Validator extends BaseProtection {
 		}
 
 		return $field_name;
+	}
+
+
+	/**
+	 * The field name to render the captcha input under.
+	 *
+	 * Only the honeypot rotates. The math and image captchas carry a companion `_hash` field
+	 * and are reloaded over AJAX by name, so their naming stays under the operator's control
+	 * via the settings — and unlike the honeypot they are a real challenge, which a
+	 * predictable name does not weaken.
+	 *
+	 * @param string $validation_method honey, math or image.
+	 */
+	protected function get_render_field_name(string $validation_method): string
+	{
+		if ($validation_method !== 'honey') {
+			return $this->get_field_name();
+		}
+
+		return Field_Token::current()->field_name(Field_Token::SLOT_HONEYPOT);
+	}
+
+
+	/**
+	 * Find the submitted captcha field, whether it arrived under the rotated or legacy name.
+	 *
+	 * Returns null when it is absent under both, which the caller treats as spam. The legacy
+	 * fallback exists so that form HTML rendered before this version — or served from a
+	 * full-page cache — keeps validating instead of blocking real visitors after an update.
+	 *
+	 * @param array  $array_post_data   The submitted data.
+	 * @param string $validation_method honey, math or image.
+	 *
+	 * @return string|null The name the field actually arrived under.
+	 */
+	protected function resolve_submitted_field_name(array $array_post_data, string $validation_method): ?string
+	{
+		if ($validation_method === 'honey') {
+			$Token = Field_Token::from_request($array_post_data);
+
+			if ($Token !== null) {
+				$rotated = $Token->field_name(Field_Token::SLOT_HONEYPOT);
+
+				if (isset($array_post_data[$rotated])) {
+					return $rotated;
+				}
+			}
+		}
+
+		$legacy = $this->get_field_name();
+
+		return isset($array_post_data[$legacy]) ? $legacy : null;
 	}
 
 

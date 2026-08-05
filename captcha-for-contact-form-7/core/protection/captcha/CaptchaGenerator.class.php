@@ -29,9 +29,13 @@ abstract class CaptchaGenerator extends BaseModul
     private const ALLOWED_CHARACTERS_AUDIO = 'abcdefghjkmnopqrstuvwxyz23456789';
 
     /**
-     * The Captcha string.
+     * The expected answer.
      *
-     * @var string
+     * Int as well as string: the math generator stores the result of its sum, which is where
+     * the "answer 0 is stored as an empty expected value" bug came from. get() is what turns
+     * this into the string that gets saved and compared.
+     *
+     * @var string|int
      */
     protected $_captcha = '';
 
@@ -184,7 +188,30 @@ abstract class CaptchaGenerator extends BaseModul
 	}
 
 
-    abstract protected function get_field(string $field_name): string;
+    /**
+     * Render the input this captcha is answered through.
+     *
+     * Declared public because that is how it is used — Captcha_Validator and the CF7 tag
+     * handler both call it from outside, and every subclass already widened it. It was
+     * declared protected here, and with a single parameter while two of the three
+     * subclasses take a second one, so nothing checked either call.
+     *
+     * @param string $field_name The HTML name attribute to render under.
+     * @param array<string, mixed> $args Renderer options; ignored by generators that have none.
+     */
+    abstract public function get_field(string $field_name, array $args = []): string;
+
+    /**
+     * Is this the right answer?
+     *
+     * The whole point of a generator, and it was on none of them as far as the type system
+     * was concerned — every subclass implemented it, nothing declared it, so a subclass
+     * that forgot would only have failed when someone submitted a form.
+     *
+     * @param string $captcha_code The answer the visitor gave.
+     * @param string $captcha_hash Identifies the stored session; unused by the honeypot.
+     */
+    abstract public function is_valid(string $captcha_code, string $captcha_hash = ''): bool;
 
     /**
      * Retrieve the AJAX response as a string
@@ -429,7 +456,9 @@ abstract class CaptchaGenerator extends BaseModul
      */
 	public function get(): string
 	{
-		if (empty($this->_captcha)) {
+		// Not empty(): a captcha whose code is "0" is a real code, and this value is what
+		// gets stored as the expected answer. See CaptchaMathGenerator::get().
+		if ($this->_captcha === null || $this->_captcha === '') {
 			$this->get_logger()->warning(
 				"get(): No captcha set",
 				['plugin' => 'f12-cf7-captcha']

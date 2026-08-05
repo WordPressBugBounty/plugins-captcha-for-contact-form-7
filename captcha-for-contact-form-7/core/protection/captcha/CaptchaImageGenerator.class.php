@@ -31,13 +31,6 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	private ?string $image = null;
 
 	/**
-	 * Whether to save the image or not
-	 *
-	 * @var bool true or false, default: false
-	 */
-	private bool $store_image = false;
-
-	/**
 	 * Captcha pool for pre-generated images.
 	 *
 	 * @var CaptchaPool|null
@@ -129,25 +122,10 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		}
 	}
 
-	/**
-	 * Enables or disables the image storing feature.
-	 *
-	 * @param bool $store_image [Optional] Whether to enable or disable the image storing. Default is true.
-	 *
-	 * @return void
-	 */
-	public function enable_image_storing( bool $store_image = true ): void {
-		$this->store_image = $store_image;
-
-		$this->get_logger()->info(
-			"enable_image_storing(): Image storing toggled",
-			[
-				'plugin' => 'f12-cf7-captcha',
-				'class'  => __CLASS__,
-				'status' => $store_image ? 'enabled' : 'disabled'
-			]
-		);
-	}
+	// enable_image_storing() and the $store_image flag it set used to live here. Nothing
+	// called the one or read the other — a public setter that logged "image storing enabled"
+	// and then changed nothing at all, which is worse than no setter, because it promises a
+	// feature that was never built.
 
 
 	/**
@@ -307,7 +285,7 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 	 * @return bool
 	 * @throws \Exception
 	 */
-	public function is_valid( string $captcha_code, string $captcha_hash ): bool {
+	public function is_valid( string $captcha_code, string $captcha_hash = '' ): bool {
 		/** @var UserData $User_Data */
 		$User_Data  = $this->Controller->get_module( 'user-data' );
 		$ip_address = $User_Data->get_ip_address();

@@ -810,6 +810,36 @@ class RestController extends BaseModul {
 	 *
 	 * @return WP_REST_Response|WP_Error
 	 */
+	/**
+	 * Move the blacklist words into the WordPress option the rule actually reads.
+	 *
+	 * RulesHandler takes its word list from `disallowed_keys` — WordPress's own comment
+	 * blacklist — and never looks at `protection_rules_blacklist_value`. The old admin
+	 * screen knew that and mirrored the field across on save; this REST endpoint, which the
+	 * current admin uses, did not. Words typed into "Blacklist Words" were stored in the
+	 * plugin's settings and then ignored, so the blacklist silently did nothing.
+	 *
+	 * The setting itself is blanked afterwards, exactly as the old screen did, so there is
+	 * one source of truth rather than two copies that can drift apart.
+	 *
+	 * @param array $settings The full settings array, modified in place.
+	 */
+	private function sync_blacklist_to_wordpress( array &$settings ): void {
+		if ( ! isset( $settings['global'] ) || ! array_key_exists( 'protection_rules_blacklist_value', $settings['global'] ) ) {
+			return;
+		}
+
+		$blacklist = trim( (string) $settings['global']['protection_rules_blacklist_value'] );
+
+		$settings['global']['protection_rules_blacklist_value'] = '';
+
+		if ( $blacklist !== '' ) {
+			update_option( 'disallowed_keys', $blacklist );
+		} else {
+			delete_option( 'disallowed_keys' );
+		}
+	}
+
 	public function handle_integration_toggle( WP_REST_Request $request ) {
 		$rate_check = $this->check_rate_limit( 'integration_toggle', self::RATE_LIMIT_ADMIN_MAX );
 		if ( $rate_check !== null ) {
@@ -905,8 +935,8 @@ class RestController extends BaseModul {
 			// API-exclusive analytics — only attached while the API is active, so
 			// the React side can hide the section entirely when the API is off.
 			// Same gate as the recording side (Protection::is_api_active()).
-			$protection = $this->Controller->get_module( 'protection' );
-			$api_active = $protection && $protection->is_api_active();
+			// get_module() throws when a module is missing, so there is nothing to null-check.
+			$api_active = $this->Controller->get_module( 'protection' )->is_api_active();
 
 			$overview['api_active']    = (bool) $api_active;
 			$overview['api_exclusive'] = $api_active
@@ -1240,6 +1270,16 @@ class RestController extends BaseModul {
 		try {
 			$settings = $this->Controller->get_settings();
 
+			// The blacklist lives in WordPress's own `disallowed_keys`, not in our settings
+			// (see sync_blacklist_to_wordpress()). Read it back from there, or the field
+			// would come up empty after every save.
+			if ( is_array( $settings ) ) {
+				if ( ! isset( $settings['global'] ) || ! is_array( $settings['global'] ) ) {
+					$settings['global'] = [];
+				}
+				$settings['global']['protection_rules_blacklist_value'] = (string) get_option( 'disallowed_keys', '' );
+			}
+
 			return new WP_REST_Response( $settings, 200 );
 		} catch ( \Throwable $e ) {
 			return new WP_Error( 'settings_error', $e->getMessage(), [ 'status' => 500 ] );
@@ -1260,7 +1300,9 @@ class RestController extends BaseModul {
 		try {
 			$body = $request->get_json_params();
 
-			if ( empty( $body ) || ! is_array( $body ) ) {
+			// get_json_params() returns an array or null, so empty() already covers both the
+			// null and the "{}" case.
+			if ( empty( $body ) ) {
 				return new WP_Error( 'invalid_body', 'Request body must be a JSON object.', [ 'status' => 400 ] );
 			}
 
@@ -1308,6 +1350,8 @@ class RestController extends BaseModul {
 					$current[ $container ][ $sanitized_key ] = $sanitized_value;
 				}
 			}
+
+			$this->sync_blacklist_to_wordpress( $current );
 
 			update_option( 'f12-cf7-captcha-settings', $current );
 			$this->Controller->invalidate_settings_cache();

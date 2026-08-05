@@ -26,7 +26,8 @@ class IPBanCleaner extends BaseModul {
 	{
 		parent::__construct($Controller);
 
-		add_action('weeklyIPClear', [$this, 'clean']);
+		// Wrapped: clean() returns a deleted-row count, which an action callback must not.
+		add_action('weeklyIPClear', function () { $this->clean(); });
 
 		$this->get_logger()->info('Instance created and hook registered', [
 			'hook'   => 'weeklyIPClear',
@@ -52,9 +53,9 @@ class IPBanCleaner extends BaseModul {
 	 * and deletes IP bans older than the specified date and time using the delete_older_than method
 	 * of the IPBan class.
 	 *
-	 * @return bool Returns true if the IP bans were successfully cleaned, false otherwise.
+	 * @return int Number of deleted rows.
 	 */
-	public function clean()
+	public function clean(): int
 	{
 		$date_time = new \DateTime('-3 Weeks');
 		$date_time_formatted = $date_time->format('Y-m-d H:i:s');

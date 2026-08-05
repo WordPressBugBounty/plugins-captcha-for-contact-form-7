@@ -323,25 +323,6 @@ class CaptchaTimer {
 	}
 
 	/**
-	 * Checks if the hash is valid.
-	 *
-	 * @return bool Returns true if the hash is valid, false otherwise.
-	 */
-	private function is_valid_hash(): bool
-	{
-		$is_valid = !empty($this->hash);
-
-		$this->get_logger()->debug('Checking the validity of the hash value.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-			'hash_state' => $is_valid ? 'valid' : 'invalid',
-		]);
-
-		return $is_valid;
-	}
-
-
-	/**
 	 * Retrieves the value of the property.
 	 *
 	 * @TODO Check if that ever returns anything else than a float. - should be the time in ms for timer validation
@@ -442,32 +423,6 @@ class CaptchaTimer {
 		}
 
 		return $this->updatetime;
-	}
-
-	/**
-	 * Sets the creation time of the object.
-	 *
-	 * This function sets the creation time of the object to the current date and time in the format 'Y-m-d H:i:s'.
-	 * It updates the 'updatetime' property with the current date and time.
-	 *
-	 * @return void
-	 */
-	private function set_create_time(): void
-	{
-		$this->get_logger()->info('Setting the creation time for the object.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-		]);
-
-		try {
-			$dt = new \DateTime();
-			$this->createtime = $dt->format('Y-m-d H:i:s');
-			$this->get_logger()->debug('Creation time successfully set.', ['createtime' => $this->createtime]);
-		} catch (\Exception $e) {
-			$this->get_logger()->error('Error creating the DateTime object. Creation time could not be set.', [
-				'error' => $e->getMessage(),
-			]);
-		}
 	}
 
 	/**
@@ -610,7 +565,7 @@ class CaptchaTimer {
 		if ($is_deleted) {
 			$this->get_logger()->info('Timer entry successfully deleted.');
 			// Optional: Set the internal hash to null to prevent multiple deletions.
-			$this->hash = null;
+			$this->hash = '';
 		} else {
 			$this->get_logger()->error('Error deleting the timer entry.');
 		}

@@ -154,10 +154,12 @@ function on_update() {
 	// 🔹 Upgrade auf 2.4.0 (Per-Form-Overrides Option initialisieren)
 	if ( version_compare( $currentVersion, '2.4.0', '<' ) ) {
 		if ( false === get_option( 'f12-cf7-captcha-form-overrides' ) ) {
+			// $autoload takes a bool. 'no' was the historic spelling and still works, but
+			// WordPress documents the boolean form now and the string is on its way out.
 			add_option( 'f12-cf7-captcha-form-overrides', [
 				'integration' => [],
 				'form'        => [],
-			], '', 'no' );
+			], '', false );
 		}
 
 		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );

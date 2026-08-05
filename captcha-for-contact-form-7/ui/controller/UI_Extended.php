@@ -57,7 +57,7 @@ namespace f12_cf7_captcha {
 		/**
 		 * @param $settings
 		 *
-		 * @return mixed
+		 * @return array<string, mixed> The settings, with this screen's defaults merged in.
 		 */
 		public function get_settings( $settings ): array {
 			$this->get_logger()->info( 'Adding global default settings.', [
@@ -234,13 +234,18 @@ namespace f12_cf7_captcha {
 						// Access the main module instance.
 						$main_module = CF7Captcha::get_instance()->get_module( $action_data['module'] );
 
-						// Optional: Access the sub-module instance if available.
+						// The module name comes from the action table, so static analysis cannot
+						// tell which concrete class comes back — hence the annotation.
+						/** @var \f12_cf7_captcha\core\protection\Protection $main_module */
 						$cleaner_instance = $main_module;
 						if ( $action_data['sub_module'] !== null ) {
 							$cleaner_instance = $main_module->get_module( $action_data['sub_module'] );
 						}
 
-						// Optional: Access the cleaner instance if a special method exists for it.
+						// Two entries in the table above carry a null cleaner_method, so this guard
+						// is load-bearing — without it those two actions would call_user_func() on
+						// a null method name. PHPStan narrows the shape per element and loses that.
+						// @phpstan-ignore notIdentical.alwaysTrue
 						if ( $action_data['cleaner_method'] !== null ) {
 							$cleaner_instance = call_user_func( [ $cleaner_instance, $action_data['cleaner_method'] ] );
 						}

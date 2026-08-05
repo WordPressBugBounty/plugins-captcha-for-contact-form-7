@@ -168,7 +168,7 @@ namespace f12_cf7_captcha {
 		/**
 		 * @param $settings
 		 *
-		 * @return mixed
+		 * @return array<string, mixed> The settings, with this screen's defaults merged in.
 		 */
 		public function get_settings( $settings ): array {
 			$this->get_logger()->info( 'Adding global default settings.', [

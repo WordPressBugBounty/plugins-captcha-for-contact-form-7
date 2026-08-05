@@ -142,7 +142,7 @@ class Shadow_Mode {
 	 *     passed: int,
 	 *     estimated_additional: int,
 	 *     estimated_additional_pct: int,
-	 *     current_week: array{total: int, blocked: int, passed: int},
+	 *     current_week: array{total: int, blocked: int, passed: int, estimated_additional: int},
 	 *     last_updated: int
 	 * }
 	 */

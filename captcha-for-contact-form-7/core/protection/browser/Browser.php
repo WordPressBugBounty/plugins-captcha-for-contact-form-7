@@ -165,8 +165,8 @@ class Browser extends BaseProtection {
 
 		$this->get_logger()->debug("Additional log data collected", [
 			'plugin'       => 'f12-cf7-captcha',
-			'browser_data' => mb_substr($data['Browser Data'] ?? '', 0, 80) . (strlen($data['Browser Data'] ?? '') > 80 ? '...' : ''),
-			'header_data'  => mb_substr($data['Header Data'] ?? '', 0, 80) . (strlen($data['Header Data'] ?? '') > 80 ? '...' : '')
+			'browser_data' => mb_substr($data['Browser Data'], 0, 80) . (strlen($data['Browser Data']) > 80 ? '...' : ''),
+			'header_data'  => mb_substr($data['Header Data'], 0, 80) . (strlen($data['Header Data']) > 80 ? '...' : '')
 		]);
 
 		return $data;
@@ -458,7 +458,7 @@ class Browser extends BaseProtection {
 	/**
 	 * Determine if the current call is done by a crawler
 	 *
-	 * @return bool|void
+	 * @return bool
 	 */
 	public function is_crawler(): bool {
 		$browser_data = $this->get_browser();

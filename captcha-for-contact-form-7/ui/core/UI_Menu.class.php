@@ -62,8 +62,12 @@ namespace f12_cf7_captcha\ui {
 
 		/**
 		 *
-		 * @param array<UI_Page> $Pages
-		 * @param string         $active_slug
+		 * Either one page or a list of them — the body normalises a single instance into an
+		 * array, which is why the is_array() check below is not redundant.
+		 *
+		 * @param UI_Page|array<UI_Page> $Page_Storage
+		 * @param string                 $active_slug
+		 * @param string                 $plugin_slug
 		 *
 		 * @return void
 		 */

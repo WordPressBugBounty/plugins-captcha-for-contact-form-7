@@ -26,11 +26,12 @@ class CaptchaCleaner extends BaseModul {
 	{
 		parent::__construct($Controller);
 
-		add_action('dailyCaptchaClear', [$this, 'clean']);
-		add_action('dailyCaptchaClear', [$this, 'maybe_fill_captcha_pool']);
+		// Wrapped: these return a deleted-row count, which an action callback must not.
+		add_action('dailyCaptchaClear', function () { $this->clean(); });
+		add_action('dailyCaptchaClear', function () { $this->maybe_fill_captcha_pool(); });
 
 		// Also add a more frequent hook for pool filling (every 15 minutes)
-		add_action('f12_captcha_pool_fill', [$this, 'maybe_fill_captcha_pool']);
+		add_action('f12_captcha_pool_fill', function () { $this->maybe_fill_captcha_pool(); });
 
 		// Schedule the pool fill hook if not already scheduled
 		if (!wp_next_scheduled('f12_captcha_pool_fill')) {

@@ -348,7 +348,26 @@ class Protection extends BaseModul {
 	/**
 	 * Retrieves the specified module based on its name.
 	 *
+	 * Same reasoning as CF7Captcha::get_module(): the registry is keyed by string, so the
+	 * declared type can only be the base class, and the conditional type tells static
+	 * analysis which validator each key really yields.
+	 *
+	 * Keep in step with init_modules().
+	 *
 	 * @param string $name The name of the module to retrieve.
+	 *
+	 * @phpstan-return (
+	 *     $name is 'captcha-validator' ? \f12_cf7_captcha\core\protection\captcha\Captcha_Validator : (
+	 *     $name is 'timer-validator' ? \f12_cf7_captcha\core\protection\time\Timer_Validator : (
+	 *     $name is 'ip-validator' ? \f12_cf7_captcha\core\protection\ip\IPValidator : (
+	 *     $name is 'ip-blacklist-validator' ? \f12_cf7_captcha\core\protection\ip_blacklist\IP_Blacklist_Validator : (
+	 *     $name is 'javascript-validator' ? \f12_cf7_captcha\core\protection\javascript\Javascript_Validator : (
+	 *     $name is 'multiple-submission-validator' ? \f12_cf7_captcha\core\protection\multiple_submission\Multiple_Submission_Validator : (
+	 *     $name is 'rule-validator' ? \f12_cf7_captcha\core\protection\rules\RulesHandler : (
+	 *     $name is 'browser-validator' ? \f12_cf7_captcha\core\protection\browser\Browser : (
+	 *     $name is 'whitelist-validator' ? \f12_cf7_captcha\core\protection\whitelist\Whitelist_Validator : (
+	 *     $name is 'api-validator' ? \f12_cf7_captcha\core\protection\api\Api : BaseProtection
+	 *     ))))))))))
 	 *
 	 * @return BaseProtection The specified module.
 	 * @throws \Exception If the specified module does not exist.
@@ -398,7 +417,48 @@ class Protection extends BaseModul {
 			}
 		}
 
-		return implode( "", $captcha_parts );
+		$captcha = implode( "", $captcha_parts );
+
+		if ( $captcha === '' ) {
+			return $captcha;
+		}
+
+		// Emitted here rather than from one of the modules so that the token travels with the
+		// form whenever *any* protection rendered something — the honeypot and the timing
+		// fields derive their rotated names from it and are toggled independently.
+		return Field_Token::current()->get_field() . $captcha;
+	}
+
+	/**
+	 * Strip the plugin's own fields out of form data before it gets logged or displayed.
+	 *
+	 * Rotated names are not known ahead of time, so they are matched by shape rather than
+	 * listed literally.
+	 *
+	 * @param array $data The submitted form data.
+	 *
+	 * @return array The data without the plugin's internal fields.
+	 */
+	public static function strip_internal_fields( array $data ): array {
+		$literal = [
+			'_wpcf7', '_wpcf7_version', '_wpcf7_locale', '_wpcf7_unit_tag',
+			'_wpcf7_container_post', '_wpcf7_posted_data_hash', '_wpcf7_nonce',
+			'php_start_time', 'js_start_time', 'js_end_time',
+			'f12_captcha', 'f12_captcha_hash', '_wpnonce', 'behavior_nonce',
+			Field_Token::TOKEN_FIELD,
+		];
+
+		foreach ( $literal as $key ) {
+			unset( $data[ $key ] );
+		}
+
+		foreach ( array_keys( $data ) as $key ) {
+			if ( is_string( $key ) && preg_match( '/^f12_[0-9a-f]{16}$/', $key ) ) {
+				unset( $data[ $key ] );
+			}
+		}
+
+		return $data;
 	}
 
 	/**
@@ -408,8 +468,6 @@ class Protection extends BaseModul {
 	 * and calling their respective "is_spam" method.
 	 *
 	 * @param mixed ...$args The arguments passed to the method. In this case, it is the data submitted.
-	 *
-	 * @param bool  $skip    Skip validation, default: false
 	 *
 	 * @return bool Returns true if the submitted data is spam, otherwise false.
 	 *
@@ -436,7 +494,7 @@ class Protection extends BaseModul {
 
 		// Check whitelist
 		$whitelist = $this->get_module( 'whitelist-validator' );
-		if ( $whitelist && $whitelist->is_whitelisted( $array_post_data ) ) {
+		if ( $whitelist->is_whitelisted( $array_post_data ) ) {
 			self::$pending_deltas['checks_clean'] = ( self::$pending_deltas['checks_clean'] ?? 0 ) + 1;
 
 			return false;
@@ -514,16 +572,7 @@ class Protection extends BaseModul {
 			// Store context for the universal wp_mail hook to log sent mails
 			if ( MailLog::is_enabled() ) {
 				// Clean form data: remove internal/captcha fields
-				$clean = $array_post_data;
-				$strip = [
-					'_wpcf7', '_wpcf7_version', '_wpcf7_locale', '_wpcf7_unit_tag',
-					'_wpcf7_container_post', '_wpcf7_posted_data_hash', '_wpcf7_nonce',
-					'php_start_time', 'js_start_time', 'js_end_time',
-					'f12_captcha', 'f12_captcha_hash', '_wpnonce', 'behavior_nonce',
-				];
-				foreach ( $strip as $k ) {
-					unset( $clean[ $k ] );
-				}
+				$clean = self::strip_internal_fields( $array_post_data );
 
 				self::$last_passed_context = [
 					'form_plugin'  => $this->context_integration_id ?? '',
@@ -615,9 +664,13 @@ class Protection extends BaseModul {
 	 * Only logs when a form just passed spam validation (context is stored).
 	 * This ensures only form-related emails are logged, not password resets etc.
 	 *
-	 * @param array $args wp_mail arguments: to, subject, message, headers, attachments.
+	 * Typed as mixed, not array: this is a filter callback, and whatever ran before us on
+	 * `wp_mail` decides what arrives. The is_array() guard below is the reason we can hand
+	 * it straight back instead of fataling on someone else's return value.
 	 *
-	 * @return array Unmodified $args (pass-through filter).
+	 * @param mixed $args wp_mail arguments: to, subject, message, headers, attachments.
+	 *
+	 * @return mixed Unmodified $args (pass-through filter).
 	 */
 	public function capture_sent_mail( $args ) {
 		if ( self::$last_passed_context === null || ! is_array( $args ) ) {

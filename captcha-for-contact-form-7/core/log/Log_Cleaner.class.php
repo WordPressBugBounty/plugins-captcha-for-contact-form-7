@@ -42,7 +42,8 @@ class Log_Cleaner extends BaseModul
 		    'class'  => static::class
 	    ]);
 
-        add_action('weeklyIPClear', array($this, 'clean'));
+        // Wrapped: clean() returns a deleted-row count, which an action callback must not.
+        add_action('weeklyIPClear', function () { $this->clean(); });
     }
 
 
@@ -154,19 +155,27 @@ class Log_Cleaner extends BaseModul
 	/**
 	 * Resets the table in the logger.
 	 *
-	 * @return void
+	 * Returns how many rows went, like every other cleaner here. It used to return void
+	 * while the REST cleanup endpoint cast the result to int and reported it as the number
+	 * of deleted entries — so clearing all logs always claimed "0 entries deleted", in the
+	 * response and in the audit trail, however much it had actually removed.
+	 *
+	 * @return int Number of deleted rows.
 	 * @throws \Throwable
 	 * @deprecated
 	 */
-	public function reset_table(): void
+	public function reset_table(): int
 	{
 		try {
-			$this->Logger->reset_table();
+			$deleted = $this->Logger->reset_table();
 
 			$this->get_logger()->warning("Logger table reset", [
-				'plugin' => 'f12-cf7-captcha',
-				'class'  => static::class
+				'plugin'  => 'f12-cf7-captcha',
+				'class'   => static::class,
+				'deleted' => $deleted
 			]);
+
+			return $deleted;
 		} catch (\Throwable $e) {
 			$this->get_logger()->error("Error resetting logger table", [
 				'plugin' => 'f12-cf7-captcha',

@@ -131,37 +131,6 @@ namespace f12_cf7_captcha\ui {
 			}
 
 			/**
-			 * Get Page By Slug (get())
-			 *
-			 * @param string $slug
-			 *
-			 * @return UI_Page|null
-			 */
-			private function get_page_by_slug(string $slug): ?UI_Page
-			{
-				$this->get_logger()->info('Attempting to find a UI page by its slug.', [
-					'class' => __CLASS__,
-					'method' => __METHOD__,
-					'slug' => $slug,
-				]);
-
-				// Check if the slug exists in the `Page_Storage` array.
-				if (!isset($this->Page_Storage[$slug])) {
-					$this->get_logger()->warning('UI page not found.', ['requested_slug' => $slug]);
-					return null;
-				}
-
-				$page = $this->Page_Storage[$slug];
-
-				$this->get_logger()->info('UI page successfully found and retrieved.', [
-					'slug' => $slug,
-				]);
-
-				// Return the found UI_Page object.
-				return $page;
-			}
-
-			/**
 			 * Return the Storage of the Pages (getPages())
 			 *
 			 * @return UI_Page[]

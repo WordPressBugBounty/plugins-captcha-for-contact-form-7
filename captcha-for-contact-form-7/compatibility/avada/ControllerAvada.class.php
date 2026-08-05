@@ -132,7 +132,9 @@ class ControllerAvada extends BaseController {
 			'submit',
 			'fusion-fields-hold-private-data',
 			'form-id',
-			'f12_multiple_submission_protection',
+			// Covers every field this plugin injects, including the signed token and the
+			// per-render rotated names, whose exact spelling is not known here.
+			'f12_',
 			'js_start_time',
 			'js_end_time',
 			'php_start_time',
@@ -164,6 +166,5 @@ class ControllerAvada extends BaseController {
 				$last_visible_key => $message,
 			],
 		] );
-		return true;
 	}
 }

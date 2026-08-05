@@ -403,21 +403,6 @@ class Salt {
 	}
 
 	/**
-	 * Get the salt value for the object
-	 *
-	 * @return string The salt value
-	 */
-	private function get_salt(): string
-	{
-		$this->logger->debug('Retrieving the salt value.', [
-			'class' => __CLASS__,
-			'method' => __METHOD__,
-		]);
-
-		return $this->salt;
-	}
-
-	/**
 	 * Get the creation time of the object.
 	 * If the creation time is empty, it will generate a new DateTime object and set the creation time to the current
 	 * date and time.
@@ -661,12 +646,9 @@ class Salt {
 				'class' => __CLASS__,
 			]);
 
+			// create_salt() returns a non-empty string or throws.
 			$salt = $this->create_salt();
-			if(!empty($salt)) {
-				$this->logger->debug( 'Salt value successfully generated.', ["plugin" => "f12-cf7-captcha","salt" => $salt ] );
-			}else{
-				$this->logger->critical( 'Salt value could not be generated.', ["plugin" => "f12-cf7-captcha"] );
-			}
+			$this->logger->debug( 'Salt value successfully generated.', ["plugin" => "f12-cf7-captcha","salt" => $salt ] );
 		}
 
 		$hash = hash_hmac('sha512', $value, $this->salt);
@@ -702,7 +684,7 @@ class Salt {
 
 		$table = $this->get_table_name();
 
-		if (!is_numeric($offset) || $offset < 0) {
+		if ($offset < 0) {
 			$this->logger->error('Invalid offset value. Expected a non-negative integer.', [
 				"plugin" => "f12-cf7-captcha",
 				'offset' => $offset,
@@ -800,7 +782,7 @@ class Salt {
 	/**
 	 * Saves the object to the database.
 	 *
-	 * @return int|null The result of the save operation, or null if $wpdb is not available.
+	 * @return int The number of affected rows; 0 when $wpdb is not available.
 	 * @global wpdb $wpdb The WordPress database object.
 	 *
 	 */

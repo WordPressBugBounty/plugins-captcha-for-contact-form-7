@@ -61,6 +61,17 @@ function f12_cf7_captcha_maybe_show_review_notice() {
 			   class="button button-primary">
 				<?php esc_html_e( 'Leave a review now', 'captcha-for-contact-form-7' ); ?>
 			</a>
+			<?php
+			// The only path out of this notice used to be a public review. Someone who is
+			// unhappy has no other outlet, so the feedback lands as a one-star rating that
+			// nobody can answer. This gives them somewhere to say it to us instead.
+			?>
+			<a href="<?php echo esc_url( \f12_cf7_captcha\get_feedback_url( 'review-notice' ) ); ?>"
+			   target="_blank"
+			   rel="noopener"
+			   class="button">
+				<?php esc_html_e( 'Something not working? Tell us', 'captcha-for-contact-form-7' ); ?>
+			</a>
 			<a href="<?php echo esc_url( add_query_arg( 'f12_cf7_captcha_review_remind', '1' ) ); ?>"
 			   class="button">
 				<?php esc_html_e( 'Remind me later', 'captcha-for-contact-form-7' ); ?>

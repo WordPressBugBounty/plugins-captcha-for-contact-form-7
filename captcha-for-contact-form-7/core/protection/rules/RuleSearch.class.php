@@ -32,7 +32,7 @@ class RuleSearch extends Rule {
 	/**
 	 * Constructor method for the class.
 	 *
-	 * @param mixed  $words         The input words to be processed.
+	 * @param array<string> $words         The input words to be processed.
 	 * @param string $error_message (Optional) The error message to be displayed in case of any errors. Default is
 	 *                              empty string.
 	 * @param int    $greedy        (Optional) Flag to indicate whether to match all words or only the first one.
@@ -96,7 +96,12 @@ class RuleSearch extends Rule {
 	 *
 	 * Uses pre-compiled regex patterns for improved performance.
 	 *
-	 * @param string $value The input value to be checked for spam.
+	 * Arrays are real input here, not a defensive afterthought: a checkbox group or a
+	 * multi-select arrives as one, and the recursion below is what stops spam hidden in a
+	 * nested field from going unscanned. Declaring this string-only made that branch look
+	 * dead, so nothing was checking the path that matters most.
+	 *
+	 * @param string|array<mixed> $value The input value to be checked for spam.
 	 *
 	 * @return bool Returns true if the value is considered spam, otherwise false.
 	 */

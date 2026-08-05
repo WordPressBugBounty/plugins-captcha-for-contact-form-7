@@ -24,7 +24,8 @@ class CaptchaTimerCleaner extends BaseModul
 			'method' => __METHOD__,
 		]);
 
-		add_action('dailyCaptchaTimerClear', array($this, 'clean'));
+		// Wrapped: clean() returns a deleted-row count, which an action callback must not.
+		add_action('dailyCaptchaTimerClear', function () { $this->clean(); });
 		$this->get_logger()->debug('Hook "dailyCaptchaTimerClear" added for the "clean" method.');
 
 		$this->get_logger()->info('Constructor completed.');

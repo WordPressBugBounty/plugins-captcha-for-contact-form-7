@@ -32,10 +32,10 @@ class Backend {
      *
      * This method checks if the captcha value entered by the user is valid for the provided form tag.
      *
-     * @param WPCF7_ValidationResult $result The validation result object.
-     * @param WPCF7_FormTag          $tag    The form tag object.
+     * @param \WPCF7_ValidationResult $result The validation result object.
+     * @param \WPCF7_FormTag         $tag    The form tag object.
      *
-     * @return WPCF7_ValidationResult The updated validation result object.
+     * @return \WPCF7_ValidationResult The updated validation result object.
      */
     public function validateCaptcha( $result, $tag ) {
         /**

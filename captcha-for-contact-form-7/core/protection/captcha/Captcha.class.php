@@ -79,7 +79,7 @@ class Captcha
 		$this->logger->debug("New instance created", [
 			'plugin'    => 'f12-cf7-captcha',
 			'ip'        => $ip_address,
-			'paramKeys' => is_array($params) ? implode(',', array_keys($params)) : 'none'
+			'paramKeys' => implode(',', array_keys($params))
 		]);
 	}
 

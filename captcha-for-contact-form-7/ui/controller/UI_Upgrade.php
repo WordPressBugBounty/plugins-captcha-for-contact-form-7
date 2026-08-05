@@ -159,7 +159,7 @@ namespace f12_cf7_captcha {
 							<label style="font-size:13px; font-weight:600; display:block; margin-bottom:4px;">
 								<?php esc_html_e( 'Monthly Form Submissions', 'captcha-for-contact-form-7' ); ?>
 							</label>
-							<input type="number" id="f12-roi-submissions" value="<?php echo esc_attr( max( 100, $monthly_submissions ) ); ?>"
+							<input type="number" id="f12-roi-submissions" value="<?php echo esc_attr( (string) max( 100, $monthly_submissions ) ); ?>"
 							       style="width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:6px;"
 							       min="0" step="10" />
 						</div>
@@ -167,7 +167,7 @@ namespace f12_cf7_captcha {
 							<label style="font-size:13px; font-weight:600; display:block; margin-bottom:4px;">
 								<?php esc_html_e( 'Spam Rate (%)', 'captcha-for-contact-form-7' ); ?>
 							</label>
-							<input type="number" id="f12-roi-spam-rate" value="<?php echo esc_attr( max( 5, $spam_pct ) ); ?>"
+							<input type="number" id="f12-roi-spam-rate" value="<?php echo esc_attr( (string) max( 5, $spam_pct ) ); ?>"
 							       style="width:100%; padding:8px 12px; border:1px solid #d1d5db; border-radius:6px;"
 							       min="0" max="100" step="1" />
 						</div>

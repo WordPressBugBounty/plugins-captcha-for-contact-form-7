@@ -335,7 +335,12 @@ class Agent_Enforcer {
 	 * Evaluate the ordered rule list, first match wins (mirrors
 	 * agentpolicy.Evaluate). Returns the matching rule or null (→ allow).
 	 *
-	 * @param array<int,array<string,mixed>>                                     $rules
+	 * The rules come out of a decoded remote policy document, so an entry can be any JSON
+	 * value at all — hence array<int,mixed> rather than a promise about its shape, and hence
+	 * the is_array() guard on each one below. Declaring the shape here would make that guard
+	 * look redundant while the data can still arrive malformed.
+	 *
+	 * @param array<int,mixed>                                                   $rules
 	 * @param array{slug:string,category:string,behaviors:string[],verified:bool,spoof:bool,path?:string,method?:string} $input
 	 */
 	private static function evaluate( array $rules, array $input ): ?array {

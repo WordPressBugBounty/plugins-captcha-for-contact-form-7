@@ -205,12 +205,8 @@ class Multiple_Submission_Validator extends BaseProtection {
 		/**
 		 * @var Timer_Controller $Timer_Controller
 		 */
+		// get_module() throws when a module is missing, so there is no falsy return to guard.
 		$Timer_Controller = $this->Controller->get_module('timer');
-
-		if (!$Timer_Controller) {
-			$this->get_logger()->error('Timer controller module not found.');
-			return '';
-		}
 
 		$hash = $Timer_Controller->add_timer();
 		if (empty($hash)) {

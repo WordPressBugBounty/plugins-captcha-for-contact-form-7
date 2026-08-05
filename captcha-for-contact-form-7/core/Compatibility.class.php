@@ -18,7 +18,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Compatibility extends BaseModul {
 	/**
-	 * @var array<string, string>
+	 * Discovered integrations, keyed by class name.
+	 *
+	 * `object` appears once wp_register_components() has instantiated the controller, which
+	 * is why it is optional. This was declared as array<string, string> — the analyser then
+	 * read every entry as a plain string, decided the isset() checks on 'object' and 'path'
+	 * could never hold, and wrote off the rest of each method as unreachable. Thirteen
+	 * findings in this file came from that one line, and none of them meant anything.
+	 *
+	 * @var array<string, array{name: string, path: string, object?: BaseController}>
 	 */
 	private $components = array();
 	/**
@@ -111,15 +119,14 @@ class Compatibility extends BaseModul {
 		$active = [];
 
 		foreach ($this->components as $name => $component) {
-			if (!isset($component['object']) || !$component['object'] instanceof BaseController) {
+			if (!isset($component['object'])) {
 				continue;
 			}
 
 			$object = $component['object'];
 
 			try {
-				// Check via is_enabled() if the method exists
-				if (method_exists($object, 'is_enabled') && $object->is_enabled()) {
+				if ($object->is_enabled()) {
 					$active[] = basename(str_replace('\\', '/', $name));
 				}
 			} catch (\Throwable $e) {
@@ -192,20 +199,9 @@ class Compatibility extends BaseModul {
 			'method' => __METHOD__,
 		]);
 
+		// 'name' and 'path' are both written by load(), the only thing that fills this array,
+		// so there is nothing left to guard against here.
 		foreach ($this->components as $key => $component) {
-			// Ensure that the necessary array keys exist before accessing them.
-			if (!isset($component['name']) || !isset($component['path'])) {
-				$error_message = sprintf(
-					'Component key: %s, Name: %s, Path: %s not correctly initialized.',
-					$key,
-					$component['name'] ?? 'not defined', // Use Null Coalescing Operator for safe access
-					$component['path'] ?? 'not defined'
-				);
-				$this->get_logger()->error($error_message);
-				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception messages are not HTML output
-				throw new \RuntimeException( $error_message );
-			}
-
 			$this->get_logger()->debug('Registering component.', ['name' => $component['name'], 'path' => $component['path']]);
 
 			try {
@@ -297,11 +293,6 @@ class Compatibility extends BaseModul {
 				continue;
 			}
 
-			// Ensure that the second match result exists.
-			if (!isset($matches[1])) {
-				$this->get_logger()->warning('No class name found in filename.', ['file' => $entry]);
-				continue;
-			}
 
 			$class_name_part = $matches[1];
 

@@ -76,11 +76,6 @@ namespace f12_cf7_captcha\ui {
 				foreach ($this->Plugin_UI_Pages as $item) {
 					$this->get_logger()->debug('Processing page for registration.', ['item' => $item]);
 
-					// Skip invalid entries that are missing the path or name.
-					if (!isset($item['path']) || !isset($item['name'])) {
-						$this->get_logger()->warning('Invalid UI page entry skipped because "path" or "name" is missing.');
-						continue;
-					}
 
 					try {
 						// Load the UI page class file.
@@ -170,11 +165,6 @@ namespace f12_cf7_captcha\ui {
 						continue;
 					}
 
-					// Ensure that the second match (the page name) exists.
-					if (!isset($matches[1])) {
-						$this->get_logger()->warning('File name matches the pattern but could not extract the page name.', ['file' => $entry]);
-						continue;
-					}
 
 					// Add the found UI page to the internal storage.
 					$this->Plugin_UI_Pages[] = [

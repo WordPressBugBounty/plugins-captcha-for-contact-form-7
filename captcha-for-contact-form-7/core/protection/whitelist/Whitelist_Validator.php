@@ -29,27 +29,22 @@ class Whitelist_Validator extends BaseProtection {
 		] );
 	}
 
+	/**
+	 * The whitelist has no on/off setting — it is always active, and the filter is the only
+	 * way to turn it off. The old shape pretended otherwise with an if/else over a variable
+	 * that was hardcoded true.
+	 */
 	protected function is_enabled(): bool {
-		$is_enabled = true;
+		$this->get_logger()->info( 'Whitelist is enabled.', [
+			'class'  => __CLASS__,
+			'method' => __METHOD__,
+		] );
 
-		if ( $is_enabled ) {
-			$this->get_logger()->info( 'Whitelist is enabled.', [
-				'class'  => __CLASS__,
-				'method' => __METHOD__,
-			] );
-		} else {
-			$this->get_logger()->warning( 'Whitelist is disabled.', [
-				'class'  => __CLASS__,
-				'method' => __METHOD__,
-			] );
-		}
+		$result = apply_filters( 'f12-cf7-captcha-skip-validation-whitelist', true );
 
-		$result = apply_filters( 'f12-cf7-captcha-skip-validation-whitelist', $is_enabled );
-
-		if ( $is_enabled && ! $result ) {
+		if ( ! $result ) {
 			$this->get_logger()->debug( 'Whitelist skipped by filter.', [
-				'filter'         => 'f12-cf7-captcha-skip-validation-whitelist',
-				'original_state' => $is_enabled,
+				'filter' => 'f12-cf7-captcha-skip-validation-whitelist',
 			] );
 		}
 
@@ -135,7 +130,7 @@ class Whitelist_Validator extends BaseProtection {
 	 */
 	private function is_whitelisted_ajax_or_rest(): bool {
 		// WooCommerce / PayPal AJAX
-		$is_ajax_request = defined('DOING_AJAX') && DOING_AJAX;
+		$is_ajax_request = wp_doing_ajax();
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Nonce verified by the form plugin
 		$wc_ajax_action  = isset($_REQUEST['wc-ajax']) ? sanitize_text_field( wp_unslash( $_REQUEST['wc-ajax'] ) ) : '';
 

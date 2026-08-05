@@ -3,6 +3,7 @@
 namespace f12_cf7_captcha\core\log;
 
 use f12_cf7_captcha\CF7Captcha;
+use f12_cf7_captcha\core\protection\Protection;
 use Forge12\Shared\LoggerInterface;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -203,15 +204,8 @@ class MailLog {
 		$body      = $post_data['your-message'] ?? $post_data['message'] ?? '';
 
 		// Strip captcha/timing fields from stored form data
-		$clean_data = $post_data;
-		unset(
-			$clean_data['php_start_time'],
-			$clean_data['js_start_time'],
-			$clean_data['js_end_time'],
-			$clean_data['f12_captcha'],
-			$clean_data['_wpcf7_unit_tag'],
-			$clean_data['_wpnonce']
-		);
+		$clean_data = Protection::strip_internal_fields( $post_data );
+		unset( $clean_data['_wpcf7_unit_tag'] );
 
 		$data = [
 			'form_plugin'  => $form_plugin,

@@ -87,8 +87,57 @@ class UI_ReactApp {
 			}
 		}
 
+		$this->add_feedback_menu_item();
+
 		// Add type="module" to the script tag so dynamic imports (code splitting) work
 		add_filter( 'script_loader_tag', [ $this, 'add_module_type' ], 10, 3 );
+	}
+
+	/**
+	 * A permanent way out of the plugin for someone who has a problem.
+	 *
+	 * The review notice only appears after ten days and twenty blocked attempts, and it can
+	 * be dismissed for good — so it cannot be the only route. This one is always there.
+	 *
+	 * add_submenu_page() cannot point at an external address, so the entry is registered
+	 * normally and its href rewritten afterwards.
+	 */
+	private function add_feedback_menu_item(): void {
+		$slug = 'silentshield-feedback';
+
+		add_submenu_page(
+			'f12-cf7-captcha',
+			__( 'Feedback', 'captcha-for-contact-form-7' ),
+			__( 'Feedback & Support', 'captcha-for-contact-form-7' ),
+			'manage_options',
+			$slug,
+			'__return_null'
+		);
+
+		global $submenu;
+
+		if ( ! isset( $submenu['f12-cf7-captcha'] ) ) {
+			return;
+		}
+
+		$url = \f12_cf7_captcha\get_feedback_url( 'admin-menu' );
+
+		foreach ( $submenu['f12-cf7-captcha'] as &$item ) {
+			if ( isset( $item[2] ) && $item[2] === $slug ) {
+				$item[2] = $url;
+				break;
+			}
+		}
+		unset( $item );
+
+		// WordPress has no way to mark a menu entry as external, and throwing an admin out of
+		// the dashboard to file a bug report is a good way to lose the report.
+		add_action( 'admin_footer', static function () use ( $url ) {
+			printf(
+				'<script>document.querySelectorAll(\'#adminmenu a[href="%s"]\').forEach(function(a){a.target="_blank";a.rel="noopener";});</script>',
+				esc_js( $url )
+			);
+		} );
 	}
 
 	/**
@@ -312,6 +361,9 @@ class UI_ReactApp {
 				'pluginUrl' => esc_url_raw( plugin_dir_url( __FILE__ ) ),
 				'iconUrl'   => esc_url_raw( plugin_dir_url( __FILE__ ) . 'assets/icon-captcha-20x20.png' ),
 				'siteUrl'   => home_url(),
+				// Built server-side so the version is attached in one place — see core/feedback.php.
+				'feedbackUrl' => esc_url_raw( \f12_cf7_captcha\get_feedback_url( 'help-page' ) ),
+				'supportUrl'  => esc_url_raw( \f12_cf7_captcha\get_support_url( 'help-page' ) ),
 			] );
 		}
 	}

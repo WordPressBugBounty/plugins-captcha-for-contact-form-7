@@ -96,8 +96,8 @@ namespace f12_cf7_captcha\ui {
 		 *
 		 * @access public
 		 *
-		 * @param mixed $message
-		 * @param mixed $type
+		 * @param string $message
+		 * @param string $type
 		 *
 		 * @return void
 		 */

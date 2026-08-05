@@ -149,7 +149,11 @@ class Form_Discovery {
 			return true;
 		}
 
-		// Check if it's a function, class, or constant
+		// A probe is whichever of the three a plugin happens to expose. Every entry in
+		// INTEGRATIONS is currently a class or a constant, so this first branch never fires
+		// today — it stays because adding a function-based probe should not need a code
+		// change here, and because dropping it would silently break the next one added.
+		// @phpstan-ignore function.impossibleType
 		if ( function_exists( $check ) ) {
 			return true;
 		}

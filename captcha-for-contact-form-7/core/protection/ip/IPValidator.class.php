@@ -22,7 +22,7 @@ class IPValidator extends BaseProtection {
 	/**
 	 * Class constructor.
 	 *
-	 * @param CF7Captcha|null $Controller The CF7Captcha object. (optional)
+	 * @param CF7Captcha $Controller The CF7Captcha object. (optional)
 	 *
 	 * @return void
 	 */

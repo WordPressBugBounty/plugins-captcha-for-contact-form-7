@@ -4,7 +4,6 @@ namespace f12_cf7_captcha\core;
 
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\log\Array_Formatter;
-use forge12\contactform7\CF7Captcha\core\log\Log_Item;
 use Forge12\Shared\Logger;
 use Forge12\Shared\LoggerInterface;
 use RuntimeException;
@@ -201,7 +200,6 @@ class Log_WordPress implements Log_WordPress_Interface {
 			'capability_type'    => 'post',
 			'has_archive'        => true,
 			'hierarchical'       => false,
-			'menu_position'      => null,
 			'supports'           => array( 'title', 'editor' ),
 			'taxonomies'         => array( 'log_status' )
 		);
@@ -210,7 +208,14 @@ class Log_WordPress implements Log_WordPress_Interface {
 	}
 
 	/**
-	 * Register a new taxonomy for the "deals" post type.
+	 * Register the log_status taxonomy for the captcha log post type.
+	 *
+	 * This used to name a "deals" post type that does not exist in this plugin — left over
+	 * from wherever the code was copied from. It still worked, because wp_register_post_type()
+	 * lists the taxonomy in its own `taxonomies` argument and that is what created the real
+	 * association. The dead name was not harmless though: WordPress kept the taxonomy bound
+	 * to `deals` as well, so if any other plugin ever registered a post type by that name,
+	 * our Status column (show_admin_column) would have appeared in their list table.
 	 *
 	 * @return void
 	 */
@@ -222,7 +227,7 @@ class Log_WordPress implements Log_WordPress_Interface {
 		);
 
 		try {
-			register_taxonomy( 'log_status', array( 'deals' ), array(
+			register_taxonomy( 'log_status', array( 'f12_captcha_log' ), array(
 				'hierarchical'      => false,
 				'labels'            => $labels,
 				'show_ui'           => true,
@@ -234,7 +239,7 @@ class Log_WordPress implements Log_WordPress_Interface {
 			$this->get_logger()->info("Taxonomy registered", [
 				'plugin'     => 'f12-cf7-captcha',
 				'taxonomy'   => 'log_status',
-				'post_types' => ['deals']
+				'post_types' => ['f12_captcha_log']
 			]);
 		} catch (\Throwable $e) {
 			$this->get_logger()->error("Error registering taxonomy", [
@@ -248,7 +253,7 @@ class Log_WordPress implements Log_WordPress_Interface {
 		/*
 		 * Create the default taxonomies if not exists
 		 */
-		$terms = get_terms('log_status');
+		$terms = get_terms( [ 'taxonomy' => 'log_status', 'hide_empty' => false ] );
 		$defaultTerms = [ 'spam' => 'Spam', 'verified' => 'Verified' ];
 
 		foreach ($terms as $term) {
@@ -295,7 +300,7 @@ class Log_WordPress implements Log_WordPress_Interface {
 	/**
 	 * Check if the logging is enabled.
 	 *
-	 * @return int Return 1 for true, 0 for false.
+	 * @return bool
 	 *
 	 * @since 1.12.3
 	 */
@@ -470,7 +475,7 @@ class Log_WordPress implements Log_WordPress_Interface {
 		/*
 		 * Check if the post has been created
 		 */
-		if ( ! is_numeric( $post_id ) || 0 === $post_id ) {
+		if ( 0 === $post_id ) {
 			$this->last_insert_id = 0;
 
 			$this->get_logger()->error("Log could not be saved", [
@@ -527,7 +532,7 @@ class Log_WordPress implements Log_WordPress_Interface {
 			$this->get_logger()->debug("Last log entry loaded", [
 				'plugin' => 'f12-cf7-captcha',
 				'post_id'=> $this->last_insert_id,
-				'title'  => $post->post_title ?? 'unknown'
+				'title'  => $post->post_title
 			]);
 			return $post;
 		}
@@ -537,42 +542,6 @@ class Log_WordPress implements Log_WordPress_Interface {
 			'post_id'=> $this->last_insert_id
 		]);
 		return null;
-	}
-
-
-	/**
-	 * @param Log_Item $Log_Item
-	 *
-	 * @return void
-	 * @deprecated
-	 * @see Log_WordPress::maybe_log()
-	 *
-	 */
-	public static function store( $Log_Item ) {
-		$logger = \Forge12\Shared\Logger::getInstance();
-		$log_wp = Log_WordPress::get_instance();
-
-		if ( ! $log_wp->is_logging_enabled() ) {
-			$logger->debug("Logging skipped - disabled", [
-				'plugin'   => 'f12-cf7-captcha',
-				'log_item' => method_exists($Log_Item, 'get_name') ? $Log_Item->get_name() : 'unknown'
-			]);
-			return;
-		}
-
-		$is_spam = $Log_Item->get_log_status_slug() === 'spam';
-
-		$logger->info("Log item being saved", [
-			'plugin'   => 'f12-cf7-captcha',
-			'name'     => $Log_Item->get_name(),
-			'status'   => $is_spam ? 'spam' : 'verified'
-		]);
-
-		$log_wp->maybe_log(
-			$Log_Item->get_name(),
-			$Log_Item->get_properties(),
-			$is_spam
-		);
 	}
 
 
@@ -702,9 +671,9 @@ class Log_WordPress implements Log_WordPress_Interface {
 	/**
 	 * Deletes records older than a specified create time from the database table.
 	 *
-	 * @param int $create_time The create time threshold. Only records created before this time will be deleted.
+	 * @param string $create_time The threshold, formatted Y-m-d H:i:s. Only older records go.
 	 *
-	 * @return string The number of records deleted. Format: Y-m-d H:i:s
+	 * @return int The number of records deleted.
 	 * @throws RuntimeException When WPDB is not defined.
 	 */
 	public function delete_older_than( string $create_time ): int {

@@ -69,7 +69,6 @@ class ControllerUltimateMember extends BaseController
         if ($Protection->is_spam($array_post_data)) {
             $this->get_logger()->warning('Spam detected!');
             $Protection->clear_context();
-            $this->is_valid = false;
 
             if (function_exists('UM')) {
                 $message = $Protection->get_message();

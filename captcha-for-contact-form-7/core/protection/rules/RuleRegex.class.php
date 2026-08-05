@@ -86,7 +86,10 @@ class RuleRegex extends Rule {
 	/**
 	 * Determines if the given value is considered spam based on a regular expression match.
 	 *
-	 * @param string $value The value to be checked for spam.
+	 * Arrays are real input — a nested field arrives as one and the recursion below is what
+	 * scans it. See RuleSearch::is_spam().
+	 *
+	 * @param string|array<mixed> $value The value to be checked for spam.
 	 *
 	 * @return bool Returns true if the value is considered spam, false otherwise.
 	 */

@@ -257,19 +257,19 @@ namespace f12_cf7_captcha {
 			check_ajax_referer( 'f12_dismiss_upgrade_prompt' );
 
 			if ( ! current_user_can( 'manage_options' ) ) {
-				wp_die( -1 );
+				wp_die( '-1' );
 			}
 
 			$trigger = sanitize_text_field( wp_unslash( $_POST['trigger'] ?? '' ) );
 			if ( empty( $trigger ) ) {
-				wp_die( -1 );
+				wp_die( '-1' );
 			}
 
 			$dismissed = get_option( self::OPTION_DISMISSED, [] );
 			$dismissed[ $trigger ] = time() + ( 7 * DAY_IN_SECONDS );
 			update_option( self::OPTION_DISMISSED, $dismissed );
 
-			wp_die( 1 );
+			wp_die( '1' );
 		}
 
 		/**

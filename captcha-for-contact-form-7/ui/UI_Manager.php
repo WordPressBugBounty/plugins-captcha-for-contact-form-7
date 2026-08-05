@@ -63,12 +63,6 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private $UI_Message = null;
 
-			/**
-			 * The WordPress Menu Integration
-			 *
-			 * @var UI_WordPress|null
-			 */
-			private $UI_WordPress = null;
 
 			/**
 			 * Array containing all instances for the different ui managers
@@ -96,15 +90,9 @@ namespace f12_cf7_captcha\ui {
 			 */
 			private $namespace;
 
-			/**
-			 * @var UI_Menu
-			 */
-			private $UI_Menu = null;
-
-			/**
-			 * @var UI_Page_Plugin_Loader
-			 */
-			private $UI_Page_Plugin_Loader = null;
+			// UI_WordPress, UI_Menu and UI_Page_Plugin_Loader used to be held in properties
+			// nothing ever read. Their constructors register WordPress hooks, and that is what
+			// keeps them alive — the properties only made it look like something needed them.
 
 			/**
 			 * Get an instance of the object. If it doesn't exist, create one.
@@ -155,12 +143,12 @@ namespace f12_cf7_captcha\ui {
 				$this->set_namespace( $namespace );
 				$this->set_icon( $icon );
 
-				$this->UI_WordPress          = new UI_WordPress( $this );
-				$this->UI_Page_Plugin_Loader = new UI_Page_Plugin_Loader( $this );
+				new UI_WordPress( $this );
+				new UI_Page_Plugin_Loader( $this );
 				$this->UI_Page_Manager       = new UI_Page_Manager( $this );
 				$this->UI_Asset_Handler      = new UI_Asset_Handler( $this );
 				$this->UI_Message            = new UI_Message( $this );
-				$this->UI_Menu               = new UI_Menu( $this );
+				new UI_Menu( $this );
 
 				// Called after all Pages have been initialized.
 				// Defer to 'init' so that translation functions (__(), etc.) are available.

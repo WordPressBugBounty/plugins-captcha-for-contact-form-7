@@ -158,19 +158,22 @@ class IPBan
 	}
 
 
-    /**
-     * Reset the table by deleting all records.
-     *
-     * @return bool True if the table was reset successfully; otherwise, false.
-     * @global wpdb $wpdb The WordPress database object.
-     *
-     */
-	public function reset_table(): bool
+	/**
+	 * Empty the ban table.
+	 *
+	 * Returns the row count, not a success flag. It used to throw the count away and return
+	 * a bool, which IPBanCleaner then handed on as its declared int — so PHP turned "it
+	 * worked" into 1 and the cleanup in the admin reported exactly one deleted entry no
+	 * matter how many bans it had just cleared.
+	 *
+	 * @return int Number of deleted rows; 0 when the query failed.
+	 */
+	public function reset_table(): int
 	{
 		global $wpdb;
 
 		if (null === $wpdb) {
-			return false;
+			return 0;
 		}
 
 		$wp_table_name = $this->get_table_name();
@@ -179,9 +182,9 @@ class IPBan
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
 			$rows = $wpdb->query(sprintf('DELETE FROM %s', $wp_table_name));
 
-			return $rows !== false;
+			return false === $rows ? 0 : (int) $rows;
 		} catch (\Throwable $e) {
-			return false;
+			return 0;
 		}
 	}
 
@@ -272,18 +275,6 @@ class IPBan
 	public function get_id(): int
 	{
 		return (int) $this->id;
-	}
-
-    /**
-     * Set the ID of the object.
-     *
-     * @param int $id The ID to set.
-     *
-     * @return void
-     */
-	private function set_id(int $id): void
-	{
-		$this->id = $id;
 	}
 
     /**
