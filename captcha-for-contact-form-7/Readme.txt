@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.12.0
+Stable tag: 2.12.1
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -48,7 +48,7 @@ SilentShield protects forms from all major WordPress form builders and core feat
 **Form Builders:**
 - Contact Form 7 (CF7)
 - WPForms / WPForms Lite
-- Elementor Pro Forms
+- Elementor Pro Forms (classic widget and v4 "atomic" forms)
 - Gravity Forms
 - Fluent Forms
 - JetFormBuilder
@@ -188,6 +188,14 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.12.1 =
+- New [Elementor]: Elementor's new v4 forms — the "atomic" forms, built on the new element system — are now protected. They were not before, and not because the protection failed on them: these forms assemble what they send entirely in the browser and only include the fields Elementor itself placed, so everything this plugin adds was dropped on the way out and the form arrived looking like an ordinary, unprotected submission. Its fields now travel with the request. Nothing of ours appears in your notification email or in the submissions table, and the classic Elementor form widget is unaffected.
+- Fix [Captcha]: On sites with page caching the reload button stopped working, and did so silently. The button sent a security token that WordPress stamps into the page itself and only accepts for about a day; a cached page keeps serving that token long after it has expired, and WordPress then turned every click away before the plugin ever saw it. The button no longer sends that token. It does not need one — the address the request comes from is checked instead, which a cache cannot invalidate. This affects the same on every form plugin, not only Contact Form 7.
+- Fix [Captcha]: If your site sends visitors' browsers the instruction not to disclose which page they came from — a common privacy setting, and one some privacy extensions apply on their own — the reload button, the audio button and the timing refresh were refused outright. They were relying on exactly the information that setting withholds. They now use signals the browser sends regardless, so the setting no longer costs you a working captcha.
+- Fix [Captcha]: The limit on how often a new captcha could be requested was counted per address as your server reports it. Behind a CDN or load balancer that is one and the same address for everybody, so all your visitors together shared a single allowance of thirty requests a minute — busy enough sites simply ran out, and the reload button then stopped working for everyone at once. The limit now counts each visitor separately, using the proxy setting you may already have configured.
+- Fix [Captcha]: A reload that failed used to leave no trace whatsoever: the old captcha stayed on screen, nothing was said, and nothing was written to the browser console unless you knew about an undocumented debug switch. There was no way to tell a refused request from a broken connection, and nothing useful a visitor could report. A failed reload now says so next to the captcha and records the reason in the browser console.
+- Fix [Admin]: The SilentShield navigation column could disappear entirely, leaving no way to reach any of its screens — the sidebar was still on the page, but hidden, and the button meant to bring it back did nothing. The plugin's own styling was competing on equal footing with a rule WordPress itself ships, and which of the two won came down to the order the stylesheets happened to load in. A theme, another plugin, or anything that combines stylesheets could tip it. The sidebar no longer depends on winning that race.
+
 = 2.12.0 =
 - Fix [Admin]: On sites whose permalinks are set to "Plain", several screens inside the plugin were simply empty — the Audit Log, the Mail Log and the Analytics figures showed nothing at all, no matter how much had actually been recorded. The records were never lost; the plugin was asking WordPress for them with a malformed address and getting nothing back. All of those screens fill in again after this update. Sites using any other permalink setting were never affected.
 - New [Setup]: A newly installed plugin protects nothing until you switch on the form plugins you use, and until now nothing said so — it sat in your plugin list marked "active" while every form on the site was still wide open. There is now a notice in the WordPress admin, and a panel on the SilentShield dashboard, naming the form plugins found on your site and linking straight to the screen where you turn them on. Nothing is enabled for you: switching on something like the WordPress login form uninvited is how people end up locked out of their own site. Both disappear as soon as anything is protected.

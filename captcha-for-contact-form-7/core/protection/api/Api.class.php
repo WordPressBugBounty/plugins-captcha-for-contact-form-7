@@ -115,12 +115,25 @@ class Api extends BaseProtection {
                 $endpoint .= ( strpos( $endpoint, '?' ) === false ? '?' : '&' ) . 'verbose=1';
             }
 
+            // The page the form was submitted from. Sent so the dashboard can
+            // name a form the server checks but no scan ever found — this
+            // server-to-server call carries no Referer of its own, so this is
+            // the only way that page reaches SilentShield. It never affects the
+            // verdict. wp_get_referer() checks the _wp_http_referer field and
+            // the HTTP_REFERER header; false (stripped / direct POST) simply
+            // means no page is sent.
+            $verify_body = [ 'nonce' => $nonce ];
+            $page_url    = wp_get_referer();
+            if ( is_string( $page_url ) && $page_url !== '' ) {
+                $verify_body['page_url'] = mb_substr( $page_url, 0, 1024 );
+            }
+
             $response = wp_remote_post( $endpoint, [
                 'headers' => [
                     'Content-Type' => 'application/json',
                     'api-key'      => $api_key,
                 ],
-                'body'    => wp_json_encode( [ 'nonce' => $nonce ] ),
+                'body'    => wp_json_encode( $verify_body ),
                 'timeout' => 5,
             ] );
 

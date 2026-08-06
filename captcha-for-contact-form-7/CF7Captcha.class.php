@@ -752,8 +752,16 @@ class CF7Captcha {
 
 		$atts = array(
 			'resturl'    => rest_url( 'f12-cf7-captcha/v1/' ),
+			// Kept for backwards compatibility with third-party code reading this value.
+			// The plugin's own public endpoints (captcha/reload, captcha/audio, timer/reload)
+			// deliberately no longer send it: a nonce baked into cached HTML goes stale and
+			// WordPress core then rejects the request with 403 before the endpoint's own
+			// origin check runs. See RestController::validate_public_request().
 			'restnonce'  => wp_create_nonce( 'wp_rest' ),
 			'components' => $active_components,
+			'i18n'       => array(
+				'reloadFailed' => __( 'Could not load a new captcha. Please try again.', 'captcha-for-contact-form-7' ),
+			),
 		);
 
 		wp_enqueue_script(

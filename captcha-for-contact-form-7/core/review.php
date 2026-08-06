@@ -44,6 +44,11 @@ function f12_cf7_captcha_maybe_show_review_notice() {
 		return;
 	}
 
+	// Claim this screen. The credit-link notice runs later on the same hook and stands down
+	// when it sees this — asking a site owner for two favours at once is how a plugin earns a
+	// one-star review, and the review request is the more valuable of the two.
+	$GLOBALS['f12_cf7_captcha_review_notice_shown'] = true;
+
 	?>
 	<div class="notice notice-info is-dismissible f12-cf7-captcha-review-notice">
 		<p>

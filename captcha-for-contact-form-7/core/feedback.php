@@ -29,14 +29,29 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Reachable without an account: most of the people with something to say are free
  * wordpress.org users who have never logged in anywhere.
  */
-const FEEDBACK_URL = 'https://silentshield.io/feedback';
+/**
+ * The language segment silentshield.io expects.
+ *
+ * The site serves /de and /en; the bare domain only offers a chooser. Shared by every link
+ * the plugin builds to the product site so they cannot drift apart — which they had, with the
+ * sidebar showing two links that respected the site language next to one that did not.
+ *
+ * @return string 'de' or 'en'.
+ */
+function product_lang(): string {
+	$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+
+	return strpos( (string) $locale, 'de' ) === 0 ? 'de' : 'en';
+}
+
+const FEEDBACK_URL = 'https://silentshield.io/%s/feedback';
 
 /**
  * Support — for "I need help with my installation".
  *
  * May sit behind the login, since accounts live on the same domain.
  */
-const SUPPORT_URL = 'https://silentshield.io/support';
+const SUPPORT_URL = 'https://silentshield.io/%s/support';
 
 /**
  * Build a feedback link.
@@ -56,7 +71,7 @@ function get_feedback_url( string $from = '' ): string {
 		$args['from'] = $from;
 	}
 
-	return add_query_arg( $args, FEEDBACK_URL );
+	return add_query_arg( $args, sprintf( FEEDBACK_URL, product_lang() ) );
 }
 
 /**
@@ -73,5 +88,5 @@ function get_support_url( string $from = '' ): string {
 		$args['from'] = $from;
 	}
 
-	return add_query_arg( $args, SUPPORT_URL );
+	return add_query_arg( $args, sprintf( SUPPORT_URL, product_lang() ) );
 }

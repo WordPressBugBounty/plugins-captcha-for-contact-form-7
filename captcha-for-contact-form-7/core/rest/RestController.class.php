@@ -2291,60 +2291,159 @@ class RestController extends BaseModul {
 	/**
 	 * Validates the request origin for public REST endpoints.
 	 *
-	 * For authenticated users: validates the X-WP-Nonce header.
-	 * For unauthenticated users: validates the referer header.
+	 * These endpoints are reachable by logged-out visitors by design: they hand out a fresh
+	 * captcha, its audio rendering, or a fresh timer hash. They must therefore stay reachable
+	 * for *every* visitor, which rules out the two things this used to rely on.
+	 *
+	 * It used to accept a valid `wp_rest` nonce, else a same-host `Referer`. Both were wrong:
+	 *
+	 * - The nonce could never survive a page cache. It is baked into the HTML by
+	 *   wp_create_nonce() and dies after ~24h, and once it is stale WordPress core rejects the
+	 *   request itself — rest_cookie_check_errors() returns 403 rest_cookie_invalid_nonce for a
+	 *   *present but invalid* nonce before any permission_callback runs (wp-includes/rest-api.php).
+	 *   The fallback below was therefore unreachable in exactly the case it was written for.
+	 *   The client no longer sends the header at all; core steps aside when none is present.
+	 *   Nothing of value is lost: for a logged-out visitor wp_create_nonce('wp_rest') binds to
+	 *   user 0 with no session token, so every anonymous visitor on the site shares one value
+	 *   that anyone can read off the homepage.
+	 * - `Referer` is optional. A site sending `Referrer-Policy: no-referrer`, a privacy
+	 *   extension or an intermediary strips it, and rejecting on its absence turned a privacy
+	 *   setting into a dead captcha.
+	 *
+	 * What replaces them, strongest signal first:
+	 *
+	 * 1. `Sec-Fetch-Site` — set by the browser and unforgeable from a page (forbidden header
+	 *    name), so it is a harder anti-CSRF signal than the anonymous nonce ever was.
+	 * 2. `Origin` — survives `Referrer-Policy` (verified: a POST with `no-referrer` still
+	 *    carries Origin), and is likewise not settable from page script.
+	 * 3. `Referer` — kept only for clients too old to send either of the above.
+	 *
+	 * When a cross-origin caller is positively identified the request is refused. When none of
+	 * the three is present nothing is claimed either way, so the request is allowed and
+	 * check_rate_limit() carries it — a public endpoint must not fail closed on headers the
+	 * client is free to omit. Abuse of these routes is resource consumption, not privilege, and
+	 * the rate limiter is the control that actually addresses it.
 	 *
 	 * @return bool True if request is valid, false otherwise.
 	 */
 	public function validate_public_request(): bool {
-		// Check for WordPress REST API nonce (authenticated users)
-		$nonce = '';
-		if ( isset( $_SERVER['HTTP_X_WP_NONCE'] ) ) {
-			$nonce = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_WP_NONCE'] ) );
-		}
+		$site_host = wp_parse_url( home_url(), PHP_URL_HOST );
 
-		// If nonce is present and valid, allow the request
-		if ( ! empty( $nonce ) && wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+		// 1. Sec-Fetch-Site. "same-origin" and "same-site" are ours; "none" is a direct
+		//    navigation. Only "cross-site" is a positive cross-origin identification.
+		if ( isset( $_SERVER['HTTP_SEC_FETCH_SITE'] ) ) {
+			$fetch_site = sanitize_text_field( wp_unslash( $_SERVER['HTTP_SEC_FETCH_SITE'] ) );
+
+			if ( 'cross-site' === $fetch_site ) {
+				$this->get_logger()->warning(
+					'Request rejected: cross-site fetch.',
+					[
+						'plugin'     => 'f12-cf7-captcha',
+						'endpoint'   => 'public',
+						'fetch_site' => $fetch_site,
+					]
+				);
+				return false;
+			}
+
 			return true;
 		}
 
-		// For unauthenticated users, validate referer
+		// 2. Origin.
+		if ( ! empty( $_SERVER['HTTP_ORIGIN'] ) ) {
+			$origin_host = wp_parse_url(
+				esc_url_raw( wp_unslash( $_SERVER['HTTP_ORIGIN'] ) ),
+				PHP_URL_HOST
+			);
+
+			if ( $origin_host !== $site_host ) {
+				$this->get_logger()->warning(
+					'Request rejected due to foreign origin.',
+					[
+						'plugin'      => 'f12-cf7-captcha',
+						'site_host'   => $site_host,
+						'origin_host' => $origin_host,
+					]
+				);
+				return false;
+			}
+
+			return true;
+		}
+
+		// 3. Referer, for clients that send neither of the above.
 		$referer = wp_get_referer();
 		if ( empty( $referer ) ) {
-			// Also check HTTP_REFERER directly as fallback
 			$referer = isset( $_SERVER['HTTP_REFERER'] )
 				? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) )
 				: '';
 		}
 
-		if ( empty( $referer ) ) {
-			$this->get_logger()->warning(
-				'Request rejected due to missing referer.',
-				[
-					'plugin'   => 'f12-cf7-captcha',
-					'endpoint' => 'public',
-				]
-			);
-			return false;
+		if ( ! empty( $referer ) ) {
+			$referer_host = wp_parse_url( $referer, PHP_URL_HOST );
+
+			if ( $referer_host !== $site_host ) {
+				$this->get_logger()->warning(
+					'Request rejected due to foreign host.',
+					[
+						'plugin'       => 'f12-cf7-captcha',
+						'site_host'    => $site_host,
+						'referer_host' => $referer_host,
+					]
+				);
+				return false;
+			}
+
+			return true;
 		}
 
-		// Verify referer is from the same site
-		$site_host    = wp_parse_url( home_url(), PHP_URL_HOST );
-		$referer_host = wp_parse_url( $referer, PHP_URL_HOST );
-
-		if ( $site_host !== $referer_host ) {
-			$this->get_logger()->warning(
-				'Request rejected due to foreign host.',
-				[
-					'plugin'       => 'f12-cf7-captcha',
-					'site_host'    => $site_host,
-					'referer_host' => $referer_host,
-				]
-			);
-			return false;
-		}
+		// Nothing identifies the caller either way. Allowed on purpose — see the note above.
+		$this->get_logger()->debug(
+			'Public request carries no origin signal; deferring to the rate limiter.',
+			[
+				'plugin'   => 'f12-cf7-captcha',
+				'endpoint' => 'public',
+			]
+		);
 
 		return true;
+	}
+
+	/**
+	 * The requesting client's IP, as the rest of the plugin determines it.
+	 *
+	 * Deliberately not `$_SERVER['REMOTE_ADDR']`. Behind a reverse proxy or CDN that is the
+	 * proxy's address, identical for every visitor, so an IP-keyed rate limit degenerates into
+	 * a single site-wide budget — 30 captcha reloads per minute for the whole site, after which
+	 * the reload button silently stops working for everyone. UserData::get_ip_address() honours
+	 * the F12_TRUSTED_PROXY_HEADER constant the site operator configures for exactly this, and
+	 * falls back to REMOTE_ADDR when it is unset, so the unproxied case is unchanged.
+	 *
+	 * @return string Client IP, or '0.0.0.0' when it cannot be determined.
+	 */
+	private function get_client_ip(): string {
+		// get_module() throws when the module is not registered. This runs on the rate-limit
+		// path of every public request, so it degrades to REMOTE_ADDR rather than turning a
+		// missing module into a failed captcha reload.
+		try {
+			$ip = $this->Controller->get_module( 'user-data' )->get_ip_address();
+
+			if ( ! empty( $ip ) ) {
+				return $ip;
+			}
+		} catch ( \Throwable $e ) {
+			$this->get_logger()->warning(
+				'Could not resolve the client IP via user-data; falling back to REMOTE_ADDR.',
+				[
+					'plugin' => 'f12-cf7-captcha',
+					'error'  => $e->getMessage(),
+				]
+			);
+		}
+
+		return isset( $_SERVER['REMOTE_ADDR'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+			: '0.0.0.0';
 	}
 
 	/**
@@ -2357,7 +2456,7 @@ class RestController extends BaseModul {
 	 */
 	private function check_rate_limit( string $endpoint, ?int $max_limit = null ): ?WP_Error {
 		$limit = $max_limit ?? self::RATE_LIMIT_MAX;
-		$ip    = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '0.0.0.0';
+		$ip    = $this->get_client_ip();
 		$key   = 'f12_rl_' . md5( $endpoint . '|' . $ip );
 
 		$count = (int) get_transient( $key );

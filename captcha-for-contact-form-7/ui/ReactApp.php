@@ -88,6 +88,7 @@ class UI_ReactApp {
 		}
 
 		$this->add_feedback_menu_item();
+		$this->add_support_menu_item();
 
 		// Add type="module" to the script tag so dynamic imports (code splitting) work
 		add_filter( 'script_loader_tag', [ $this, 'add_module_type' ], 10, 3 );
@@ -114,13 +115,32 @@ class UI_ReactApp {
 			'__return_null'
 		);
 
+		$this->point_menu_item_at( $slug, \f12_cf7_captcha\get_feedback_url( 'admin-menu' ) );
+	}
+
+	/**
+	 * Send a registered submenu entry to an external address, and open it in a new tab.
+	 *
+	 * add_submenu_page() cannot point at an external address, so the entry is registered
+	 * normally and its href rewritten here.
+	 *
+	 * The new-tab part used to be written with esc_js(), which HTML-encodes the ampersands in
+	 * a query string — so the emitted selector asked for `…&amp;utm_medium=…` while the anchor
+	 * carries `…&utm_medium=…`, matched nothing, and both entries quietly opened in the same
+	 * tab. Throwing an admin out of their dashboard to file a bug report is a good way to lose
+	 * the report, which is exactly what this was meant to prevent. The URL now travels as a
+	 * JSON string literal and is compared against the attribute value rather than being
+	 * interpolated into a selector.
+	 *
+	 * @param string $slug The slug the entry was registered under.
+	 * @param string $url  Where it should actually go.
+	 */
+	private function point_menu_item_at( string $slug, string $url ): void {
 		global $submenu;
 
 		if ( ! isset( $submenu['f12-cf7-captcha'] ) ) {
 			return;
 		}
-
-		$url = \f12_cf7_captcha\get_feedback_url( 'admin-menu' );
 
 		foreach ( $submenu['f12-cf7-captcha'] as &$item ) {
 			if ( isset( $item[2] ) && $item[2] === $slug ) {
@@ -130,14 +150,36 @@ class UI_ReactApp {
 		}
 		unset( $item );
 
-		// WordPress has no way to mark a menu entry as external, and throwing an admin out of
-		// the dashboard to file a bug report is a good way to lose the report.
 		add_action( 'admin_footer', static function () use ( $url ) {
 			printf(
-				'<script>document.querySelectorAll(\'#adminmenu a[href="%s"]\').forEach(function(a){a.target="_blank";a.rel="noopener";});</script>',
-				esc_js( $url )
+				'<script>(function(){var u=%s;document.querySelectorAll("#adminmenu a").forEach(function(a){if(a.getAttribute("href")===u){a.target="_blank";a.rel="noopener";}});})();</script>',
+				wp_json_encode( $url )
 			);
 		} );
+	}
+
+	/**
+	 * A way to the product site from inside the plugin.
+	 *
+	 * Admin-side on purpose. Guideline 10 governs credit links on "users' front-facing
+	 * websites" — the front-end credit therefore stays opt-in and off by default, while a menu
+	 * entry an administrator sees in their own dashboard is an ordinary plugin link.
+	 *
+	 * Same mechanism as the feedback entry above.
+	 */
+	private function add_support_menu_item(): void {
+		$slug = 'silentshield-support-us';
+
+		add_submenu_page(
+			'f12-cf7-captcha',
+			__( 'Support us', 'captcha-for-contact-form-7' ),
+			__( 'Support us', 'captcha-for-contact-form-7' ),
+			'manage_options',
+			$slug,
+			'__return_null'
+		);
+
+		$this->point_menu_item_at( $slug, \f12_cf7_captcha\get_credit_url( 'admin-menu' ) );
 	}
 
 	/**
@@ -179,6 +221,16 @@ class UI_ReactApp {
 		$old_slugs = [];
 		foreach ( $submenu['f12-cf7-captcha'] as $item ) {
 			$slug = $item[2] ?? '';
+
+			// The entries pointing at silentshield.io had their slug replaced by the full URL
+			// back at registration time, so they cannot be matched by name here — and an
+			// absolute URL is never one of the old PHP pages this is meant to clean up.
+			// Without this they were registered and deleted again in the same request, which
+			// is why the "Feedback & Support" entry never appeared in the menu at all.
+			if ( strpos( $slug, 'http://' ) === 0 || strpos( $slug, 'https://' ) === 0 ) {
+				continue;
+			}
+
 			if ( ! in_array( $slug, $keep, true ) && $slug !== 'f12-cf7-captcha' ) {
 				$old_slugs[] = $slug;
 			}
@@ -206,6 +258,12 @@ class UI_ReactApp {
 			'f12-cf7-captcha-extended'                  => 'silentshield-protection',
 			'f12-cf7-captcha-audit-log'                 => 'silentshield-audit-log',
 			'f12-cf7-captcha_f12-cf7-captcha-audit-log' => 'silentshield-audit-log',
+			// The old Beta screen (ui/controller/UI_Beta.php) held the API key and the
+			// SilentShield toggles, which now live on the API page. It was missing from this
+			// list, so a bookmark or an old link landed on "Sorry, you are not allowed to
+			// access this page" instead of the screen that replaced it.
+			'f12-cf7-captcha-beta'                      => 'silentshield-api',
+			'f12-cf7-captcha_f12-cf7-captcha-beta'      => 'silentshield-api',
 		];
 
 		$page = sanitize_text_field( wp_unslash( $_GET['page'] ) );
@@ -364,6 +422,11 @@ class UI_ReactApp {
 				// Built server-side so the version is attached in one place — see core/feedback.php.
 				'feedbackUrl' => esc_url_raw( \f12_cf7_captcha\get_feedback_url( 'help-page' ) ),
 				'supportUrl'  => esc_url_raw( \f12_cf7_captcha\get_support_url( 'help-page' ) ),
+				// The sidebar's own links. Built here rather than in JS because the language
+				// segment comes from the site locale, which only PHP knows.
+				'docsUrl'      => esc_url_raw( \f12_cf7_captcha\get_docs_url( 'admin-sidebar' ) ),
+				'feedbackUrlSidebar' => esc_url_raw( \f12_cf7_captcha\get_feedback_url( 'admin-sidebar' ) ),
+				'supportUsUrl' => esc_url_raw( \f12_cf7_captcha\get_credit_url( 'admin-sidebar' ) ),
 			] );
 		}
 	}

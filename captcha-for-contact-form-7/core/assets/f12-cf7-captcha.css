@@ -662,3 +662,67 @@
   outline-offset: 1px;
   border-color: rgba(100, 180, 220, 0.3);
 }
+
+/**
+ * Failed captcha reload.
+ *
+ * Before this existed a failed reload was silent in every channel: the captcha kept its old
+ * question, no message appeared, and the console line was gated behind ?silentshield-debug.
+ * A user could only report "the reload button does not work", which does not distinguish a
+ * 403 (stale nonce), a 429 (rate limit) and a dropped connection.
+ *
+ * @since 2.12.1
+ */
+.f12-captcha .c-reload-error {
+  margin: 6px 0 0;
+  font-size: 0.85em;
+  line-height: 1.4;
+  color: #b32d2e;
+}
+
+.f12-captcha--reload-failed .c-reload {
+  outline: 1px solid #b32d2e;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Dark templates: the same red is unreadable on their backgrounds. */
+.f12-captcha.template-3 .c-reload-error,
+.f12-captcha.template-4 .c-reload-error,
+.f12-captcha.template-8 .c-reload-error,
+.f12-captcha.template-9 .c-reload-error {
+  color: #ff9b9b;
+}
+
+.f12-captcha.template-3.f12-captcha--reload-failed .c-reload,
+.f12-captcha.template-4.f12-captcha--reload-failed .c-reload,
+.f12-captcha.template-8.f12-captcha--reload-failed .c-reload,
+.f12-captcha.template-9.f12-captcha--reload-failed .c-reload {
+  outline-color: #ff9b9b;
+}
+
+/**
+ * Optional credit link under the captcha ("Support us", off by default).
+ *
+ * Deliberately quiet: a site owner who agreed to a small thank-you did not agree to a banner.
+ * Inherits the surrounding font and only drops the size and contrast, so it sits under any
+ * theme without being restyled per template.
+ *
+ * @since 2.12.1
+ */
+.f12-captcha-credit {
+  margin: 4px 0 0;
+  font-size: 0.75em;
+  line-height: 1.4;
+  opacity: 0.65;
+}
+
+.f12-captcha-credit a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.f12-captcha-credit a:hover,
+.f12-captcha-credit a:focus {
+  text-decoration: underline;
+}
