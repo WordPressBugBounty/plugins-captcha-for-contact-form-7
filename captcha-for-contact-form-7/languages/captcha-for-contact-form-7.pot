@@ -3266,3 +3266,7 @@ msgstr ""
 #: ui/react-app (privacy)
 msgid "Spam protection with the SilentShield API\n\nTo protect our forms against spam and bots, we use the “SilentShield” service. When a form is loaded and submitted, technical characteristics of your access are processed and transmitted to the SilentShield API for assessment:\n\n- your IP address;\n- behavioural and device information (e.g. timestamps, interaction and input signals, browser properties);\n- the URL of the page accessed.\n\nBased on this data, SilentShield determines whether the input is likely human or automated and returns an assessment result.\n\nThe provider and recipient of the data is Forge12 Interactive GmbH, Josefstr. 37, 78166 Donaueschingen, which carries out the processing as a processor on our behalf (data processing agreement pursuant to Art. 28 GDPR). Processing takes place exclusively on servers in Germany (Hetzner Online GmbH); no transfer to third countries takes place.\n\nThe legal basis is our legitimate interest in preventing spam and abuse (Art. 6(1)(f) GDPR). The transmitted technical access data is stored by SilentShield only for as long as is necessary for spam detection (generally a maximum of 14 days, unless security-relevant events require longer storage) and is then deleted.\n\nFurther information: https://silentshield.io/en/privacy"
 msgstr ""
+
+#: core/protection/gibberish/Gibberish_Validator.php
+msgid "gibberish-protection"
+msgstr ""

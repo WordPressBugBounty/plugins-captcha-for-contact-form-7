@@ -20,6 +20,7 @@ class ControllerAvada extends BaseController {
 	protected array $hooks = [
 		['type' => 'filter', 'hook' => 'fusion_element_form_content', 'method' => 'wp_add_spam_protection', 'priority' => 10, 'args' => 2],
 		['type' => 'filter', 'hook' => 'fusion_form_demo_mode', 'method' => 'wp_is_spam'],
+		['type' => 'filter', 'hook' => 'fusion_builder_form_submission_data', 'method' => 'wp_remove_internal_fields', 'priority' => 10, 'args' => 1],
 	];
 
 	public function is_installed(): bool {
@@ -71,6 +72,74 @@ class ControllerAvada extends BaseController {
 		}
 
 		return $html;
+	}
+
+	/**
+	 * Take this plugin's own fields back out of the submission before Avada uses it.
+	 *
+	 * Avada is the one integration that mails back *everything* that was submitted:
+	 * Fusion_Form_Submit::default_email_message() builds the notification by iterating the
+	 * whole field set rather than a template the site owner wrote. So every hidden field this
+	 * plugin adds turned up in the mail, and the people reading those mails — medical
+	 * practices, tradesmen — saw rows like
+	 *
+	 *     F12 Timer                          $2y$12$sI9RgrME/JfeIasjE3aCbu…
+	 *     F12 Multiple Submission Protection $2y$12$u8Gu.1NPVFVll5p9f8TJDe…
+	 *
+	 * under the enquiry, which reads as a broken website rather than as protection working.
+	 *
+	 * `fusion_builder_form_submission_data` is the right place for it. It runs inside
+	 * get_submit_data(), before handle_form_notifications() builds the mail from the same
+	 * array, so one filter cleans the notification, the stored submission and the entry list
+	 * in Avada's admin at once. Avada strips its own reCAPTCHA fields a few lines below the
+	 * same filter, which is a fair sign this is the intended seam.
+	 *
+	 * Rewriting `$_POST['formData']` on the success path would also have worked, but that
+	 * string is slashed and url-encoded, and round-tripping it through parse_str() and
+	 * http_build_query() risks mangling any value containing a quote or a backslash — a worse
+	 * failure than the one being fixed.
+	 *
+	 * @param mixed ...$args array $data Avada's submission structure.
+	 *
+	 * @return mixed
+	 */
+	public function wp_remove_internal_fields( ...$args ) {
+		$data = $args[0] ?? null;
+
+		if ( ! is_array( $data ) || ! isset( $data['data'] ) || ! is_array( $data['data'] ) ) {
+			return $data;
+		}
+
+		$before = array_keys( $data['data'] );
+		$data['data'] = Protection::strip_internal_fields( $data['data'] );
+		$removed = array_diff( $before, array_keys( $data['data'] ) );
+
+		if ( empty( $removed ) ) {
+			return $data;
+		}
+
+		// The parallel arrays are keyed by field name too. Leaving our names in them would put
+		// orphaned labels in the mail table and in the admin entry view.
+		foreach ( [ 'field_labels', 'field_types' ] as $parallel ) {
+			if ( ! isset( $data[ $parallel ] ) || ! is_array( $data[ $parallel ] ) ) {
+				continue;
+			}
+
+			foreach ( $removed as $key ) {
+				unset( $data[ $parallel ][ $key ] );
+			}
+		}
+
+		if ( isset( $data['hidden_field_names'] ) && is_array( $data['hidden_field_names'] ) ) {
+			$data['hidden_field_names'] = array_values( array_diff( $data['hidden_field_names'], $removed ) );
+		}
+
+		$this->get_logger()->debug( 'Removed internal fields from the Avada submission.', [
+			'plugin'  => 'f12-cf7-captcha',
+			'removed' => array_values( $removed ),
+		] );
+
+		return $data;
 	}
 
 	/**

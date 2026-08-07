@@ -40,6 +40,10 @@ class Settings_Resolver {
 		'protection_javascript_enable',
 		'protection_browser_enable',
 		'protection_multiple_submission_enable',
+		// Gibberish
+		'protection_gibberish_enable',
+		'protection_gibberish_mode',
+		'protection_gibberish_min_fields',
 		// IP
 		'protection_ip_enable',
 		'protection_ip_max_retries',

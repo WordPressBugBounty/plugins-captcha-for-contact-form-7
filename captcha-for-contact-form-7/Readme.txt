@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.12.1
+Stable tag: 2.13.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -24,7 +24,7 @@ It works with the most popular form builders and protects login, registration, a
 **Why choose SilentShield?**
 - **Invisible defense** – Captcha, honeypot, and blacklists working silently.
 - **Instant results** – Install, activate, and stop spam.
-- **Universal support** – Works with Contact Form 7, WPForms, Elementor, WooCommerce, and more.
+- **Universal support** – Works with Contact Form 7, WPForms, Elementor, Formidable, Ninja Forms, Forminator, Kadence, WooCommerce, and more.
 - **Privacy-first** – No cookies, no tracking, fully GDPR / DSGVO compliant.
 
 SilentShield doesn't just protect forms.
@@ -51,18 +51,28 @@ SilentShield protects forms from all major WordPress form builders and core feat
 - Elementor Pro Forms (classic widget and v4 "atomic" forms)
 - Gravity Forms
 - Fluent Forms
+- Formidable Forms
+- Ninja Forms
+- Forminator
 - JetFormBuilder
+- Kadence Blocks (Advanced Form)
 - Avada (Fusion Builder) Forms
+
+**Newsletter:**
+- MC4WP – Mailchimp for WordPress (signup forms)
 
 **WooCommerce:**
 - Checkout (classic & PayPal Payments)
 - Login
 - Registration
+- Lost password
+- Account details
 
 **WordPress Core:**
 - Login form (wp-login.php)
 - Registration form
-- Comment forms
+- Lost password form
+- Comment forms (including WooCommerce product reviews)
 
 **Other:**
 - Ultimate Member (Login & Registration)
@@ -84,8 +94,9 @@ SilentShield uses **10+ protection mechanisms** working together:
 6. **IP Rate Limiting** – Limits requests per IP and time window
 7. **IP Blacklist** – Block known bad IPs
 8. **Content Rules** – Limit URLs, block BBCode, keyword blacklist
-9. **Whitelist** – Skip validation for admins, logged-in users, or specific emails/IPs
-10. **SilentShield API** (Beta) – Cloud-based spam detection
+9. **Gibberish Detection** – Recognises submissions filled with random characters, the kind a bot writes when it only needs the form to go through. Unlike every other check it does not depend on the sender's browser, so a bot driving a real browser cannot pass it by playing along. Starts in observation mode and blocks nothing until you switch it on.
+10. **Whitelist** – Skip validation for admins, logged-in users, or specific emails/IPs
+11. **SilentShield API** (Beta) – Cloud-based spam detection
 
 ---
 
@@ -188,6 +199,17 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.13.0 =
+- Fix [Avada]: Notification emails from Avada forms arrived with the plugin's own hidden fields listed underneath the enquiry — rows like "F12 Timer" followed by a long string of characters. Nothing was broken and no data was at risk, but to the person reading the email it looked like a malfunctioning website, which is a poor thanks for protection that was otherwise doing its job. Avada is the only form plugin that emails back everything a form sent rather than a message you wrote yourself, which is why it happened there and nowhere else. Those fields are now removed before Avada builds the email, and they no longer appear in the stored submission or in Avada's own entries list either. Two of them had also been kept in the plugin's mail log all along, where nobody happened to look; that is fixed by the same change.
+- New [Protection]: A new check reads what was actually typed into your forms and recognises the kind of spam that fills every field with random characters — a name like "Cowqv Exnjznedy", a town like "JPnuTSVqMlNmdwoFObq". This catches something the other checks cannot: they all work by giving the visitor's browser something to return, which a spam program driving a real browser simply hands back correctly. Judging the text instead does not care how good the program is at pretending to be a person, because writing nonsense is the whole point of what it is doing. It starts in observation mode and blocks nothing until you switch it on under Protection, so it cannot turn a real enquiry away while you are still deciding. It never looks at more than one field in isolation: a single unusual name or product code is normal, and only a submission where several fields are nonsense counts. Non-Latin alphabets are skipped entirely rather than guessed at.
+- New [Integrations]: Formidable Forms is now supported. It was the one major form plugin that every comparable captcha plugin protected and this one did not.
+- New [Integrations]: Ninja Forms and Forminator are now supported.
+- New [Integrations]: Kadence Blocks is now supported, for its Advanced Form block. Kadence's older classic form block cannot be protected — it offers no way for any plugin to stop a submission — and Kadence have said they are retiring it.
+- New [Integrations]: MC4WP (Mailchimp for WordPress) newsletter signup forms are now supported. Junk signups do more damage than junk email: they fill your mailing list with addresses that bounce, and that in turn harms the delivery of every newsletter you send afterwards.
+- New [Integrations]: The "lost password" form is now protected, both WordPress's own and WooCommerce's. Left open, that form can be used to send password emails to any address a spammer cares to type in — the people receiving them have never heard of your site, and the resulting complaints damage the reputation of your domain, which then costs you every other email you try to send. Nothing about this shows up as spam on your own site, which is why it usually goes unnoticed.
+- New [Integrations]: The WooCommerce "account details" form is now protected. Note that it is only ever shown to logged-in customers, and the plugin skips logged-in visitors by default, so this only takes effect if you have turned that off.
+- Improvement [Support]: The support link inside the plugin now leads to the SilentShield support board for this plugin instead of a general page.
+
 = 2.12.1 =
 - New [Elementor]: Elementor's new v4 forms — the "atomic" forms, built on the new element system — are now protected. They were not before, and not because the protection failed on them: these forms assemble what they send entirely in the browser and only include the fields Elementor itself placed, so everything this plugin adds was dropped on the way out and the form arrived looking like an ordinary, unprotected submission. Its fields now travel with the request. Nothing of ours appears in your notification email or in the submissions table, and the classic Elementor form widget is unaffected.
 - Fix [Captcha]: On sites with page caching the reload button stopped working, and did so silently. The button sent a security token that WordPress stamps into the page itself and only accepts for about a day; a cached page keeps serving that token long after it has expired, and WordPress then turned every click away before the plugin ever saw it. The button no longer sends that token. It does not need one — the address the request comes from is checked instead, which a cache cannot invalidate. This affects the same on every form plugin, not only Contact Form 7.

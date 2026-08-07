@@ -198,9 +198,10 @@ class Javascript_Validator extends BaseProtection
 	/**
 	 * Flatten every place a form plugin might have hidden our fields into one array.
 	 *
-	 * Avada posts the whole form url-encoded inside `formData`, Fluent Forms inside `data`.
-	 * Collecting them once here means the token lookup and every field read see the same view
-	 * of the request, instead of each consumer re-parsing the same payloads.
+	 * Avada posts the whole form url-encoded inside `formData`, Ninja Forms posts a JSON
+	 * Backbone payload under the same key, and Fluent Forms uses `data`. Collecting them once
+	 * here means the token lookup and every field read see the same view of the request,
+	 * instead of each consumer re-parsing the same payloads.
 	 *
 	 * @return array<string, mixed>
 	 */
@@ -209,10 +210,22 @@ class Javascript_Validator extends BaseProtection
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		$data = (array) wp_unslash($_POST);
 
-		// Avada: the real fields live url-encoded inside `formData`.
+		// Two plugins claim `formData`, in two different encodings.
 		if (isset($data['formData']) && is_string($data['formData'])) {
-			parse_str($data['formData'], $form_data);
-			$data = array_merge($data, $form_data);
+			$decoded = json_decode($data['formData'], true);
+
+			if (is_array($decoded)) {
+				// Ninja Forms: a Backbone payload. It carries none of the form element's own
+				// inputs — the browser-side module copies ours into `extra`, which is the only
+				// place they can be found again.
+				if (isset($decoded['extra']) && is_array($decoded['extra'])) {
+					$data = array_merge($data, $decoded['extra']);
+				}
+			} else {
+				// Avada: the real fields live url-encoded inside `formData`.
+				parse_str($data['formData'], $form_data);
+				$data = array_merge($data, $form_data);
+			}
 		}
 
 		// Fluent Forms: same idea, but url-encoded twice and inside `data`.

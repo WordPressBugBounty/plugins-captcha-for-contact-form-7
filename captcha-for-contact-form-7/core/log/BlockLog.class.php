@@ -105,6 +105,28 @@ class BlockLog {
 	}
 
 	/**
+	 * Check whether anonymous observation rows may be written.
+	 *
+	 * Separate from {@see is_enabled()} on purpose. Detailed tracking turns on an IP-linked
+	 * log the site owner reads on the Analytics page; observations are anonymous measurements
+	 * that exist to calibrate detection. Two purposes, two switches — a site owner who wants
+	 * neither, or only one, can say so.
+	 *
+	 * Defaults to on when the option has never been saved, which is the state of every
+	 * installation that has not visited the settings screen since this shipped.
+	 */
+	public static function is_observing(): bool {
+		$enabled = \f12_cf7_captcha\CF7Captcha::get_instance()
+			->get_settings( 'protection_anonymous_metrics', 'global' );
+
+		if ( $enabled === '' || $enabled === null ) {
+			return true;
+		}
+
+		return (int) $enabled === 1;
+	}
+
+	/**
 	 * Log a block event.
 	 *
 	 * @param string $protection    The protection module name (e.g. 'timer', 'honeypot', 'api')
@@ -117,17 +139,53 @@ class BlockLog {
 			return;
 		}
 
+		$this->insert( $protection, $reason_code, $reason_detail, $extra, false );
+	}
+
+	/**
+	 * Log an anonymous observation — a verdict a module reached without acting on it.
+	 *
+	 * Written under {@see is_observing()} rather than under detailed tracking, and always with
+	 * a pseudonymised IP: these rows are meant to be analysed away from the site that produced
+	 * them, so the `protection_log_plaintext` debugging switch deliberately does not reach
+	 * them. A site owner debugging their own blocks sees plaintext in the rows that are about
+	 * their own traffic, and hashes in the rows that are about detection quality.
+	 *
+	 * @param string $protection    The protection module name.
+	 * @param string $reason_code   Machine-readable reason code.
+	 * @param string $reason_detail Human-readable explanation.
+	 * @param array  $extra         verdict, score, reason_codes, meta, form_plugin, form_id.
+	 */
+	public function log_observation( string $protection, string $reason_code, string $reason_detail, array $extra = [] ): void {
+		if ( ! self::is_observing() ) {
+			return;
+		}
+
+		$this->insert( $protection, $reason_code, $reason_detail, $extra, true );
+	}
+
+	/**
+	 * Write one row.
+	 *
+	 * @param bool $anonymous When true, the IP is always pseudonymised regardless of the
+	 *                        plaintext debugging switch.
+	 */
+	private function insert( string $protection, string $reason_code, string $reason_detail, array $extra, bool $anonymous ): void {
 		global $wpdb;
 
 		$ip_raw  = isset( $_SERVER['REMOTE_ADDR'] )
 			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
 			: '';
 
-		// When plaintext logging is enabled, store the raw IP; otherwise SHA-256 hash
-		$plaintext = (int) \f12_cf7_captcha\CF7Captcha::get_instance()
-			->get_settings( 'protection_log_plaintext', 'global' ) === 1;
+		// Plaintext is an explicit debugging opt-in and never applies to anonymous rows.
+		$plaintext = ! $anonymous && (int) \f12_cf7_captcha\CF7Captcha::get_instance()
+				->get_settings( 'protection_log_plaintext', 'global' ) === 1;
+
+		// Pseudonymizer keys the digest against a rotating site secret. A bare SHA-256 of an
+		// IP is not a pseudonym — the whole IPv4 space can be enumerated and reversed in
+		// seconds — which is what this column used to hold.
 		$ip_hash = ! empty( $ip_raw )
-			? ( $plaintext ? $ip_raw : hash( 'sha256', $ip_raw ) )
+			? ( $plaintext ? $ip_raw : Pseudonymizer::hash_ip( $ip_raw ) )
 			: '';
 
 		$page_url = isset( $_SERVER['REQUEST_URI'] )
@@ -179,6 +237,16 @@ class BlockLog {
 	}
 
 	/**
+	 * SQL predicate limiting a query to rows that represent an actual block.
+	 *
+	 * The table also holds anonymous observations — `monitored` (would have blocked) and
+	 * `scored` (passed, measured anyway). Those exist to calibrate detection and must never
+	 * reach the Analytics screen, which reports what the plugin *did*. Rows written before the
+	 * verdict column was used carry the 'blocked' default, so history is unaffected.
+	 */
+	private const BLOCKED_ONLY = "verdict = 'blocked'";
+
+	/**
 	 * Get block log entries (newest first).
 	 *
 	 * @param int $limit  Max entries to return.
@@ -200,7 +268,7 @@ class BlockLog {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$results = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE ts >= %s ORDER BY ts DESC LIMIT %d OFFSET %d",
+				"SELECT * FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY . " ORDER BY ts DESC LIMIT %d OFFSET %d",
 				$since,
 				$limit,
 				$offset
@@ -223,6 +291,41 @@ class BlockLog {
 	}
 
 	/**
+	 * Get anonymous observation entries — everything the Analytics screen deliberately hides.
+	 *
+	 * This is the read side of {@see log_observation()} and the intended source for any later
+	 * export: it returns only rows that carry no personal data by construction. The mail log
+	 * holds full submission text and must never be used for that purpose.
+	 *
+	 * @param int $limit  Max entries to return.
+	 * @param int $offset Offset for pagination.
+	 * @param int $days   Only entries from last N days.
+	 *
+	 * @return array
+	 */
+	public function get_observations( int $limit = 100, int $offset = 0, int $days = 30 ): array {
+		if ( ! $this->table_exists() ) {
+			return [];
+		}
+
+		global $wpdb;
+
+		$table = $this->get_table_name();
+		$since = gmdate( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		return $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT * FROM {$table} WHERE ts >= %s AND verdict <> 'blocked' ORDER BY ts DESC LIMIT %d OFFSET %d",
+				$since,
+				$limit,
+				$offset
+			),
+			ARRAY_A
+		) ?: [];
+	}
+
+	/**
 	 * Get summary counts grouped by protection module.
 	 *
 	 * @param int $days Only entries from last N days.
@@ -242,7 +345,7 @@ class BlockLog {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT protection, COUNT(*) as count FROM {$table} WHERE ts >= %s GROUP BY protection ORDER BY count DESC",
+				"SELECT protection, COUNT(*) as count FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY . " GROUP BY protection ORDER BY count DESC",
 				$since
 			),
 			ARRAY_A
@@ -269,7 +372,7 @@ class BlockLog {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT reason_code, COUNT(*) as count FROM {$table} WHERE ts >= %s AND reason_code != '' GROUP BY reason_code ORDER BY count DESC",
+				"SELECT reason_code, COUNT(*) as count FROM {$table} WHERE ts >= %s AND reason_code != '' AND " . self::BLOCKED_ONLY . " GROUP BY reason_code ORDER BY count DESC",
 				$since
 			),
 			ARRAY_A
@@ -296,7 +399,7 @@ class BlockLog {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table} WHERE ts >= %s",
+				"SELECT COUNT(*) FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY,
 				$since
 			)
 		);
@@ -322,7 +425,7 @@ class BlockLog {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT DATE(ts) AS day, COUNT(*) AS count FROM {$table} WHERE ts >= %s GROUP BY DATE(ts) ORDER BY day ASC",
+				"SELECT DATE(ts) AS day, COUNT(*) AS count FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY . " GROUP BY DATE(ts) ORDER BY day ASC",
 				$since
 			),
 			ARRAY_A
@@ -349,17 +452,17 @@ class BlockLog {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$today_count = $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE ts >= %s", $today )
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY, $today )
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$week_count = $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE ts >= %s", $week )
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY, $week )
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$month_count = $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE ts >= %s", $month )
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE ts >= %s AND " . self::BLOCKED_ONLY, $month )
 		);
 
 		if ( null === $today_count && ! empty( $wpdb->last_error ) ) {

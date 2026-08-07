@@ -13,6 +13,7 @@ use f12_cf7_captcha\core\protection\api\Api;
 use f12_cf7_captcha\core\protection\Shadow_Mode;
 use f12_cf7_captcha\core\protection\browser\Browser;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
+use f12_cf7_captcha\core\protection\gibberish\Gibberish_Validator;
 use f12_cf7_captcha\core\protection\ip\IPValidator;
 use f12_cf7_captcha\core\protection\ip_blacklist\IP_Blacklist_Validator;
 use f12_cf7_captcha\core\protection\javascript\Javascript_Validator;
@@ -110,6 +111,7 @@ class Protection extends BaseModul {
 			'multiple-submission-validator' => new Multiple_Submission_Validator( $this->Controller ),
 			'timer-validator'               => new Timer_Validator( $this->Controller ),
 			'captcha-validator'             => new Captcha_Validator( $this->Controller ),
+			'gibberish-validator'           => new Gibberish_Validator( $this->Controller ),
 		];
 
 		// Check if API is enabled and API key is present
@@ -432,8 +434,19 @@ class Protection extends BaseModul {
 	/**
 	 * Strip the plugin's own fields out of form data before it gets logged or displayed.
 	 *
-	 * Rotated names are not known ahead of time, so they are matched by shape rather than
-	 * listed literally.
+	 * Everything this plugin injects is namespaced `f12_`, and that prefix is what the rule
+	 * matches. It used to be a literal list plus a pattern for the rotated names, and that list
+	 * was wrong twice: `f12_timer` and `f12_multiple_submission_protection` were never on it, so
+	 * both turned up in the notification mails of an Avada site — the recipients being medical
+	 * practices and tradesmen, to whom `F12 Timer: $2y$12$sI9RgrME…` reads as a broken website.
+	 * A list that has to be extended every time a module gains a field will keep being wrong;
+	 * the prefix cannot fall behind.
+	 *
+	 * The timer field name is configurable (`protection_time_field_name`), which the old list
+	 * could not have covered anyway.
+	 *
+	 * Non-prefixed names are still listed literally: the timing fields predate the namespace,
+	 * and the nonces belong to WordPress and Contact Form 7 rather than to us.
 	 *
 	 * @param array $data The submitted form data.
 	 *
@@ -444,21 +457,46 @@ class Protection extends BaseModul {
 			'_wpcf7', '_wpcf7_version', '_wpcf7_locale', '_wpcf7_unit_tag',
 			'_wpcf7_container_post', '_wpcf7_posted_data_hash', '_wpcf7_nonce',
 			'php_start_time', 'js_start_time', 'js_end_time',
-			'f12_captcha', 'f12_captcha_hash', '_wpnonce', 'behavior_nonce',
+			'_wpnonce', 'behavior_nonce',
 			Field_Token::TOKEN_FIELD,
 		];
+
+		// A site that renamed the timer field to something outside the namespace would slip past
+		// the prefix rule, so the configured name is removed by value rather than by shape.
+		$timer_field = self::configured_timer_field();
+
+		if ( $timer_field !== '' ) {
+			$literal[] = $timer_field;
+		}
 
 		foreach ( $literal as $key ) {
 			unset( $data[ $key ] );
 		}
 
 		foreach ( array_keys( $data ) as $key ) {
-			if ( is_string( $key ) && preg_match( '/^f12_[0-9a-f]{16}$/', $key ) ) {
+			if ( is_string( $key ) && strpos( $key, 'f12_' ) === 0 ) {
 				unset( $data[ $key ] );
 			}
 		}
 
 		return $data;
+	}
+
+	/**
+	 * The site's configured timer field name, or '' when it cannot be read.
+	 *
+	 * Deliberately forgiving: strip_internal_fields() is static and gets called from logging
+	 * paths and from unit tests where no controller exists. Failing to read a setting must
+	 * degrade to "strip the defaults" rather than throw while assembling a notification mail.
+	 */
+	private static function configured_timer_field(): string {
+		try {
+			$name = CF7Captcha::get_instance()->get_settings( 'protection_time_field_name', 'global' );
+
+			return is_string( $name ) ? trim( $name ) : '';
+		} catch ( \Throwable $e ) {
+			return '';
+		}
 	}
 
 	/**
@@ -583,10 +621,61 @@ class Protection extends BaseModul {
 			}
 		}
 
+		// Anonymous observations: what modules measured but did not act on. Written after the
+		// verdict so a module can report "I would have blocked this" for a submission that was
+		// let through, which is the only way the false-negative side of detection quality ever
+		// becomes visible.
+		$this->maybe_log_observations( $spam_modul_name );
+
 		// Shadow Mode: record the local verdict for API comparison analytics.
 		Shadow_Mode::record( $is_spam, $spam_modul_name, $array_post_data );
 
 		return $is_spam;
+	}
+
+	/**
+	 * Write the anonymous observation rows for this request.
+	 *
+	 * Exactly one row is written per module per request. The blocking module is skipped only
+	 * when detailed tracking already recorded it through maybe_log_block(); with that switch
+	 * off, its observation is written here instead, so a block is never lost just because the
+	 * site owner does not keep an IP-linked log.
+	 *
+	 * @param string $blocking_module The module that produced the block, if any.
+	 */
+	private function maybe_log_observations( string $blocking_module ): void {
+		$already_logged = BlockLog::is_enabled() ? $blocking_module : '';
+		$block_log      = null;
+
+		foreach ( $this->_modules as $name => $modul ) {
+			if ( $name === $already_logged || ! $modul instanceof Observation_Provider ) {
+				continue;
+			}
+
+			$observation = $modul->get_observation();
+
+			if ( $observation === null ) {
+				continue;
+			}
+
+			// Built lazily: most requests have nothing to observe, and constructing the log
+			// object touches the database.
+			$block_log = $block_log ?? new BlockLog( $this->get_logger() );
+
+			$block_log->log_observation(
+				$name,
+				$observation['reason_code'],
+				$observation['reason_detail'],
+				[
+					'verdict'      => $observation['verdict'],
+					'score'        => $observation['score'],
+					'reason_codes' => $observation['reason_codes'],
+					'meta'         => $observation['meta'],
+					'form_plugin'  => $this->context_integration_id ?? '',
+					'form_id'      => $this->context_form_id ?? '',
+				]
+			);
+		}
 	}
 
 
@@ -603,6 +692,7 @@ class Protection extends BaseModul {
 		'rule-validator'                => [ 'BLACKLIST_MATCH',   'Content matched a blacklist rule' ],
 		'multiple-submission-validator' => [ 'DUPLICATE_SUBMIT',  'Duplicate submission detected' ],
 		'api-validator'                 => [ 'API_VERDICT_BOT',   'SilentShield API classified as bot/suspicious' ],
+		'gibberish-validator'           => [ 'GIBBERISH_CONTENT', 'Submitted text scored as machine-generated' ],
 	];
 
 	/**
@@ -630,6 +720,19 @@ class Protection extends BaseModul {
 			'form_plugin' => $this->context_integration_id ?? '',
 			'form_id'     => $this->context_form_id ?? '',
 		];
+
+		// Modules that measure rather than merely decide carry the numbers behind the verdict.
+		// Folding them in here means a blocked submission lands in the log as one row with its
+		// full reasoning, instead of a bare verdict plus a separate observation.
+		if ( $modul instanceof Observation_Provider ) {
+			$observation = $modul->get_observation();
+
+			if ( $observation !== null ) {
+				$extra['score']        = $observation['score'];
+				$extra['reason_codes'] = $observation['reason_codes'];
+				$extra['meta']         = $observation['meta'];
+			}
+		}
 
 		$block_log->log( $module_name, $reason_code, $reason_detail, $extra );
 	}

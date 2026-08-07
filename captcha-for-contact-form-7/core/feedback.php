@@ -13,14 +13,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /*
- * Both addresses live on silentshield.io rather than the company site, deliberately.
+ * Feedback lives on silentshield.io, support on forge12.com. That split is deliberate but not
+ * free, so it is worth writing down.
  *
- * These URLs ship inside every installed copy and stay there until the site updates, which
- * for a WordPress plugin can be years — so they have to be addresses we can redirect, not
- * addresses that happen to point at today's helpdesk. silentshield.io is the product domain
- * the admin menu, the API, the login and the docs already use, and the privacy texts the
- * plugin hands users name it as the destination. Landing someone on a different brand mid
- * bug-report is a good way to lose the report.
+ * These URLs ship inside every installed copy and stay there until the site updates, which for
+ * a WordPress plugin can be years. They therefore have to be addresses that can be redirected
+ * rather than addresses that happen to point at today's helpdesk — and the support board is a
+ * deep path (`/shop/wordpress-captcha/support`), which is exactly the kind of URL a shop
+ * restructure tends to move. If that path ever changes, a redirect has to be left behind: the
+ * old copies will keep asking for it.
+ *
+ * The brands differ across the two links, which is a real cost. Someone reporting a bug from
+ * the sidebar lands on silentshield.io, someone asking for help lands on forge12.com. That is
+ * survivable because support is where an existing customer expects the company, but if the
+ * feedback form ever moves too, both should end up on the same domain.
  */
 
 /**
@@ -49,9 +55,11 @@ const FEEDBACK_URL = 'https://silentshield.io/%s/feedback';
 /**
  * Support — for "I need help with my installation".
  *
- * May sit behind the login, since accounts live on the same domain.
+ * The captcha's own board on forge12.com rather than the general support hub: someone arriving
+ * from inside the plugin already knows which product they are asking about, and a hub would
+ * make them pick it again. Served per language, same as everything else here.
  */
-const SUPPORT_URL = 'https://silentshield.io/%s/support';
+const SUPPORT_URL = 'https://www.forge12.com/%s/shop/wordpress-captcha/support';
 
 /**
  * Build a feedback link.

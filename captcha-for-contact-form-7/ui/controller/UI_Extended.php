@@ -98,6 +98,15 @@ namespace f12_cf7_captcha {
 				'protection_browser_enable'                => 1,
 				'protection_javascript_enable'             => 1,
 
+				// Gibberish content detection. Ships enabled but in `monitor`, so it measures
+				// from day one without any risk of rejecting a real enquiry. Flipping the mode
+				// to `block` is the site owner's decision, ideally after looking at what the
+				// monitor rows say about their own traffic.
+				'protection_gibberish_enable'              => 1,
+				'protection_gibberish_mode'                => 'monitor',
+				'protection_gibberish_min_fields'          => 3,
+				'protection_gibberish_sample_rate'         => 20,
+
 				// Whitelists
 				'protection_whitelist_emails'              => '',
 				'protection_whitelist_ips'                 => '',
@@ -108,6 +117,12 @@ namespace f12_cf7_captcha {
 				// Asset loading
 				'protection_global_asset_loading'          => 1,
 				'protection_asset_loading_urls'            => '',
+
+				// Anonymous detection metrics. Its own switch rather than a corner of detailed
+				// tracking: that one turns on an IP-linked log the site owner reads, this one
+				// records anonymous measurements used to calibrate detection. Different
+				// purposes should not share one consent.
+				'protection_anonymous_metrics'             => 1,
 
 				// Detailed tracking (block log)
 				'protection_detailed_tracking'             => 0,
@@ -335,6 +350,8 @@ namespace f12_cf7_captcha {
 				'protection_rules_bbcode_enable',
 				'protection_browser_enable',
 				'protection_javascript_enable',
+				'protection_gibberish_enable',
+				'protection_anonymous_metrics',
 				'protection_captcha_template',
 				// This value should be treated as an integer
                 'telemetry',
