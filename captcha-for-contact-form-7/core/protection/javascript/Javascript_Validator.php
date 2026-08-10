@@ -61,6 +61,17 @@ class Javascript_Validator extends BaseProtection
     private ?Field_Token $Token = null;
 
     /**
+     * Request data supplied by an integration instead of read from `$_POST`.
+     *
+     * Null for every ordinary form submission, which is the overwhelming majority: the fields
+     * arrive in `$_POST` and collect_request_data() finds them there. It is set only by
+     * hydrate_from_request(), for transports where `$_POST` is structurally empty.
+     *
+     * @var array<string, mixed>|null
+     */
+    private ?array $request_data_override = null;
+
+    /**
      * Private constructor for the class.
      *
      * Initializes the PHP and JS components and sets up a filter for the f12-cf7-captcha-log-data hook.
@@ -196,6 +207,39 @@ class Javascript_Validator extends BaseProtection
 	}
 
 	/**
+	 * Re-read the token and both timers from a caller-supplied array.
+	 *
+	 * This module is the only one that does not take the submitted data as an argument: it
+	 * snapshots `$_POST` in its constructor, which runs on `after_setup_theme`. That is correct
+	 * for a form post and wrong for anything that does not arrive as form-encoded body — the
+	 * WooCommerce Store API sends JSON, so `$_POST` is empty, the token resolves to null, both
+	 * timestamps read as 0.0, and is_human() rejects every visitor as a bot. The failure is
+	 * total and looks exactly like working protection, which is the dangerous part.
+	 *
+	 * Integrations on such a transport call this with the fields they recovered, before asking
+	 * Protection::is_spam(). The override then also governs get_log_data(), so the log shows the
+	 * timings that were actually judged rather than an empty snapshot.
+	 *
+	 * @param array<string, mixed> $data The recovered submission fields.
+	 *
+	 * @return void
+	 */
+	public function hydrate_from_request(array $data): void
+	{
+		$this->request_data_override = $data;
+		$this->Token                 = Field_Token::from_request($data);
+
+		$this->get_logger()->debug('Timer data re-read from a supplied request payload.', [
+			'class'     => __CLASS__,
+			'method'    => __METHOD__,
+			'has_token' => $this->Token !== null ? 'yes' : 'no',
+		]);
+
+		$this->init_php();
+		$this->init_js();
+	}
+
+	/**
 	 * Flatten every place a form plugin might have hidden our fields into one array.
 	 *
 	 * Avada posts the whole form url-encoded inside `formData`, Ninja Forms posts a JSON
@@ -207,6 +251,10 @@ class Javascript_Validator extends BaseProtection
 	 */
 	private function collect_request_data(): array
 	{
+		if ($this->request_data_override !== null) {
+			return $this->request_data_override;
+		}
+
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by the form plugin
 		$data = (array) wp_unslash($_POST);
 

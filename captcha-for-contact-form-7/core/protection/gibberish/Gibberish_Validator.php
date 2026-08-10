@@ -4,6 +4,7 @@ namespace f12_cf7_captcha\core\protection\gibberish;
 
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
+use f12_cf7_captcha\core\log\ObservationLog;
 use f12_cf7_captcha\core\log\Pseudonymizer;
 use f12_cf7_captcha\core\protection\Observation_Provider;
 use f12_cf7_captcha\core\protection\Protection;
@@ -192,12 +193,14 @@ class Gibberish_Validator extends BaseProtection implements Observation_Provider
 			'verdict'       => $verdict,
 			'reason_code'   => self::REASON_CODE,
 			'reason_detail' => sprintf(
-				'%d of %d text fields and %d of %d words scored as machine-generated '
-				. '(thresholds: %d fields or %d words, mode %s)',
+				'%s. %d of %d text fields and %d of %d long words (%d+ letters, Latin script) '
+				. 'scored as machine-generated (thresholds: %d fields or %d long words, mode %s)',
+				self::describe_outcome( $verdict ),
 				$result['fields_flagged'],
 				$result['fields_analyzed'],
 				$result['tokens_flagged'],
 				$result['tokens_analyzed'],
+				Gibberish_Scorer::MIN_TOKEN_LENGTH,
 				$this->get_min_fields(),
 				Gibberish_Scorer::MIN_GIBBERISH_TOKENS,
 				$this->get_mode()
@@ -217,6 +220,27 @@ class Gibberish_Validator extends BaseProtection implements Observation_Provider
 				'email'           => Pseudonymizer::describe_email( $this->find_email( $post_data ) ),
 			],
 		];
+	}
+
+	/**
+	 * Say in words what happened to the submission.
+	 *
+	 * The verdict column alone was read the wrong way round in the field: a site owner found a
+	 * `scored` row for a submission that another module had rejected, took `scored` to mean
+	 * "this module scored it as spam", and spent hours on the wrong module. `scored` means the
+	 * opposite — the submission passed and was kept as a negative sample. The detail column is
+	 * the one place where that can be said in a sentence rather than in a column value, so it
+	 * says it.
+	 */
+	private static function describe_outcome( string $verdict ): string {
+		switch ( $verdict ) {
+			case 'blocked':
+				return 'Submission rejected by this module';
+			case 'monitored':
+				return 'Submission passed; this module would have rejected it in block mode';
+			default:
+				return 'Submission passed; recorded as a calibration sample';
+		}
 	}
 
 	/**
@@ -287,20 +311,18 @@ class Gibberish_Validator extends BaseProtection implements Observation_Provider
 	}
 
 	/**
-	 * Whether anonymous observations may be written at all.
+	 * Whether anonymous observations may be built at all.
 	 *
 	 * Deliberately its own setting rather than riding on `protection_detailed_tracking`: that
 	 * switch turns on an IP-linked log for the site owner's own use, which is a different
 	 * purpose from anonymous measurements, and two purposes should not share one consent.
+	 *
+	 * The answer comes from {@see ObservationLog} rather than being worked out again here. Both
+	 * ends read the same option and both have to treat "never saved" as on; two copies of that
+	 * rule is one copy too many for a switch that decides whether data is collected.
 	 */
 	private function is_collecting(): bool {
-		$raw = $this->Controller->get_settings( 'protection_anonymous_metrics', 'global' );
-
-		if ( $raw === '' || $raw === null ) {
-			$raw = 1;
-		}
-
-		return (int) $raw === 1;
+		return ObservationLog::is_enabled();
 	}
 
 	private function is_sampled(): bool {

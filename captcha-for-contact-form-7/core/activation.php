@@ -6,6 +6,7 @@ use Forge12\Shared\Logger;
 use f12_cf7_captcha\core\log\AuditLog;
 use f12_cf7_captcha\core\log\BlockLog;
 use f12_cf7_captcha\core\log\MailLog;
+use f12_cf7_captcha\core\log\ObservationLog;
 use f12_cf7_captcha\core\protection\captcha\Captcha;
 use f12_cf7_captcha\core\protection\ip\IPBan;
 use f12_cf7_captcha\core\protection\ip\IPLog;
@@ -74,6 +75,13 @@ function on_activation() {
 		$logger->info( "Table created", [
 			'plugin' => 'f12-cf7-captcha',
 			'table'  => 'mail_log'
+		] );
+
+		$Observation_Log = new ObservationLog( $logger );
+		$Observation_Log->create_table();
+		$logger->info( "Table created", [
+			'plugin' => 'f12-cf7-captcha',
+			'table'  => 'observation_log'
 		] );
 
 		if ( ! get_option( 'f12_cf7_captcha_installed_at' ) ) {

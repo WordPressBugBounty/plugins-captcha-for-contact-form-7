@@ -8,6 +8,7 @@ use f12_cf7_captcha\core\BaseProtection;
 use f12_cf7_captcha\core\log\AuditLog;
 use f12_cf7_captcha\core\log\BlockLog;
 use f12_cf7_captcha\core\log\MailLog;
+use f12_cf7_captcha\core\log\ObservationLog;
 use f12_cf7_captcha\core\Log_WordPress_Interface;
 use f12_cf7_captcha\core\protection\api\Api;
 use f12_cf7_captcha\core\protection\Shadow_Mode;
@@ -621,11 +622,11 @@ class Protection extends BaseModul {
 			}
 		}
 
-		// Anonymous observations: what modules measured but did not act on. Written after the
-		// verdict so a module can report "I would have blocked this" for a submission that was
-		// let through, which is the only way the false-negative side of detection quality ever
-		// becomes visible.
-		$this->maybe_log_observations( $spam_modul_name );
+		// Anonymous measurements: what modules scored, whether or not they acted on it. Written
+		// after the verdict so a module can report "I would have blocked this" for a submission
+		// that was let through, which is the only way the false-negative side of detection
+		// quality ever becomes visible.
+		$this->maybe_log_observations();
 
 		// Shadow Mode: record the local verdict for API comparison analytics.
 		Shadow_Mode::record( $is_spam, $spam_modul_name, $array_post_data );
@@ -634,21 +635,21 @@ class Protection extends BaseModul {
 	}
 
 	/**
-	 * Write the anonymous observation rows for this request.
+	 * Write the anonymous measurement rows for this request.
 	 *
-	 * Exactly one row is written per module per request. The blocking module is skipped only
-	 * when detailed tracking already recorded it through maybe_log_block(); with that switch
-	 * off, its observation is written here instead, so a block is never lost just because the
-	 * site owner does not keep an IP-linked log.
-	 *
-	 * @param string $blocking_module The module that produced the block, if any.
+	 * Exactly one row per measuring module per request, in {@see ObservationLog} — a different
+	 * table from the block log, under a different switch. The blocking module is no longer
+	 * skipped: when these rows shared a table with the blocks, writing both for one submission
+	 * meant two rows for one event, so the blocking module's measurement was suppressed whenever
+	 * maybe_log_block() had already recorded it. With separate tables that reason is gone, and
+	 * dropping the skip fixes what it cost — a calibration series that lost precisely its
+	 * true positives on any site with detailed tracking switched on.
 	 */
-	private function maybe_log_observations( string $blocking_module ): void {
-		$already_logged = BlockLog::is_enabled() ? $blocking_module : '';
-		$block_log      = null;
+	private function maybe_log_observations(): void {
+		$observation_log = null;
 
 		foreach ( $this->_modules as $name => $modul ) {
-			if ( $name === $already_logged || ! $modul instanceof Observation_Provider ) {
+			if ( ! $modul instanceof Observation_Provider ) {
 				continue;
 			}
 
@@ -660,9 +661,9 @@ class Protection extends BaseModul {
 
 			// Built lazily: most requests have nothing to observe, and constructing the log
 			// object touches the database.
-			$block_log = $block_log ?? new BlockLog( $this->get_logger() );
+			$observation_log = $observation_log ?? new ObservationLog( $this->get_logger() );
 
-			$block_log->log_observation(
+			$observation_log->log(
 				$name,
 				$observation['reason_code'],
 				$observation['reason_detail'],

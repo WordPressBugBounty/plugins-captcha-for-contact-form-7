@@ -229,4 +229,39 @@ function on_update() {
 			'to'     => '2.6.2',
 		] );
 	}
+
+	// 🔹 Upgrade auf 2.14.0 (Beobachtungen aus dem Block-Log in eine eigene Tabelle)
+	//
+	// 2.13.0 schrieb anonyme Messungen in `f12_block_log` und hielt sie nur über die Spalte
+	// `verdict` auseinander. Die beiden Zeilenarten hängen aber an gegenläufigen Defaults
+	// (Messungen an, Block-Log aus), also enthielt die Tabelle auf einer Standardinstallation
+	// ausschließlich Messungen und keinen einzigen Block — mit dem Ergebnis, dass mindestens ein
+	// Anwender die Messzeilen für die Ursache seiner Ablehnung hielt.
+	//
+	// Die Tabellenprüfung steht bewusst neben dem Versionsvergleich: eine Installation, die
+	// bereits auf 2.14.0 steht, ohne diesen Block je gesehen zu haben, bekäme sonst nie eine
+	// Tabelle — und ObservationLog::log() verwirft dann jede Messung, ohne dass irgendwo etwas
+	// auffällt. Das betrifft jede Installation, auf der ein 2.14.0-Build vor dieser Änderung
+	// lief. create_table() ist dbDelta und damit ohnehin idempotent.
+	$observation_log = new \f12_cf7_captcha\core\log\ObservationLog( $logger );
+
+	if ( version_compare( $currentVersion, '2.14.0', '<' ) || ! $observation_log->table_exists() ) {
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+
+		$observation_log->create_table();
+
+		// Verschiebt die Bestandszeilen. Schlägt das Kopieren fehl, bleibt das Block-Log
+		// unangetastet — BlockLog::BLOCKED_ONLY filtert die Messzeilen dort weiterhin heraus,
+		// die Analytics-Seite bleibt also auch bei halb gelaufener Migration korrekt.
+		$moved = $observation_log->migrate_from_block_log();
+
+		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );
+
+		$logger->info( "Upgrade performed: ObservationLog table created, observations migrated", [
+			'plugin' => 'f12-cf7-captcha',
+			'from'   => $currentVersion ?: 'none',
+			'to'     => '2.14.0',
+			'moved'  => $moved,
+		] );
+	}
 }

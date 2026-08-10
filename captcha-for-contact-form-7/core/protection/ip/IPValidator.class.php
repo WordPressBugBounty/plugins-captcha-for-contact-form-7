@@ -300,6 +300,13 @@ class IPValidator extends BaseProtection {
 
 		// Check if the IP has been blocked
 		if ($this->create_ip_ban()->get_count($hash_current, $hash_previous) > 0) {
+			// The rate-limit path below sets this message when the ban is *created*. Without it
+			// here, every further submission for the whole block time — an hour by default —
+			// left the message empty, and the form plugin fell back to its own generic wording
+			// ("Invalid input detected."). A site owner then has a form that refuses everything
+			// and names no reason; the one report of this cost hours of bisecting the modules.
+			$this->set_message(__('ip-protection', 'captcha-for-contact-form-7'));
+
 			$this->get_logger()->info('IP is blocked', [
 				'hash_current'  => $hash_current,
 				'hash_previous' => $hash_previous,

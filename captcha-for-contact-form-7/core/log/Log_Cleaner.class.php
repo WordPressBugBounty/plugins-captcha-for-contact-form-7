@@ -85,20 +85,28 @@ class Log_Cleaner extends BaseModul
 		    $mail_log = new MailLog( $this->get_logger() );
 		    $mail_deleted = $mail_log->cleanup( $mail_retention );
 
+		    // Anonymous measurements keep their own, longer window — see
+		    // ObservationLog::RETENTION_DAYS. No setting: the one switch that matters turns the
+		    // whole table off.
+		    $observation_log = new ObservationLog( $this->get_logger() );
+		    $observation_deleted = $observation_log->cleanup();
+
 		    // Audit the cleanup itself
-		    if ( $block_deleted > 0 || $audit_deleted > 0 || $mail_deleted > 0 ) {
+		    if ( $block_deleted > 0 || $audit_deleted > 0 || $mail_deleted > 0 || $observation_deleted > 0 ) {
 			    AuditLog::log(
 				    AuditLog::TYPE_CRON,
 				    'LOG_CLEANUP_COMPLETED',
 				    AuditLog::SEVERITY_INFO,
-				    sprintf( 'Log cleanup: %d block log + %d audit log + %d mail log entries deleted', $block_deleted, $audit_deleted, $mail_deleted ),
+				    sprintf( 'Log cleanup: %d block log + %d audit log + %d mail log + %d observation log entries deleted', $block_deleted, $audit_deleted, $mail_deleted, $observation_deleted ),
 				    [
-					    'block_deleted'   => $block_deleted,
-					    'block_retention' => $retention,
-					    'audit_deleted'   => $audit_deleted,
-					    'audit_retention' => $audit_retention,
-					    'mail_deleted'    => $mail_deleted,
-					    'mail_retention'  => $mail_retention,
+					    'block_deleted'         => $block_deleted,
+					    'block_retention'       => $retention,
+					    'audit_deleted'         => $audit_deleted,
+					    'audit_retention'       => $audit_retention,
+					    'mail_deleted'          => $mail_deleted,
+					    'mail_retention'        => $mail_retention,
+					    'observation_deleted'   => $observation_deleted,
+					    'observation_retention' => ObservationLog::RETENTION_DAYS,
 				    ]
 			    );
 		    }
@@ -113,6 +121,7 @@ class Log_Cleaner extends BaseModul
 			    'audit_retention' => $audit_retention,
 			    'mail_deleted'    => $mail_deleted,
 			    'mail_retention'  => $mail_retention,
+			    'observation_deleted' => $observation_deleted,
 		    ]);
 
 		    return $deleted;

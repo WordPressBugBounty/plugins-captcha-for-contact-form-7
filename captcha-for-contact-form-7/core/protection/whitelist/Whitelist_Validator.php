@@ -253,14 +253,70 @@ class Whitelist_Validator extends BaseProtection {
 		if (defined('REST_REQUEST') && REST_REQUEST) {
 			$route = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
 			if (strpos($route, '/wc/store/') !== false || strpos($route, '/wc/v3/') !== false) {
-				$this->get_logger()->info('Whitelist: WooCommerce REST-API detected.', [
-					'route' => $route,
-				]);
-				return true;
+				// The one Store API route that must NOT be skipped. Whitelisting all of
+				// /wc/store/ is what left the block checkout completely unprotected: the block
+				// checkout places its order through this route, so a blanket skip meant every
+				// order went through untouched however many protections were switched on.
+				//
+				// Everything else under /wc/store/ stays whitelisted on purpose — adding to the
+				// cart, changing a quantity or picking a shipping rate carries none of our
+				// fields and would be classified as spam on sight.
+				if (self::is_store_api_checkout_route($route)) {
+					$this->get_logger()->info('Whitelist: WooCommerce Store API checkout — not skipped.', [
+						'route' => $route,
+					]);
+				} else {
+					$this->get_logger()->info('Whitelist: WooCommerce REST-API detected.', [
+						'route' => $route,
+					]);
+					return true;
+				}
 			}
 		}
 
 		// No match -> no whitelist match
+		return false;
+	}
+
+	/**
+	 * Whether a request URI addresses the Store API's checkout route.
+	 *
+	 * Deliberately strict about *where* it looks. Matching "checkout" anywhere in the URI would
+	 * also fire on `/wc/store/v1/products?search=checkout`, and un-whitelisting a product search
+	 * would have it validated as if it were a form submission. Only the route path decides, and
+	 * only when it ends there:
+	 *
+	 *  - pretty permalinks — `/wp-json/wc/store/v1/checkout`
+	 *  - plain permalinks — `/index.php?rest_route=/wc/store/v1/checkout`, where the route lives
+	 *    in the query string instead of the path (the same shape that broke every filtered admin
+	 *    list once already)
+	 *
+	 * The version segment is not required: the route was `/wc/store/checkout` before v1 existed.
+	 *
+	 * @param string $request_uri The raw REQUEST_URI.
+	 *
+	 * @return bool
+	 */
+	public static function is_store_api_checkout_route( string $request_uri ): bool {
+		$path  = (string) strtok( $request_uri, '?' );
+		$query = (string) substr( $request_uri, strlen( $path ) + 1 );
+
+		$candidates = [ $path ];
+
+		if ( $query !== '' ) {
+			parse_str( $query, $params );
+
+			if ( isset( $params['rest_route'] ) && is_string( $params['rest_route'] ) ) {
+				$candidates[] = $params['rest_route'];
+			}
+		}
+
+		foreach ( $candidates as $candidate ) {
+			if ( preg_match( '!/wc/store(/v\d+)?/checkout/?$!', $candidate ) === 1 ) {
+				return true;
+			}
+		}
+
 		return false;
 	}
 

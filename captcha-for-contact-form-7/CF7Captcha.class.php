@@ -600,6 +600,15 @@ class CF7Captcha {
 			$this->logger->debug( "Assets loaded for WooCommerce checkout", [ 'plugin' => 'f12-cf7-captcha' ] );
 			return true;
 		}
+		// The checkout *block* renders wherever it is placed, while is_checkout() only knows the
+		// one page WooCommerce has been told about. A shop that put the block on any other page
+		// got no assets at all, so the block checkout stayed unprotected however the integration
+		// was configured — and nothing said so.
+		if ( $post && ! empty( $post->post_content ) && function_exists( 'has_block' )
+		     && has_block( 'woocommerce/checkout', $post ) ) {
+			$this->logger->debug( "Assets loaded - WooCommerce checkout block detected", [ 'plugin' => 'f12-cf7-captcha' ] );
+			return true;
+		}
 		if ( function_exists( 'is_account_page' ) && is_account_page() ) {
 			$this->logger->debug( "Assets loaded for WooCommerce account page", [ 'plugin' => 'f12-cf7-captcha' ] );
 			return true;

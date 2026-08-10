@@ -105,28 +105,6 @@ class BlockLog {
 	}
 
 	/**
-	 * Check whether anonymous observation rows may be written.
-	 *
-	 * Separate from {@see is_enabled()} on purpose. Detailed tracking turns on an IP-linked
-	 * log the site owner reads on the Analytics page; observations are anonymous measurements
-	 * that exist to calibrate detection. Two purposes, two switches — a site owner who wants
-	 * neither, or only one, can say so.
-	 *
-	 * Defaults to on when the option has never been saved, which is the state of every
-	 * installation that has not visited the settings screen since this shipped.
-	 */
-	public static function is_observing(): bool {
-		$enabled = \f12_cf7_captcha\CF7Captcha::get_instance()
-			->get_settings( 'protection_anonymous_metrics', 'global' );
-
-		if ( $enabled === '' || $enabled === null ) {
-			return true;
-		}
-
-		return (int) $enabled === 1;
-	}
-
-	/**
 	 * Log a block event.
 	 *
 	 * @param string $protection    The protection module name (e.g. 'timer', 'honeypot', 'api')
@@ -139,46 +117,22 @@ class BlockLog {
 			return;
 		}
 
-		$this->insert( $protection, $reason_code, $reason_detail, $extra, false );
-	}
-
-	/**
-	 * Log an anonymous observation — a verdict a module reached without acting on it.
-	 *
-	 * Written under {@see is_observing()} rather than under detailed tracking, and always with
-	 * a pseudonymised IP: these rows are meant to be analysed away from the site that produced
-	 * them, so the `protection_log_plaintext` debugging switch deliberately does not reach
-	 * them. A site owner debugging their own blocks sees plaintext in the rows that are about
-	 * their own traffic, and hashes in the rows that are about detection quality.
-	 *
-	 * @param string $protection    The protection module name.
-	 * @param string $reason_code   Machine-readable reason code.
-	 * @param string $reason_detail Human-readable explanation.
-	 * @param array  $extra         verdict, score, reason_codes, meta, form_plugin, form_id.
-	 */
-	public function log_observation( string $protection, string $reason_code, string $reason_detail, array $extra = [] ): void {
-		if ( ! self::is_observing() ) {
-			return;
-		}
-
-		$this->insert( $protection, $reason_code, $reason_detail, $extra, true );
+		$this->insert( $protection, $reason_code, $reason_detail, $extra );
 	}
 
 	/**
 	 * Write one row.
-	 *
-	 * @param bool $anonymous When true, the IP is always pseudonymised regardless of the
-	 *                        plaintext debugging switch.
 	 */
-	private function insert( string $protection, string $reason_code, string $reason_detail, array $extra, bool $anonymous ): void {
+	private function insert( string $protection, string $reason_code, string $reason_detail, array $extra ): void {
 		global $wpdb;
 
 		$ip_raw  = isset( $_SERVER['REMOTE_ADDR'] )
 			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
 			: '';
 
-		// Plaintext is an explicit debugging opt-in and never applies to anonymous rows.
-		$plaintext = ! $anonymous && (int) \f12_cf7_captcha\CF7Captcha::get_instance()
+		// Plaintext is an explicit debugging opt-in: this log is about the site's own traffic
+		// and a site owner debugging their own blocks may ask to see the addresses.
+		$plaintext = (int) \f12_cf7_captcha\CF7Captcha::get_instance()
 				->get_settings( 'protection_log_plaintext', 'global' ) === 1;
 
 		// Pseudonymizer keys the digest against a rotating site secret. A bare SHA-256 of an
@@ -239,10 +193,12 @@ class BlockLog {
 	/**
 	 * SQL predicate limiting a query to rows that represent an actual block.
 	 *
-	 * The table also holds anonymous observations — `monitored` (would have blocked) and
-	 * `scored` (passed, measured anyway). Those exist to calibrate detection and must never
-	 * reach the Analytics screen, which reports what the plugin *did*. Rows written before the
-	 * verdict column was used carry the 'blocked' default, so history is unaffected.
+	 * Every row written here is a block since observations moved to {@see ObservationLog}, so
+	 * this is belt and braces rather than a live filter. It stays because the migration that
+	 * empties the old rows out can fail — a `DELETE` on a large table under a low
+	 * `max_execution_time` is the obvious way — and a half-migrated install must still not show
+	 * measurements on a screen that reports what the plugin *did*. Rows written before the
+	 * verdict column existed carry the 'blocked' default, so history is unaffected either way.
 	 */
 	private const BLOCKED_ONLY = "verdict = 'blocked'";
 
@@ -288,41 +244,6 @@ class BlockLog {
 		}
 
 		return $results ?: [];
-	}
-
-	/**
-	 * Get anonymous observation entries — everything the Analytics screen deliberately hides.
-	 *
-	 * This is the read side of {@see log_observation()} and the intended source for any later
-	 * export: it returns only rows that carry no personal data by construction. The mail log
-	 * holds full submission text and must never be used for that purpose.
-	 *
-	 * @param int $limit  Max entries to return.
-	 * @param int $offset Offset for pagination.
-	 * @param int $days   Only entries from last N days.
-	 *
-	 * @return array
-	 */
-	public function get_observations( int $limit = 100, int $offset = 0, int $days = 30 ): array {
-		if ( ! $this->table_exists() ) {
-			return [];
-		}
-
-		global $wpdb;
-
-		$table = $this->get_table_name();
-		$since = gmdate( 'Y-m-d H:i:s', time() - ( $days * DAY_IN_SECONDS ) );
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE ts >= %s AND verdict <> 'blocked' ORDER BY ts DESC LIMIT %d OFFSET %d",
-				$since,
-				$limit,
-				$offset
-			),
-			ARRAY_A
-		) ?: [];
 	}
 
 	/**

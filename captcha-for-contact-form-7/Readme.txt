@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.13.0
+Stable tag: 2.14.0
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -62,7 +62,8 @@ SilentShield protects forms from all major WordPress form builders and core feat
 - MC4WP – Mailchimp for WordPress (signup forms)
 
 **WooCommerce:**
-- Checkout (classic & PayPal Payments)
+- Checkout – block (the default for new shops since WooCommerce 8.3)
+- Checkout – classic (incl. PayPal Payments)
 - Login
 - Registration
 - Lost password
@@ -199,6 +200,13 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.14.0 =
+- New [WooCommerce]: The block checkout is now protected. This is the checkout WooCommerce gives every new shop since version 8.3, and until now it received no protection at all — not a weakened version, none. Captcha, honeypot, timing checks and blacklists were all switched on and doing their work everywhere else on the site, while an order placed at the checkout itself went through untouched. Nothing indicated this: the plugin listed WooCommerce as protected, because it was — the older, classic checkout was. The two are separate pieces of software that happen to sell the same basket, and the block checkout offers none of the places the classic one does for a plugin to step in. **You have to switch this on.** It appears as its own entry, "WooCommerce Block Checkout", under Forms, next to the existing "WooCommerce Checkout" — turning that one on does not cover it, and never did. If you are unsure which checkout your shop uses: open your checkout page in the editor, and if it shows a single "Checkout" block rather than a shortcode, it is the block one.
+- Improvement [WooCommerce]: If your checkout block sits on a page other than the one WooCommerce has been told is your checkout — a landing page, a one-page shop, a custom funnel — the plugin previously loaded nothing there at all, so no protection could run even where it was configured. It now recognises the checkout block wherever it is placed.
+- Fix [Protection]: When the rate limit blocked an address, only the submission that triggered the block said so. Every attempt for the rest of the block — an hour by default — was turned away with whatever generic wording your form plugin uses when it is given no reason, so a site owner testing their own form a few times in a row locked themselves out and then had a form that refused everything and explained nothing. One person spent hours switching protections off one at a time to find out which one it was. The block now names itself for its whole duration, exactly as the first rejection always did.
+- Fix [Logging]: The anonymous measurements the new content check records were being written to the same place as the log of blocked submissions. Those two are governed by separate switches with opposite defaults — measuring is on, the block log is off until you ask for it — so on a normal installation that table filled up with measurements and contained not a single actual block. Anyone opening it while looking for the reason a submission was turned away found only rows belonging to submissions that had been let *through*, and at least one person reasonably concluded the content check had rejected their enquiry when it had done the opposite. Measurements now have their own place. Existing rows are moved across on update; nothing is lost, and the figures shown on the Analytics screen were correct throughout and do not change.
+- Improvement [Protection]: The new content check judged a field holding a single long word by that word alone, which is a poor basis for a decision when the field is a name, a town, or a German sentence whose only long word is something like "Rechnungsanschrift". A lone word now has to look far more clearly machine-generated before it counts against the field; where a second long word is present, nothing changes. Real spam is unaffected — it fills whole fields with generated text, and every one of those was rechecked against this. The explanation written alongside each measurement also says plainly what happened to the submission and what it counted, instead of "1 of 1 words", which meant "one of the one words long enough to judge" and was read, understandably, as a word count.
+
 = 2.13.0 =
 - Fix [Avada]: Notification emails from Avada forms arrived with the plugin's own hidden fields listed underneath the enquiry — rows like "F12 Timer" followed by a long string of characters. Nothing was broken and no data was at risk, but to the person reading the email it looked like a malfunctioning website, which is a poor thanks for protection that was otherwise doing its job. Avada is the only form plugin that emails back everything a form sent rather than a message you wrote yourself, which is why it happened there and nowhere else. Those fields are now removed before Avada builds the email, and they no longer appear in the stored submission or in Avada's own entries list either. Two of them had also been kept in the plugin's mail log all along, where nobody happened to look; that is fixed by the same change.
 - New [Protection]: A new check reads what was actually typed into your forms and recognises the kind of spam that fills every field with random characters — a name like "Cowqv Exnjznedy", a town like "JPnuTSVqMlNmdwoFObq". This catches something the other checks cannot: they all work by giving the visitor's browser something to return, which a spam program driving a real browser simply hands back correctly. Judging the text instead does not care how good the program is at pretending to be a person, because writing nonsense is the whole point of what it is doing. It starts in observation mode and blocks nothing until you switch it on under Protection, so it cannot turn a real enquiry away while you are still deciding. It never looks at more than one field in isolation: a single unusual name or product code is normal, and only a submission where several fields are nonsense counts. Non-Latin alphabets are skipped entirely rather than guessed at.

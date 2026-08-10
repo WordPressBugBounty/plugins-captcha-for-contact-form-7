@@ -97,6 +97,27 @@ class Gibberish_Scorer {
 	public const FIELD_FLAG_RATIO = 0.5;
 
 	/**
+	 * Signals required to flag a field whose *only* eligible token is the suspect one.
+	 *
+	 * The ratio above cannot defend a one-token field: with a single token the ratio is either
+	 * 0.0 or 1.0, so the field is condemned by that one word. Most fields are one-token fields —
+	 * a name, a town, or a German sentence whose only word of eight letters or more is
+	 * `Rechnungsanschrift`. A reporter running 2.13.0 hit exactly that and spent hours on it.
+	 *
+	 * Raising {@see MIN_SIGNALS} everywhere would be the crude version of this fix and would
+	 * cost real detection: two of the eleven tokens in the two spam runs this module was built
+	 * against trip exactly two signals. Requiring the full set *only where there is no second
+	 * token to corroborate* keeps those two counted by {@see MIN_GIBBERISH_TOKENS} while giving
+	 * a lone real word the widest margin the three signals can offer.
+	 *
+	 * Measured over 47 deliberately hostile real tokens — German compounds with five-consonant
+	 * runs, Polish and Icelandic surnames, CamelCase brand names like `WooCommerce` and
+	 * `LaserJet`: none reaches two signals, and none reaches three. The nine spam tokens that
+	 * carry a field on their own all trip three.
+	 */
+	public const MIN_SIGNALS_SINGLE_TOKEN = 3;
+
+	/**
 	 * Generated tokens anywhere in a submission that condemn it regardless of the field ratio.
 	 *
 	 * The ratio alone can be diluted away. A real spam run against a wine merchant's order
@@ -235,11 +256,16 @@ class Gibberish_Scorer {
 		}
 
 		$gibberish = 0;
+		$strongest = 0;
 		$signals   = [];
 		$worst     = [ 'vowel_ratio' => 1.0, 'cons_run' => 0, 'case_switches' => 0, 'bigram' => 9.0 ];
 
 		foreach ( $tokens as $token ) {
 			$token_signals = $this->score_token( $token );
+
+			// Tracked for every token, including the ones below the bar: the single-token rule
+			// below needs to know how strong the best case against this field actually is.
+			$strongest = max( $strongest, count( $token_signals ) );
 
 			if ( count( $token_signals ) < self::MIN_SIGNALS ) {
 				continue;
@@ -256,8 +282,14 @@ class Gibberish_Scorer {
 
 		$ratio = $gibberish / count( $tokens );
 
+		// With one token there is no ratio to speak of — 0.0 or 1.0 — so the verdict rests on
+		// that token alone and it has to clear the higher bar. See MIN_SIGNALS_SINGLE_TOKEN.
+		$is_gibberish = count( $tokens ) === 1
+			? $strongest >= self::MIN_SIGNALS_SINGLE_TOKEN
+			: $ratio >= self::FIELD_FLAG_RATIO;
+
 		return [
-			'is_gibberish' => $ratio >= self::FIELD_FLAG_RATIO,
+			'is_gibberish' => $is_gibberish,
 			'summary'      => [
 				'len'            => mb_strlen( $value ),
 				'tokens'         => count( $tokens ),
