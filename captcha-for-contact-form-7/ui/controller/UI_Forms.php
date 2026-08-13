@@ -18,7 +18,7 @@ namespace f12_cf7_captcha {
 		private ?Settings_Resolver $resolver = null;
 
 		public function __construct( UI_Manager $UI_Manager ) {
-			parent::__construct( $UI_Manager, 'f12-cf7-captcha-forms', 'Forms', 3 );
+			parent::__construct( $UI_Manager, 'f12-cf7-captcha-forms', __( 'Forms', 'captcha-for-contact-form-7' ), 3 );
 		}
 
 		private function get_discovery(): Form_Discovery {

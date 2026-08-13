@@ -22,7 +22,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerFormidable extends BaseController {
 
-	protected string $name = 'Formidable Forms';
 	protected string $id = 'formidable';
 	protected string $settings_key = 'protection_formidable_enable';
 
@@ -39,6 +38,10 @@ class ControllerFormidable extends BaseController {
 		[ 'type' => 'action', 'hook' => 'frm_entry_form', 'method' => 'wp_add_spam_protection', 'priority' => 100, 'args' => 3 ],
 		[ 'type' => 'filter', 'hook' => 'frm_validate_entry', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 2 ],
 	];
+
+	public function get_name(): string {
+		return __( 'Formidable Forms', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'FrmAppHelper' );

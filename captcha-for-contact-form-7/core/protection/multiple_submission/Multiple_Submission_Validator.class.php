@@ -5,6 +5,7 @@ namespace f12_cf7_captcha\core\protection\multiple_submission;
 
 use f12_cf7_captcha\CF7Captcha;
 use f12_cf7_captcha\core\BaseProtection;
+use f12_cf7_captcha\core\protection\Block_Reason_Provider;
 use f12_cf7_captcha\core\protection\Protection;
 use f12_cf7_captcha\core\timer\CaptchaTimer;
 use f12_cf7_captcha\core\timer\CaptchaTimerCleaner;
@@ -14,7 +15,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-class Multiple_Submission_Validator extends BaseProtection {
+class Multiple_Submission_Validator extends BaseProtection implements Block_Reason_Provider {
+
+	/**
+	 * How long a spent token stays on record, in seconds.
+	 *
+	 * Long enough to recognise the stale-markup case — a visitor submitting again from a page
+	 * that was never refreshed — and short enough that the bookkeeping cannot grow without
+	 * bound. One entry per successful submission, expiring on its own.
+	 */
+	private const CONSUMED_TOKEN_TTL = 3600;
+
+	/**
+	 * Why the last judged request was rejected, or null if it passed.
+	 *
+	 * @var array{code:string, detail:string}|null
+	 */
+	private ?array $block_reason = null;
 
 	public function __construct(CF7Captcha $Controller)
 	{
@@ -122,6 +139,10 @@ class Multiple_Submission_Validator extends BaseProtection {
 			'method' => __METHOD__,
 		]);
 
+		// Every path below either sets a reason or leaves the request clean. Clearing here
+		// keeps a verdict from one submission out of the log line of the next.
+		$this->block_reason = null;
+
 		if (!isset($args[0])) {
 			$this->get_logger()->warning('No post data available for checking.');
 			return false;
@@ -137,6 +158,14 @@ class Multiple_Submission_Validator extends BaseProtection {
 
 		if (!isset($array_post_data[$field_name])) {
 			$this->get_logger()->warning('Hash field missing in submitted data. Classified as spam.');
+			$this->block_reason = [
+				'code'   => 'MS_TOKEN_MISSING',
+				'detail' => sprintf(
+					'The submission carried no "%s" field. Either the form was rendered before this protection was switched on, or the field was stripped before it reached the server.',
+					$field_name
+				),
+			];
+
 			return true;
 		}
 
@@ -150,7 +179,22 @@ class Multiple_Submission_Validator extends BaseProtection {
 		$Timer = $Timer_Controller->get_timer($hash);
 
 		if (!$Timer) {
-			$this->get_logger()->warning('No matching timer found for hash. Classified as spam.', ['hash' => $hash]);
+			// Two very different situations reach this branch, and telling them apart is the
+			// difference between "your pages are cached" and "someone is forging tokens".
+			if ($this->was_token_consumed($hash)) {
+				$this->get_logger()->warning('Token was already used by an earlier submission. Classified as spam.', ['hash' => $hash]);
+				$this->block_reason = [
+					'code'   => 'MS_TOKEN_REUSED',
+					'detail' => 'This token had already been spent by an earlier submission. The form markup still held the used token — typically a page served from a full-page cache, a browser back/forward restore, or a second submission from a form that was never refreshed.',
+				];
+			} else {
+				$this->get_logger()->warning('No matching timer found for hash. Classified as spam.', ['hash' => $hash]);
+				$this->block_reason = [
+					'code'   => 'MS_TOKEN_UNKNOWN',
+					'detail' => 'No record exists for the submitted token. It was never issued by this site, or it expired and was removed by the daily cleanup.',
+				];
+			}
+
 			return true;
 		}
 
@@ -168,14 +212,72 @@ class Multiple_Submission_Validator extends BaseProtection {
 
 		if ($time_passed < $minimum_time_in_ms) {
 			$this->get_logger()->warning('Form submitted too quickly. Classified as spam.');
+			$this->block_reason = [
+				'code'   => 'MS_TOO_FAST',
+				'detail' => sprintf(
+					'Submitted %d ms after the form was rendered; the configured minimum is %d ms.',
+					(int) $time_passed,
+					$minimum_time_in_ms
+				),
+			];
+
 			return true;
 		}
 
 		$this->get_logger()->info('Validation successful. Deleting timer record.', ['hash' => $hash]);
+		// Order matters: record the token as spent *before* dropping the row, so a crash
+		// between the two leaves a token that is merely unrecognised rather than one that
+		// still validates.
+		$this->remember_consumed_token($hash);
 		$Timer->delete();
 
 		$this->get_logger()->info('Form classified as not spam.');
 		return false;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public function get_block_reason(): ?array
+	{
+		return $this->block_reason;
+	}
+
+	/**
+	 * Note that a token has been spent, so a later submission carrying it can be recognised.
+	 *
+	 * Deliberately not a database column: the row it belongs to is deleted a moment later, and
+	 * the only thing worth keeping is the fact that the token once existed. A transient expires
+	 * on its own, which keeps this from becoming a table nobody prunes.
+	 *
+	 * The token itself is not stored — only a digest of it — so the record cannot be replayed
+	 * into a working token if the option table is ever exposed.
+	 */
+	private function remember_consumed_token(string $hash): void
+	{
+		if (!function_exists('set_transient')) {
+			return;
+		}
+
+		set_transient($this->consumed_token_key($hash), 1, self::CONSUMED_TOKEN_TTL);
+	}
+
+	/**
+	 * Whether this token was spent by an earlier successful submission.
+	 */
+	private function was_token_consumed(string $hash): bool
+	{
+		if (!function_exists('get_transient')) {
+			return false;
+		}
+
+		return (bool) get_transient($this->consumed_token_key($hash));
+	}
+
+	private function consumed_token_key(string $hash): string
+	{
+		// md5 keeps the key inside the 172-character limit WordPress puts on transient names.
+		return 'f12_ms_spent_' . md5($hash);
 	}
 
 	/**
@@ -216,10 +318,16 @@ class Multiple_Submission_Validator extends BaseProtection {
 
 		$this->get_logger()->debug('New timer hash successfully generated.', ['hash' => $hash]);
 
+		// data-issued carries the moment this markup was rendered. On a normal request that is
+		// "now", and the frontend skips its staleness check. On a page served from a full-page
+		// cache the stamp is frozen along with the hash, which is exactly what makes it a
+		// reliable tell: without it, the one hash written into the cache is handed to every
+		// visitor, the first submission consumes it, and everyone after is blocked.
 		$html = sprintf(
-			'<div class="f12t"><input type="hidden" class="f12_timer" name="%s" value="%s"/></div>',
+			'<div class="f12t"><input type="hidden" class="f12_timer" name="%s" value="%s" data-issued="%s"/></div>',
 			esc_attr($field_name),
-			esc_attr($hash)
+			esc_attr($hash),
+			esc_attr((string) time())
 		);
 
 		$this->get_logger()->info('Hidden captcha field successfully generated.', [

@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerWPForms
  */
 class ControllerWPForms extends BaseController {
-	protected string $name = 'WPForms';
 	protected string $id = 'wpforms';
 	protected string $settings_key = 'protection_wpforms_enable';
 
@@ -20,6 +19,11 @@ class ControllerWPForms extends BaseController {
 		['type' => 'action', 'hook' => 'wpforms_frontend_output', 'method' => 'wp_add_spam_protection', 'priority' => 10, 'args' => 5],
 		['type' => 'filter', 'hook' => 'wpforms_process_initial_errors', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 2],
 	];
+
+	public function get_name(): string
+	{
+		return __( 'WPForms', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool
 	{

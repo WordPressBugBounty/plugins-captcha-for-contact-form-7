@@ -153,9 +153,13 @@ namespace f12_cf7_captcha {
 			// The parameters are:
 			// 1. $UI_Manager: The UI Manager instance.
 			// 2. 'f12-cf7-captcha': The unique domain name for this UI page.
-			// 3. 'Beta': The displayed name of the page in the UI menu.
+			// 3. The displayed name of the page in the UI menu. Matches what the React admin
+			//    calls the same screen; the classic menu was the only place still saying
+			//    "Beta", which read as a warning the product no longer intends.
 			// 4. 0: The priority or order in the menu (0 means at the top).
-			parent::__construct( $UI_Manager, 'f12-cf7-captcha-beta', 'Beta', 2 );
+			// The slug stays 'f12-cf7-captcha-beta': it is in people's bookmarks, and the
+			// settings behind it are still stored under the 'beta' container.
+			parent::__construct( $UI_Manager, 'f12-cf7-captcha-beta', __( 'API / SilentShield', 'captcha-for-contact-form-7' ), 2 );
 
 			$this->get_logger()->info( 'Constructor started.', [
 				'class'  => __CLASS__,

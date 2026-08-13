@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerGravityForms
  */
 class ControllerGravityForms extends BaseController {
-	protected string $name = 'GravityForms';
 	protected string $id = 'gravityforms';
 	protected string $settings_key = 'protection_gravityforms_enable';
 
@@ -29,6 +28,10 @@ class ControllerGravityForms extends BaseController {
 		['type' => 'filter', 'hook' => 'gform_entry_is_spam', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 3],
 		['type' => 'filter', 'hook' => 'gform_validation', 'method' => 'wp_validation', 'priority' => 10, 'args' => 3],
 	];
+
+	public function get_name(): string {
+		return __( 'GravityForms', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		$is_installed = class_exists( 'GFCommon' );

@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerWordpressLogin
  */
 class ControllerWordpressLogin extends BaseController {
-	protected string $name = 'WordPress Login';
 	protected string $id = 'wordpress_login';
 	protected string $settings_key = 'protection_wordpress_login_enable';
 
@@ -20,6 +19,11 @@ class ControllerWordpressLogin extends BaseController {
 		['type' => 'action', 'hook' => 'login_form', 'method' => 'wp_add_spam_protection'],
 		['type' => 'filter', 'hook' => 'wp_authenticate_user', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 2],
 	];
+
+	public function get_name(): string
+	{
+		return __( 'WordPress Login', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool
 	{

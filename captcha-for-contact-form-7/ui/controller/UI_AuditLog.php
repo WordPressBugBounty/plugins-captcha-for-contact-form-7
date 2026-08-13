@@ -17,7 +17,7 @@ namespace f12_cf7_captcha {
 	class UI_AuditLog extends UI_Page {
 
 		public function __construct( UI_Manager $UI_Manager ) {
-			parent::__construct( $UI_Manager, 'f12-cf7-captcha-audit-log', 'Audit Log', 4 );
+			parent::__construct( $UI_Manager, 'f12-cf7-captcha-audit-log', __( 'Audit Log', 'captcha-for-contact-form-7' ), 4 );
 		}
 
 		public function get_settings( $settings ): array {

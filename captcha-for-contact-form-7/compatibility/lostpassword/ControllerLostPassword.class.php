@@ -31,7 +31,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerLostPassword extends BaseController {
 
-	protected string $name = 'Password Reset (WordPress & WooCommerce)';
 	protected string $id = 'lostpassword';
 	protected string $settings_key = 'protection_lostpassword_enable';
 
@@ -42,6 +41,10 @@ class ControllerLostPassword extends BaseController {
 		[ 'type' => 'action', 'hook' => 'woocommerce_lostpassword_form', 'method' => 'wp_add_spam_protection' ],
 		[ 'type' => 'action', 'hook' => 'lostpassword_post', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 2 ],
 	];
+
+	public function get_name(): string {
+		return __( 'Password Reset (WordPress & WooCommerce)', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		// Core WordPress: the form always exists.

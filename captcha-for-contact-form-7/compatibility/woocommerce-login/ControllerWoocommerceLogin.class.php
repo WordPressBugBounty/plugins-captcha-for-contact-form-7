@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerWoocommerceLogin extends BaseController
 {
-    protected string $name = 'WooCommerce Login';
     protected string $id = 'woocommerce_login';
     protected string $settings_key = 'protection_woocommerce_login_enable';
 
@@ -21,6 +20,11 @@ class ControllerWoocommerceLogin extends BaseController
         ['type' => 'action', 'hook' => 'woocommerce_login_form', 'method' => 'wp_add_spam_protection'],
         ['type' => 'filter', 'hook' => 'woocommerce_process_login_errors', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 3],
     ];
+
+    public function get_name(): string
+    {
+        return __( 'WooCommerce Login', 'captcha-for-contact-form-7' );
+    }
 
     public function is_installed(): bool
     {

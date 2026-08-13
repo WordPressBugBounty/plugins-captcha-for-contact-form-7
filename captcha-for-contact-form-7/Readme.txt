@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.14.0
+Stable tag: 2.15.1
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -56,6 +56,7 @@ SilentShield protects forms from all major WordPress form builders and core feat
 - Forminator
 - JetFormBuilder
 - Kadence Blocks (Advanced Form)
+- Jetpack Forms (contact form block and shortcode)
 - Avada (Fusion Builder) Forms
 
 **Newsletter:**
@@ -74,6 +75,13 @@ SilentShield protects forms from all major WordPress form builders and core feat
 - Registration form
 - Lost password form
 - Comment forms (including WooCommerce product reviews)
+
+**Communities & Forums:**
+- bbPress (new topics and replies)
+- BuddyPress (member registration)
+
+**Donations:**
+- GiveWP (classic donation form; the visual-builder form is not yet covered)
 
 **Other:**
 - Ultimate Member (Login & Registration)
@@ -97,7 +105,7 @@ SilentShield uses **10+ protection mechanisms** working together:
 8. **Content Rules** – Limit URLs, block BBCode, keyword blacklist
 9. **Gibberish Detection** – Recognises submissions filled with random characters, the kind a bot writes when it only needs the form to go through. Unlike every other check it does not depend on the sender's browser, so a bot driving a real browser cannot pass it by playing along. Starts in observation mode and blocks nothing until you switch it on.
 10. **Whitelist** – Skip validation for admins, logged-in users, or specific emails/IPs
-11. **SilentShield API** (Beta) – Cloud-based spam detection
+11. **SilentShield API** – Cloud-based spam detection ([silentshield.io](https://silentshield.io/?utm_source=wp-org&utm_medium=readme&utm_campaign=feature-list))
 
 ---
 
@@ -108,6 +116,21 @@ It's an invisible wall against the background noise of the internet.
 
 Activate once – and your forms are human again.
 
+---
+
+## Want more? SilentShield API
+
+Everything above is free and stays free. No feature is held back, no submission limit, no account needed.
+
+What the free plugin cannot do is recognise a bot that behaves like a person — one driving a real browser, solving the captcha, typing at human speed. Rules can only catch what looks wrong, and those do not.
+
+The **SilentShield API** answers that with behaviour analysis and browser fingerprinting, scored in the cloud, and it usually decides without showing anyone a captcha at all. Switch it on and the local protections stay exactly where they are as a fallback — if the API is ever unreachable, your forms are still protected.
+
+There is a free plan and a trial, and you can see what it would have caught before you pay for anything: turn on Comparison Mode and the plugin logs what the API *would* have decided, alongside what your local rules actually did.
+
+👉 [Plans and free trial at silentshield.io](https://silentshield.io/pricing?utm_source=wp-org&utm_medium=readme&utm_campaign=upsell-section)
+
+---
 
 == Screenshots ==
 1. IP Protection settings
@@ -191,15 +214,38 @@ Same fields as (2), plus the outcome (`deny` / `throttle`), for every request en
 **4. Form assessment** (only with the SilentShield API enabled)
 See the API snippet on the plugin's Privacy page for the full description.
 
-**GDPR / DSGVO Compliance**
-- Basis: *Art. 6 Abs. 1 lit. f DSGVO* (legitimate interest – spam defense and plugin optimization).
-- Recipient and processor for (2)–(4): Forge12 Interactive GmbH, Josefstr. 37, 78166 Donaueschingen. Processing takes place exclusively on servers in Germany (Hetzner); no third-country transfer.
-- (2)–(4) transmit an IP address and therefore require a data processing agreement (Art. 28 GDPR) and a note in your privacy policy. The plugin's Privacy page tracks both.
-- No cookies, no user tracking.
-
 ---
 
 == Changelog ==
+= 2.15.1 =
+- Fix [Translations]: **French sites were not seeing the plugin's own translations at all.** When WordPress.org publishes a community translation for a plugin, WordPress uses it *instead of* the one the plugin ships — not in addition to it. Anything the community translation happens not to cover then falls back to English, even where the plugin has a complete translation for that language sitting right there. French has had a community translation since 7 August, so French sites had quietly been showing English wherever it had a gap. Both are now used together: the community translation still comes first, and the plugin's own fills whatever is left. Nothing changes for languages without a community translation. This affects Persian in the same way, and would have hit any other language the moment one appeared.
+- Fix [Translations]: The list of integrations under Forms was in English no matter what language your site is in — "WordPress Comments", "WooCommerce Checkout", "Password Reset (WordPress & WooCommerce)" and the other twenty-four. The names had never been marked as translatable, so no translation of them existed in any language, and there was nothing a translator could have done about it. They are translated now in all twenty-five languages the plugin ships. Product names stay as they are: bbPress is still bbPress, only the part in brackets is translated.
+- Improvement [Admin]: The settings screen for the SilentShield API was still called "Beta" in the menu, which read as a warning about the feature rather than a label. It is now "API / SilentShield", the same name the newer admin interface has used for a while. Only the name changed — the page, its address and your settings are untouched.
+- Fix [Translations]: The plugin's own menu was in English too — Dashboard, Analytics, Audit Log, Beta, Extended and Forms. Help and Upgrade were translated, which is what made it look like a partial translation rather than a missing one.
+- Fix [Translations]: On the default captcha template, the line under the puzzle ("Please enter the characters shown in the CAPTCHA…") and the reload button's label were always English — for your visitors, on every site, in every language. They had been written in a way that made them invisible to the translation files, so no language ever had them. This is the only one of these fixes your visitors will notice rather than you.
+- Fix [Translations]: Eight messages on the dashboard, the ones confirming that logs, timers, captchas or IP bans have been cleared, were spelled with a text domain the plugin does not use. They could not be translated in any language and never had been. Fixed and translated.
+- Fix [Translations]: Around ninety further texts had never reached the translation files at all: the audit log, the setup notice, the AI-crawler settings and their data-protection notes, the weekly report, the feedback question shown on deactivation, and the descriptions under most of the protection settings. If you have ever wondered why a settings page was half in your language and half in English, this is why. All of them are translated now.
+- Fix [Translations]: One admin notice was in German for everyone, in every language, including on German sites where it only looked correct by accident — the one that appears when the SilentShield API cannot be reached and the local protection modules take over. It is now written in English and translated like everything else.
+- Fix [Translations]: "%d Overrides" and "%d forms found" on the Forms screen could not be translated because of a gap in the tooling that reads the source code: it never looked for texts that change with a number. Both are translated now, in each language's own plural forms — three of them in Polish and Czech, four in Slovenian and Maltese.
+
+= 2.15.0 =
+- New [Integrations]: Jetpack Forms is now supported — both the contact form block and the older [contact-form] shortcode, which are the same form underneath. Jetpack is installed on several million sites, and where one of them has a contact page, this is usually the form on it. **You have to switch this on**, as with every integration: it appears under Forms as "Jetpack Forms".
+- New [Integrations]: bbPress is now supported, for new topics and for replies. Forums that allow guests to post are among the most reliably spammed things on a WordPress site, because every post is public, permanent and carries links — and unlike a contact form, nobody has to read the spam for it to do damage.
+- New [Integrations]: BuddyPress member registration is now supported. An open community signup collects fake profiles rather than emails: they stay on your site, they are indexed, and clearing them out later means going through your member list by hand.
+- New [Integrations]: GiveWP donation forms are now supported. Donation forms are not spammed the way a contact form is — they are used for card testing, where somebody runs stolen card numbers through a small donation to find out which ones still work. You do not notice it in an inbox; you notice it in chargebacks and in a payment processor asking questions. This is worth switching on even on a site nobody would bother sending spam to.
+- Fix [Protection]: A refused submission could tell the visitor that the captcha was not correct without saying which check had refused it — the message stopped at the colon and nothing followed it. The protection itself worked correctly throughout; only its name was missing, and only on some forms, which is why it went unnoticed for so long. It was most likely to appear exactly where it costs the most: on a donation or payment form, where somebody who simply mistyped is left with a refusal and nothing to correct. Every rejection now names the check that made it.
+- Fix [Protection]: On a form that has no captcha field, every submission after the first was turned away as a duplicate. The duplicate-submission check hands the form a one-time token and discards it the moment it is used, so the browser has to be given a fresh one after each submission — and it only ever was as a side effect of the captcha being redrawn. Where there was no captcha to redraw, nothing replaced the token, and the form kept sending the used one. On forms that submit without reloading the page, which is most of them now, the effect was immediate: the first enquiry arrived, the second was refused, and the mail log recorded it as a duplicate submission although the visitor had written something entirely different. Refreshing the page cleared it, so it looked intermittent. The token is now renewed independently of whether a captcha is present.
+- Fix [Protection]: The same token is also renewed on pages served from a full-page cache, and after a browser back/forward restore. A cached page hands every visitor the same token, so the first person to submit used it up and everyone after them was refused — on a cached site with this check enabled, that meant one successful submission per cache refresh. Both cases now fetch a fresh token when the page opens. This also restores the intended behaviour of the minimum-time check on cached pages, where the countdown previously began when the cache was written rather than when the visitor arrived.
+- Fix [Avada]: A submission Avada refused could fail completely silently — the visitor pressed Send, nothing appeared, and no email was sent. The refusal message is attached to one of the form's fields for Avada to display next to it, and the field chosen was worked out by discarding everything recognisable as hidden. On a site running a second anti-spam plugin, the field that survived was that plugin's honeypot, which is positioned off-screen by design, so the message was placed somewhere no one could see it. The form's own field list is now used to make that choice, which cannot pick a field the form does not visibly contain; where no visible field exists, the message is shown above the form instead of being lost.
+- Improvement [Logging]: "Duplicate submission" in the mail log stood for three unrelated things — a genuinely reused token, a token this site never issued, and a form sent back faster than the configured minimum. The commonest of the three was the stale token described above, which is not a duplicate at all, so the log confirmed a diagnosis that was wrong. Each is now recorded under its own reason, with a line saying what actually happened and what to look at. Nothing changes about which submissions are blocked.
+
+- Note [GiveWP]: This covers the classic donation form, not the newer one built in GiveWP's visual form builder, which has been the default for new forms since GiveWP 3.0. Both still ship, and which one you have depends on when the form was made. **If your form was built in the visual builder, it is not protected by this** — please check rather than assume, because we would rather tell you plainly than let you believe a form is covered when it is not. The newer form assembles what it sends in the browser and only includes fields it knows about, so the timing checks that catch automated donations cannot travel with it. We are working on it.
+- Note [bbPress]: Whether a rejected post shows a reason depends on your theme. bbPress hands error messages to the theme to display, and not every theme does — the one we tested against shows nothing, for bbPress's own errors just as much as for the captcha's. If a post is refused and nothing appears to happen, that is what you are seeing; the post is not created either way.
+- Note [Jetpack]: A submission that fails the captcha is turned away with a message the sender can read, rather than being quietly filed as spam. Jetpack offers both, and the quiet option is the wrong one here: the person who mistyped a captcha is usually a customer, and filing their enquiry away while showing them a success message means they believe they have written to you and you never find out that they did.
+
+= 2.14.1 =
+- Fix [Protection]: On English-language sites, a blocked submission named its reason with an internal identifier rather than words — "Captcha not correct: captcha-protection", or "rule-protection: blacklist" where one of your own filter rules had matched. The person reading that has usually just mistyped a captcha, and to them it looks like the website is broken rather than like an explanation. Every other language the plugin ships already had proper wording; English was the one that did not. The nine messages now read as plain labels: "Captcha check", "IP check", "Timing check", "Duplicate submission", "Filter rule: ..." and so on. Nothing changes about which submissions are blocked — only about what the visitor is told. It became more noticeable in 2.14.0, because the message for a rate-limited address is now shown for the whole duration of the block instead of only on the submission that triggered it.
+
 = 2.14.0 =
 - New [WooCommerce]: The block checkout is now protected. This is the checkout WooCommerce gives every new shop since version 8.3, and until now it received no protection at all — not a weakened version, none. Captcha, honeypot, timing checks and blacklists were all switched on and doing their work everywhere else on the site, while an order placed at the checkout itself went through untouched. Nothing indicated this: the plugin listed WooCommerce as protected, because it was — the older, classic checkout was. The two are separate pieces of software that happen to sell the same basket, and the block checkout offers none of the places the classic one does for a plugin to step in. **You have to switch this on.** It appears as its own entry, "WooCommerce Block Checkout", under Forms, next to the existing "WooCommerce Checkout" — turning that one on does not cover it, and never did. If you are unsure which checkout your shop uses: open your checkout page in the editor, and if it shows a single "Checkout" block rather than a shortcode, it is the block one.
 - Improvement [WooCommerce]: If your checkout block sits on a page other than the one WooCommerce has been told is your checkout — a landing page, a one-page shop, a custom funnel — the plugin previously loaded nothing there at all, so no protection could run even where it was configured. It now recognises the checkout block wherever it is placed.

@@ -30,7 +30,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerKadence extends BaseController {
 
-	protected string $name = 'Kadence Blocks (Advanced Form)';
 	protected string $id = 'kadence';
 	protected string $settings_key = 'protection_kadence_enable';
 
@@ -51,6 +50,10 @@ class ControllerKadence extends BaseController {
 		[ 'type' => 'filter', 'hook' => 'kadence_blocks_advanced_form_submission_reject', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 4 ],
 		[ 'type' => 'filter', 'hook' => 'kadence_blocks_advanced_form_submission_reject_message', 'method' => 'wp_rejection_message', 'priority' => 100, 'args' => 1 ],
 	];
+
+	public function get_name(): string {
+		return __( 'Kadence Blocks (Advanced Form)', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'Kadence_Blocks_Frontend' ) || defined( 'KADENCE_BLOCKS_VERSION' );

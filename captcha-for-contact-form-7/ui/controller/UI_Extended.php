@@ -32,7 +32,7 @@ namespace f12_cf7_captcha {
 			// 2. 'f12-cf7-captcha': The unique domain name for this UI page.
 			// 3. 'Dashboard': The displayed name of the page in the UI menu.
 			// 4. 0: The priority or order in the menu (0 means at the top).
-			parent::__construct( $UI_Manager, 'f12-cf7-captcha-extended', 'Extended', 1 );
+			parent::__construct( $UI_Manager, 'f12-cf7-captcha-extended', __( 'Extended', 'captcha-for-contact-form-7' ), 1 );
 
 			$this->get_logger()->info( 'Constructor started.', [
 				'class'  => __CLASS__,
@@ -189,54 +189,54 @@ namespace f12_cf7_captcha {
 					'sub_module'     => 'ip-validator',
 					'cleaner_method' => 'get_log_cleaner',
 					'db_method'      => 'reset_table',
-					'message'        => __( 'IP Logs removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'IP Logs removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-ip-ban-clean-all'   => [
 					'module'         => 'protection',
 					'sub_module'     => 'ip-validator',
 					'cleaner_method' => 'get_ban_cleaner',
 					'db_method'      => 'reset_table',
-					'message'        => __( 'IP Bans removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'IP Bans removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-clean-all'          => [
 					'module'         => 'protection',
 					'sub_module'     => 'captcha-validator',
 					'cleaner_method' => 'get_captcha_cleaner',
 					'db_method'      => 'reset_table',
-					'message'        => __( 'Captchas removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'Captchas removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-clean-validated'    => [
 					'module'         => 'protection',
 					'sub_module'     => 'captcha-validator',
 					'cleaner_method' => 'get_captcha_cleaner',
 					'db_method'      => 'clean_validated',
-					'message'        => __( 'Validated Captchas removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'Validated Captchas removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-clean-nonvalidated' => [
 					'module'         => 'protection',
 					'sub_module'     => 'captcha-validator',
 					'cleaner_method' => 'get_captcha_cleaner',
 					'db_method'      => 'clean_non_validated',
-					'message'        => __( 'Non Validated Captchas removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'Non Validated Captchas removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-log-clean-all'      => [
 					'module'         => 'log-cleaner',
 					'cleaner_method' => null,
 					'db_method'      => 'reset_table',
-					'message'        => __( 'Logs removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'Logs removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-log-clean-3-weeks'  => [
 					'module'         => 'log-cleaner',
 					'cleaner_method' => null,
 					'db_method'      => 'clean',
-					'message'        => __( 'Logs older than 3 Weeks have been removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'Logs older than 3 Weeks have been removed from database', 'captcha-for-contact-form-7' )
 				],
 				'captcha-timer-clean-all'    => [
 					'module'         => 'timer',
 					'sub_module'     => null,
 					'cleaner_method' => 'get_timer_cleaner',
 					'db_method'      => 'reset_table',
-					'message'        => __( 'Timers removed from database', 'captcha-for-contact-7-captcha' )
+					'message'        => __( 'Timers removed from database', 'captcha-for-contact-form-7' )
 				],
 			];
 

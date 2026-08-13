@@ -79,6 +79,13 @@ abstract class BaseController {
 	/**
 	 * Get the name of the object.
 	 *
+	 * This is the label the admin screens print, so it has to be translatable — and integrations
+	 * therefore override this method with a literal `__()` call instead of setting `$name`. The
+	 * property cannot carry the translation itself: PHP forbids a function call in a property
+	 * initializer, and moving it into the constructor would run before `init` and trip
+	 * WordPress's just-in-time textdomain notice, the same trap BaseModul::set_message_on_init()
+	 * exists to avoid. Resolving it here, at read time, happens well after `init` in every caller.
+	 *
 	 * @return string The name of the object.
 	 */
 	public function get_name(): string

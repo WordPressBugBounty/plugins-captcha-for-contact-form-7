@@ -49,7 +49,7 @@ $allowed_captcha_html = [
         <!-- Label correctly linked with `for` -->
         <label for="<?php echo esc_attr( $captcha_id ); ?>" class="c-label"><?php echo esc_html( $label ); ?></label>
 
-        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Reload CAPTCHA' ); ?>">
+        <div class="c-reload" role="button" tabindex="0" aria-label="<?php esc_attr_e( 'Reload CAPTCHA', 'captcha-for-contact-form-7' ); ?>">
 			<?php echo $captcha_reload; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Generated internally by get_reload_button(), all values escaped at construction. ?>
         </div>
 		<?php if ( ! empty( $captcha_audio_enabled ) ): ?>
@@ -67,7 +67,7 @@ $allowed_captcha_html = [
             </div>
 		<?php endif; ?>
         <p id="captcha-instructions" class="screen-reader-text">
-			<?php esc_html_e( 'Please enter the characters shown in the CAPTCHA to ensure that you are human.' ); ?>
+			<?php esc_html_e( 'Please enter the characters shown in the CAPTCHA to verify that you are human.', 'captcha-for-contact-form-7' ); ?>
         </p>
     </div>
 

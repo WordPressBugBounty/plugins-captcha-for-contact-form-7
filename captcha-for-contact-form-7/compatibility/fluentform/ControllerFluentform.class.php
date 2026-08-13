@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerFluentform extends BaseController
 {
-    protected string $name = 'Fluent Forms';
     protected string $id = 'fluentform';
     protected string $settings_key = 'protection_fluentform_enable';
 
@@ -23,6 +22,11 @@ class ControllerFluentform extends BaseController
         ['type' => 'action', 'hook' => 'wp_footer', 'method' => 'wp_conversational_form_js_protection'],
         ['type' => 'action', 'hook' => 'fluentform/conversational_frame_footer', 'method' => 'wp_conversational_form_js_protection'],
     ];
+
+    public function get_name(): string
+    {
+        return __( 'Fluent Forms', 'captcha-for-contact-form-7' );
+    }
 
     public function is_installed(): bool
     {

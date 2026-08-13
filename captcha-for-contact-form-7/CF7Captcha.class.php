@@ -335,6 +335,50 @@ class CF7Captcha {
 	 *
 	 * @return void
 	 */
+	/**
+	 * Put the bundled catalogue behind a wordpress.org language pack instead of losing to it.
+	 *
+	 * A pack replaces rather than supplements. WP_Textdomain_Registry takes the *first* location
+	 * holding `{domain}-{locale}.mo`, and WP_LANG_DIR/plugins comes before the plugin's own
+	 * directory — so the path handed to load_plugin_textdomain() is only a fallback for locales
+	 * with no pack at all. The moment a locale gets one, every string the pack happens not to
+	 * carry falls back to English, even though we ship a complete translation for it. This is not
+	 * hypothetical: wordpress.org has served an fr_FR pack since 2026-08-07, and French sites had
+	 * stopped seeing our catalogue entirely.
+	 *
+	 * WP_Translation_Controller can hold several files per text domain and
+	 * locate_translation() returns the first hit, so loading both fixes it. Order is deliberate:
+	 * the pack goes in first and keeps precedence, because a translation somebody contributed on
+	 * translate.wordpress.org should be what the visitor sees — ours only fills the gaps. Loading
+	 * ours first would work just as well mechanically and would silently shadow every community
+	 * contribution, which is the wrong trade.
+	 *
+	 * Both calls are no-ops when the files are absent, and load_textdomain() picks a `.l10n.php`
+	 * over the `.mo` by itself, so passing the `.mo` path is correct for either format.
+	 */
+	private function supplement_language_pack(): void {
+		$domain = 'captcha-for-contact-form-7';
+		$locale = determine_locale();
+
+		$pack = WP_LANG_DIR . '/plugins/' . $domain . '-' . $locale . '.mo';
+		$ours = plugin_dir_path( __FILE__ ) . 'languages/' . $domain . '-' . $locale . '.mo';
+
+		$has_pack = file_exists( $pack ) || file_exists( substr( $pack, 0, -3 ) . '.l10n.php' );
+
+		// No pack means the registry already resolved to our directory. Nothing to supplement.
+		if ( ! $has_pack || ! file_exists( $ours ) ) {
+			return;
+		}
+
+		load_textdomain( $domain, $pack, $locale );
+		load_textdomain( $domain, $ours, $locale );
+
+		$this->logger->debug( 'Language pack supplemented with the bundled catalogue', [
+			'plugin' => 'f12-cf7-captcha',
+			'locale' => $locale,
+		] );
+	}
+
 	private function __construct() {
 		// Forge12 Logger initialisieren
 		$this->logger = Logger::getInstance();
@@ -355,6 +399,7 @@ class CF7Captcha {
 
 		add_action( 'init', function () {
 			$loaded = load_plugin_textdomain( 'captcha-for-contact-form-7', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+			$this->supplement_language_pack();
 			if ( $loaded ) {
 				$this->logger->debug( "Textdomain loaded", [ 'plugin' => 'f12-cf7-captcha' ] );
 			} else {

@@ -31,7 +31,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerNinjaForms extends BaseController {
 
-	protected string $name = 'Ninja Forms';
 	protected string $id = 'ninjaforms';
 	protected string $settings_key = 'protection_ninjaforms_enable';
 
@@ -39,6 +38,10 @@ class ControllerNinjaForms extends BaseController {
 		[ 'type' => 'filter', 'hook' => 'ninja_forms_display_after_fields', 'method' => 'wp_add_spam_protection', 'priority' => 100, 'args' => 2 ],
 		[ 'type' => 'filter', 'hook' => 'ninja_forms_submit_data', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 1 ],
 	];
+
+	public function get_name(): string {
+		return __( 'Ninja Forms', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'Ninja_Forms' );

@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerCF7 extends BaseController
 {
-    protected string $name = 'Contact Forms 7';
     protected string $id = 'cf7';
     protected string $settings_key = 'protection_cf7_enable';
 
@@ -21,6 +20,11 @@ class ControllerCF7 extends BaseController
         ['type' => 'filter', 'hook' => 'wpcf7_form_elements', 'method' => 'wp_add_spam_protection', 'priority' => 100],
         ['type' => 'filter', 'hook' => 'wpcf7_spam', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 2],
     ];
+
+    public function get_name(): string
+    {
+        return __( 'Contact Forms 7', 'captcha-for-contact-form-7' );
+    }
 
     public function is_installed(): bool
     {

@@ -46,7 +46,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerWoocommerceBlockCheckout extends BaseController {
 
-	protected string $name = 'WooCommerce Block Checkout';
 	protected string $id = 'woocommerce_block_checkout';
 	protected string $settings_key = 'protection_woocommerce_block_checkout_enable';
 
@@ -105,6 +104,10 @@ class ControllerWoocommerceBlockCheckout extends BaseController {
 		[ 'type' => 'action', 'hook' => 'wp_enqueue_scripts', 'method' => 'wp_add_spam_protection', 'priority' => 20 ],
 		[ 'type' => 'action', 'hook' => 'woocommerce_store_api_checkout_update_order_from_request', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 2 ],
 	];
+
+	public function get_name(): string {
+		return __( 'WooCommerce Block Checkout', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'WooCommerce' )

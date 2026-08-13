@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerWordpressRegistration
  */
 class ControllerWordpressRegistration extends BaseController {
-	protected string $name = 'WordPress Registration';
 	protected string $id = 'wordpress_registration';
 	protected string $settings_key = 'protection_wordpress_registration_enable';
 
@@ -20,6 +19,11 @@ class ControllerWordpressRegistration extends BaseController {
 		['type' => 'action', 'hook' => 'register_form', 'method' => 'wp_add_spam_protection'],
 		['type' => 'filter', 'hook' => 'registration_errors', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 3],
 	];
+
+	public function get_name(): string
+	{
+		return __( 'WordPress Registration', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool
 	{

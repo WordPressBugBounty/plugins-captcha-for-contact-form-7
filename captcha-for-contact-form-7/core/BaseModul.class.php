@@ -11,6 +11,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 abstract class BaseModul {
 	protected string $message = '';
+
+	/**
+	 * Resolver for the message, kept so get_message() can produce it even when the init
+	 * callback set up by set_message_on_init() never reached this instance.
+	 *
+	 * @var callable|null
+	 */
+	private $message_resolver = null;
 	/**
 	 * @var CF7Captcha
 	 */
@@ -43,6 +51,20 @@ abstract class BaseModul {
 	 */
 	public function get_message(): string
 	{
+		// Resolve here if the init callback never reached this instance. It happens: a module
+		// constructed before `init` registers a callback, and on some request paths that
+		// callback does not run for the object that ends up doing the work — measured against
+		// GiveWP, where the live validator carried an empty message while a freshly built one
+		// carried the right text. The visible result was a rejection reading "Captcha not
+		// correct:" with nothing after the colon, because the empty string travelled all the way
+		// to the visitor.
+		//
+		// Guarded on `init` for the same reason set_message_on_init() defers at all: translating
+		// earlier trips WordPress 6.7's just-in-time textdomain notice.
+		if ($this->message === '' && $this->message_resolver !== null && did_action('init')) {
+			$this->message = (string) call_user_func($this->message_resolver);
+		}
+
 		if (f12_is_debug()) {
 			$this->get_logger()->debug('Retrieving message property.', [
 				'class' => __CLASS__,
@@ -100,6 +122,11 @@ abstract class BaseModul {
 	 */
 	protected function set_message_on_init(callable $resolver): void
 	{
+		// Kept as the fallback for get_message(): the init callback below does not reach every
+		// instance on every request path, and a module that cannot name itself rejects people
+		// without telling them why.
+		$this->message_resolver = $resolver;
+
 		if (did_action('init')) {
 			$this->set_message((string) $resolver());
 			return;

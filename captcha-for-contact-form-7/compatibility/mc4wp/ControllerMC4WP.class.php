@@ -23,7 +23,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerMC4WP extends BaseController {
 
-	protected string $name = 'MC4WP: Mailchimp for WordPress';
 	protected string $id = 'mc4wp';
 	protected string $settings_key = 'protection_mc4wp_enable';
 
@@ -41,6 +40,10 @@ class ControllerMC4WP extends BaseController {
 		[ 'type' => 'filter', 'hook' => 'mc4wp_form_errors', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 2 ],
 		[ 'type' => 'filter', 'hook' => 'mc4wp_form_messages', 'method' => 'wp_register_message', 'priority' => 10, 'args' => 1 ],
 	];
+
+	public function get_name(): string {
+		return __( 'MC4WP: Mailchimp for WordPress', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'MC4WP_Form' );

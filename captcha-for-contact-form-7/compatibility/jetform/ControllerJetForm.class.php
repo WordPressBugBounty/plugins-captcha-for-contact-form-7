@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerJetForm extends BaseController
 {
-	protected string $name = 'JetFormBuilder';
 	protected string $id   = 'jetform';
 	protected string $settings_key = 'protection_jetform_enable';
 
@@ -30,6 +29,11 @@ class ControllerJetForm extends BaseController
 		['type' => 'filter', 'hook' => 'jet-form-builder/before-end-form',       'method' => 'wp_add_spam_protection_fallback'],
 		['type' => 'action', 'hook' => 'jet-form-builder/form-handler/before-send', 'method' => 'wp_validation'],
 	];
+
+	public function get_name(): string
+	{
+		return __( 'JetFormBuilder', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool
 	{

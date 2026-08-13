@@ -22,7 +22,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerForminator extends BaseController {
 
-	protected string $name = 'Forminator';
 	protected string $id = 'forminator';
 	protected string $settings_key = 'protection_forminator_enable';
 
@@ -30,6 +29,10 @@ class ControllerForminator extends BaseController {
 		[ 'type' => 'filter', 'hook' => 'forminator_render_form_submit_markup', 'method' => 'wp_add_spam_protection', 'priority' => 100, 'args' => 2 ],
 		[ 'type' => 'filter', 'hook' => 'forminator_custom_form_submit_errors', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 3 ],
 	];
+
+	public function get_name(): string {
+		return __( 'Forminator', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'Forminator' );

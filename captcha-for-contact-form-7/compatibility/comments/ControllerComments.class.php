@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerComments extends BaseController
 {
-    protected string $name = 'WordPress Comments';
     protected string $id = 'wordpress_comments';
     protected string $settings_key = 'protection_wordpress_comments_enable';
 
@@ -21,6 +20,11 @@ class ControllerComments extends BaseController
         ['type' => 'action', 'hook' => 'comment_form_after_fields', 'method' => 'wp_add_spam_protection'],
         ['type' => 'filter', 'hook' => 'preprocess_comment', 'method' => 'wp_is_spam', 'priority' => 1],
     ];
+
+    public function get_name(): string
+    {
+        return __( 'WordPress Comments', 'captcha-for-contact-form-7' );
+    }
 
     public function is_installed(): bool
     {

@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerWoocommerceCheckout extends BaseController
 {
-	protected string $name = 'WooCommerce Checkout';
 	protected string $id   = 'woocommerce_checkout';
 	protected string $settings_key = 'protection_woocommerce_checkout_enable';
 
@@ -21,6 +20,11 @@ class ControllerWoocommerceCheckout extends BaseController
 		['type' => 'action', 'hook' => 'woocommerce_review_order_before_submit', 'method' => 'wp_add_spam_protection'],
 		['type' => 'action', 'hook' => 'woocommerce_after_checkout_validation', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 2],
 	];
+
+	public function get_name(): string
+	{
+		return __( 'WooCommerce Checkout', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool
 	{

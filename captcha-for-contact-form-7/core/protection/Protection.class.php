@@ -236,11 +236,11 @@ class Protection extends BaseModul {
 		printf(
 			'<div class="notice notice-warning is-dismissible"><p><strong>SilentShield:</strong> %s <a href="%s">%s</a></p></div>',
 			esc_html__(
-				'Die SilentShield API ist nicht erreichbar. Die lokalen Schutzmodule (Captcha, Timer, JS-Erkennung etc.) wurden automatisch reaktiviert. Deine Formulare sind weiterhin geschützt.',
+				'The SilentShield API cannot be reached. The local protection modules (captcha, timer, JS detection and so on) have been switched back on automatically, so your forms are still protected.',
 				'captcha-for-contact-form-7'
 			),
 			esc_url( $settings_url ),
-			esc_html__( 'API-Einstellungen prüfen', 'captcha-for-contact-form-7' )
+			esc_html__( 'Check API settings', 'captcha-for-contact-form-7' )
 		);
 	}
 
@@ -682,6 +682,12 @@ class Protection extends BaseModul {
 
 	/**
 	 * Map module names to machine-readable reason codes and human-readable details.
+	 *
+	 * One entry per module, which is the fallback rather than the last word: a module
+	 * implementing {@see Block_Reason_Provider} reports the specific rejection that fired and
+	 * overrides its entry here. `DUPLICATE_SUBMIT` is the cautionary example — it stood for
+	 * three unrelated failures of the multiple-submission module, the commonest of which was
+	 * not a duplicate at all.
 	 */
 	private static array $block_reason_map = [
 		'timer-validator'               => [ 'SUBMIT_TOO_FAST',   'Form submitted too quickly (minimum time not reached)' ],
@@ -697,6 +703,32 @@ class Protection extends BaseModul {
 	];
 
 	/**
+	 * Resolve the code and detail to log for a block.
+	 *
+	 * The static map holds one code per module, which is only ever right for a module with a
+	 * single way to fail. A module implementing {@see Block_Reason_Provider} knows which of its
+	 * several rejections actually fired, so its answer wins whenever it has one.
+	 *
+	 * @param string              $module_name The protection module name.
+	 * @param BaseProtection|null $modul       The module instance, when available.
+	 *
+	 * @return array{0:string, 1:string} Reason code and human-readable detail.
+	 */
+	private function resolve_block_reason( string $module_name, ?BaseProtection $modul ): array {
+		$mapped = self::$block_reason_map[ $module_name ] ?? [ strtoupper( str_replace( '-', '_', $module_name ) ), '' ];
+
+		if ( $modul instanceof Block_Reason_Provider ) {
+			$specific = $modul->get_block_reason();
+
+			if ( is_array( $specific ) && ! empty( $specific['code'] ) ) {
+				return [ (string) $specific['code'], (string) $specific['detail'] ];
+			}
+		}
+
+		return [ $mapped[0], $mapped[1] ];
+	}
+
+	/**
 	 * Log a block event to the detailed block log (if enabled).
 	 *
 	 * @param string         $module_name The protection module name.
@@ -707,12 +739,12 @@ class Protection extends BaseModul {
 			return;
 		}
 
-		$reason      = self::$block_reason_map[ $module_name ] ?? [ strtoupper( str_replace( '-', '_', $module_name ) ), '' ];
-		$reason_code = $reason[0];
-		// Use the module's specific message as detail (more precise than the generic map description)
-		$reason_detail = $modul->get_message();
+		[ $reason_code, $reason_detail ] = $this->resolve_block_reason( $module_name, $modul );
+
+		// Fall back to the module's visitor-facing message only when nothing more precise was
+		// offered — it is a translated slug, which reads poorly in a log meant for support.
 		if ( empty( $reason_detail ) ) {
-			$reason_detail = $reason[1];
+			$reason_detail = $modul->get_message();
 		}
 
 		$block_log  = new BlockLog( $this->get_logger() );
@@ -750,13 +782,14 @@ class Protection extends BaseModul {
 			return;
 		}
 
-		$reason = self::$block_reason_map[ $module_name ] ?? [ strtoupper( str_replace( '-', '_', $module_name ) ), '' ];
+		$modul = $this->_modules[ $module_name ] ?? null;
+		[ $reason_code ] = $this->resolve_block_reason( $module_name, $modul instanceof BaseProtection ? $modul : null );
 
 		$mail_log = new MailLog( $this->get_logger() );
 		$mail_log->log_blocked(
 			$this->context_integration_id ?? '',
 			$this->context_form_id,
-			$reason[0],
+			$reason_code,
 			$post_data,
 			$api_response
 		);

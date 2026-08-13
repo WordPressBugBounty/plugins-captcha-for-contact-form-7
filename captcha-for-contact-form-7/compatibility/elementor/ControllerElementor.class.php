@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerElementor extends BaseController
 {
-    protected string $name = 'Elementor';
     protected string $id = 'elementor';
     protected string $settings_key = 'protection_elementor_enable';
 
@@ -41,6 +40,11 @@ class ControllerElementor extends BaseController
      * atomic form cannot leave one dangling.
      */
     private int $atomic_buffer_depth = 0;
+
+    public function get_name(): string
+    {
+        return __( 'Elementor', 'captcha-for-contact-form-7' );
+    }
 
     public function is_installed(): bool
     {

@@ -17,7 +17,7 @@ namespace f12_cf7_captcha {
 	class UI_Analytics extends UI_Page {
 
 		public function __construct( UI_Manager $UI_Manager ) {
-			parent::__construct( $UI_Manager, 'f12-cf7-captcha-analytics', 'Analytics', 3 );
+			parent::__construct( $UI_Manager, 'f12-cf7-captcha-analytics', __( 'Analytics', 'captcha-for-contact-form-7' ), 3 );
 		}
 
 		public function get_settings( $settings ): array {

@@ -24,7 +24,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ControllerWoocommerceEditAccount extends BaseController {
 
-	protected string $name = 'WooCommerce Account Details';
 	protected string $id = 'woocommerce-edit-account';
 	protected string $settings_key = 'protection_woocommerce-edit-account_enable';
 
@@ -32,6 +31,10 @@ class ControllerWoocommerceEditAccount extends BaseController {
 		[ 'type' => 'action', 'hook' => 'woocommerce_edit_account_form', 'method' => 'wp_add_spam_protection' ],
 		[ 'type' => 'action', 'hook' => 'woocommerce_save_account_details_errors', 'method' => 'wp_is_spam', 'priority' => 10, 'args' => 2 ],
 	];
+
+	public function get_name(): string {
+		return __( 'WooCommerce Account Details', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		return class_exists( 'WooCommerce' );

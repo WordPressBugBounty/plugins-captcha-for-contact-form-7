@@ -13,7 +13,6 @@ if (!defined('ABSPATH')) {
  */
 class ControllerUltimateMember extends BaseController
 {
-    protected string $name = 'Ultimate Member';
     protected string $id = 'ultimatemember';
     protected string $settings_key = 'protection_ultimatemember_enable';
 
@@ -23,6 +22,11 @@ class ControllerUltimateMember extends BaseController
         ['type' => 'action', 'hook' => 'um_submit_form_errors_hook_login', 'method' => 'wp_is_spam', 'priority' => 5],
         ['type' => 'action', 'hook' => 'um_submit_form_errors_hook__registration', 'method' => 'wp_is_spam', 'priority' => 5],
     ];
+
+    public function get_name(): string
+    {
+        return __( 'Ultimate Member', 'captcha-for-contact-form-7' );
+    }
 
     public function is_installed(): bool
     {

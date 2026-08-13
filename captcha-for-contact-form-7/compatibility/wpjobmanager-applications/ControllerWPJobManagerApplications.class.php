@@ -12,7 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerWPJobManagerApplications
  */
 class ControllerWPJobManagerApplications extends BaseController {
-	protected string $name = 'WP Job Manager Application Forms';
 	protected string $id = 'wpjobmanager_applications';
 	protected string $settings_key = 'protection_wpjobmanager_applications_enable';
 
@@ -20,6 +19,11 @@ class ControllerWPJobManagerApplications extends BaseController {
 		['type' => 'action', 'hook' => 'job_application_form_fields_end', 'method' => 'wp_add_spam_protection'],
 		['type' => 'filter', 'hook' => 'application_form_validate_fields', 'method' => 'wp_is_spam'],
 	];
+
+	public function get_name(): string
+	{
+		return __( 'WP Job Manager Application Forms', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool
 	{

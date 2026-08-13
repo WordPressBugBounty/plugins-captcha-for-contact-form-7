@@ -13,7 +13,6 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class ControllerAvada
  */
 class ControllerAvada extends BaseController {
-	protected string $name = 'Avada';
 	protected string $id = 'avada';
 	protected string $settings_key = 'protection_avada_enable';
 
@@ -22,6 +21,10 @@ class ControllerAvada extends BaseController {
 		['type' => 'filter', 'hook' => 'fusion_form_demo_mode', 'method' => 'wp_is_spam'],
 		['type' => 'filter', 'hook' => 'fusion_builder_form_submission_data', 'method' => 'wp_remove_internal_fields', 'priority' => 10, 'args' => 1],
 	];
+
+	public function get_name(): string {
+		return __( 'Avada', 'captcha-for-contact-form-7' );
+	}
 
 	public function is_installed(): bool {
 		$is_installed = function_exists( 'Avada' );
@@ -194,8 +197,102 @@ class ControllerAvada extends BaseController {
 		parse_str( wp_unslash( $_POST['formData'] ), $fields_array );
 		$fields_array = array_map( 'sanitize_text_field', $fields_array );
 
-		$last_visible_key = null;
-		$skip_patterns    = [
+		$last_visible_key = $this->find_visible_field( $fields_array );
+
+		// 'general' matches no field, and Avada's error renderer falls back to prepending the
+		// message to the form — visible, which is the whole point. Better a message above the
+		// form than one attached to a field the visitor cannot see.
+		if ( ! $last_visible_key ) {
+			$last_visible_key = 'general';
+		}
+
+		wp_send_json( [
+			'status' => 'error',
+			'errors' => [
+				$last_visible_key => $message,
+			],
+		] );
+	}
+
+	/**
+	 * Pick a field the visitor can actually see, to hang the error message on.
+	 *
+	 * This used to work by elimination: a list of name fragments belonging to fields that are
+	 * hidden, and whatever survived was assumed visible. That inverts the burden of proof, and
+	 * it broke as soon as something the list had never heard of appeared in the form. On a site
+	 * running a second anti-spam plugin the last surviving field was that plugin's honeypot —
+	 * positioned at `left:-9999px` — so the message was rendered into a field nobody can see.
+	 * The visitor pressed Send, no mail arrived, and nothing at all appeared on screen.
+	 *
+	 * So ask Avada instead of guessing. `field_labels` is posted alongside the data and holds
+	 * exactly the fields the form was built from, keyed by name. Foreign honeypots are not in
+	 * it, and neither is anything this plugin injects. `hidden_field_names` names the ones
+	 * Avada itself renders hidden.
+	 *
+	 * The old pattern list stays as the fallback for the case where `field_labels` is absent or
+	 * unparseable — an older Avada, or a submission that did not come through its own JS.
+	 *
+	 * @param array<string, mixed> $fields_array The submitted fields, in form order.
+	 *
+	 * @return string|null Name of a visible field, or null when none could be established.
+	 */
+	private function find_visible_field( array $fields_array ): ?string {
+		$labels = [];
+		$hidden = [];
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Avada theme
+		if ( isset( $_POST['field_labels'] ) && is_string( $_POST['field_labels'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- decoded and key-checked below
+			$decoded = json_decode( wp_unslash( $_POST['field_labels'] ), true );
+
+			if ( is_array( $decoded ) ) {
+				$labels = $decoded;
+			}
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verified by Avada theme
+		if ( isset( $_POST['hidden_field_names'] ) && is_string( $_POST['hidden_field_names'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- decoded and compared as strings below
+			$decoded = json_decode( wp_unslash( $_POST['hidden_field_names'] ), true );
+
+			if ( is_array( $decoded ) ) {
+				$hidden = array_map( 'strval', $decoded );
+			}
+		}
+
+		if ( ! empty( $labels ) ) {
+			foreach ( array_reverse( $fields_array, true ) as $key => $val ) {
+				if ( ! isset( $labels[ $key ] ) ) {
+					continue;
+				}
+
+				if ( in_array( (string) $key, $hidden, true ) ) {
+					continue;
+				}
+
+				return (string) $key;
+			}
+
+			// Avada told us what the form contains and none of it is visible. Guessing past
+			// that would only rediscover the honeypot.
+			return null;
+		}
+
+		return $this->guess_visible_field( $fields_array );
+	}
+
+	/**
+	 * Fallback for submissions that carry no `field_labels`.
+	 *
+	 * Elimination by name fragment, with all its weaknesses — it can only skip what it has been
+	 * told about. Kept because a wrong-but-visible field is still better than no message, and
+	 * because an unknown name is now far likelier to be a third party's hidden field than one
+	 * of ours, the list errs towards skipping.
+	 *
+	 * @param array<string, mixed> $fields_array The submitted fields, in form order.
+	 */
+	private function guess_visible_field( array $fields_array ): ?string {
+		$skip_patterns = [
 			'hidden',
 			'nonce',
 			'submit',
@@ -207,33 +304,24 @@ class ControllerAvada extends BaseController {
 			'js_start_time',
 			'js_end_time',
 			'php_start_time',
-			'php_end_time'
+			'php_end_time',
+			// Common honeypot spellings from other plugins and from Avada itself. A honeypot
+			// is invisible by construction, so a message attached to one is a message lost.
+			'honeypot',
+			'_hp_',
+			'ss_hp',
 		];
 
 		foreach ( array_reverse( $fields_array, true ) as $key => $val ) {
-			$skip = false;
 			foreach ( $skip_patterns as $pattern ) {
 				if ( stripos( $key, $pattern ) !== false ) {
-					$skip = true;
-					break;
+					continue 2;
 				}
 			}
-			if ( $skip ) {
-				continue;
-			}
-			$last_visible_key = $key;
-			break;
+
+			return (string) $key;
 		}
 
-		if ( ! $last_visible_key ) {
-			$last_visible_key = 'general';
-		}
-
-		wp_send_json( [
-			'status' => 'error',
-			'errors' => [
-				$last_visible_key => $message,
-			],
-		] );
+		return null;
 	}
 }
