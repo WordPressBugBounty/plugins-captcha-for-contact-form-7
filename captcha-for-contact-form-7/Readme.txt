@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.15.2
+Stable tag: 2.15.3
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -217,6 +217,9 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.3 =
+- Fix [Privacy]: **The plugin's own settings screens loaded a font from Google's servers.** Opening any SilentShield page in the WordPress admin fetched the "Inter" typeface from `fonts.googleapis.com`, and a request to Google's servers carries the IP address of whoever made it. On a plugin whose purpose is data protection this should never have been the case, and under the GDPR it is the kind of transfer that needs a legal basis nobody had established. The font now ships inside the plugin and is loaded from your own server; not a single request leaves your site any more. Only administrators opening SilentShield's settings were affected — never visitors, and never anyone filling in one of your forms, because the file was only ever loaded inside the admin area. Nothing changes in how the settings look, and nothing needs to be configured. The font has been part of the plugin since version 2.10.0, so any site running that version or later was affected; if your data protection documentation lists the services your site contacts, this entry can be removed from it.
+
 = 2.15.2 =
 - Fix [Protection]: **On some hosts, every form submission failed with a server error.** The gibberish detection used PHP's `mbstring` extension, which is optional and which WordPress itself does not require — it supplies replacements for the two functions it needs and no more. Where the extension was missing, the check ran until it reached a function nobody had replaced and stopped the request dead. The visitor pressed Send and got an error page; no email arrived, and nothing in the plugin's own logs said why. It made no difference that the detection ships in monitoring mode and was not entitled to reject anything: it never got as far as a verdict. The check no longer uses the extension at all. Separately, the gibberish detection can now no longer end a submission by failing, whatever the reason — if it cannot finish, the submission is let through and the reason is written to the log. Only hosts without `mbstring` were affected; sites where forms have been working are unaffected.
 - Improvement [Protection]: While rewriting the above, six characters turned out to have been counted as consonants: the Turkish `ı` and `İ`, the Nordic `ø`, and long vowels such as `ā` and `ū`. Names written with them looked slightly less pronounceable to the detection than they are — a small bias against Turkish, Baltic and Scandinavian names, in the one direction that costs a real enquiry rather than a spam. They now count as the vowels they are.
