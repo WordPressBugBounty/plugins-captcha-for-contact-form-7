@@ -94,7 +94,7 @@ class ControllerForminator extends BaseController {
 	}
 
 	/**
-	 * The field the message is shown against.
+	 * The field the message is shown against — one the visitor can actually see.
 	 *
 	 * Forminator has no form-level error slot, so a form-wide rejection borrows a field. The
 	 * first one is nearest the top, which is where a visitor looks. When the submission carried
@@ -102,17 +102,64 @@ class ControllerForminator extends BaseController {
 	 * because a non-empty error array is what actually rejects the submission and losing that
 	 * would let the spam through to keep the message tidy.
 	 *
+	 * "First" alone is not enough. A form whose first field is hidden — a tracking value, a
+	 * pre-filled id — would have the refusal attached to something nobody can see: the visitor
+	 * presses Send, no mail arrives, and nothing appears. That is the failure ControllerAvada
+	 * was fixed for in 2.15.0, reached by a different route. Forminator cannot pick up a foreign
+	 * plugin's honeypot the way Avada could, because this list comes from Forminator rather than
+	 * from $_POST, but its own hidden fields are in it.
+	 *
+	 * Hidden-ness is judged from an explicit `type` where the payload carries one. The data
+	 * Forminator hands this filter has only `name` and `value` as far as we have seen, so there
+	 * is a second reading: element ids are `{type}-{n}`, which makes `hidden-1` recognisable
+	 * without guessing at anything a third party might have injected. Neither test is trusted to
+	 * exist — where nothing identifies a field as hidden, the old behaviour stands and the first
+	 * field wins, which is no worse than before.
+	 *
 	 * @param mixed $field_data_array List of ['name' => id, 'value' => …] as Forminator builds it.
 	 */
 	private function first_field_name( $field_data_array ): string {
-		if ( is_array( $field_data_array ) ) {
-			foreach ( $field_data_array as $field ) {
-				if ( is_array( $field ) && isset( $field['name'] ) && is_string( $field['name'] ) && $field['name'] !== '' ) {
-					return $field['name'];
-				}
-			}
+		if ( ! is_array( $field_data_array ) ) {
+			return 'f12_captcha';
 		}
 
-		return 'f12_captcha';
+		$first_named = null;
+
+		foreach ( $field_data_array as $field ) {
+			if ( ! is_array( $field ) || ! isset( $field['name'] ) || ! is_string( $field['name'] ) || $field['name'] === '' ) {
+				continue;
+			}
+
+			$name = $field['name'];
+
+			if ( $first_named === null ) {
+				$first_named = $name;
+			}
+
+			if ( self::looks_hidden( $field, $name ) ) {
+				continue;
+			}
+
+			return $name;
+		}
+
+		// Every field looked hidden, or none carried a usable name. Falling back to the first
+		// named field keeps the pre-2.15.2 behaviour rather than inventing a key Forminator
+		// would not render at all.
+		return $first_named ?? 'f12_captcha';
+	}
+
+	/**
+	 * Whether a Forminator field is one the visitor cannot see.
+	 *
+	 * @param array  $field The field as posted.
+	 * @param string $name  Its element id, e.g. `email-1` or `hidden-1`.
+	 */
+	private static function looks_hidden( array $field, string $name ): bool {
+		if ( isset( $field['type'] ) && is_string( $field['type'] ) ) {
+			return strtolower( $field['type'] ) === 'hidden';
+		}
+
+		return strpos( $name, 'hidden-' ) === 0;
 	}
 }

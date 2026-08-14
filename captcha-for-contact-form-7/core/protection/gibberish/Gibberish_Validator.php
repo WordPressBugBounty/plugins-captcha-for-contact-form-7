@@ -115,7 +115,24 @@ class Gibberish_Validator extends BaseProtection implements Observation_Provider
 			return false;
 		}
 
-		$result     = $this->Scorer->score_submission( $fields );
+		// The scorer is a heuristic, and a heuristic must never be able to take a submission
+		// down with it. It ships in `monitor` mode, where it changes no outcome at all — yet an
+		// undefined mb_* function inside it turned every Avada submit on one customer's host
+		// into a 500 (2026-08-14). That specific cause is gone, but the shape of the failure is
+		// the point: whatever the next one is, a lost enquiry costs more than a missed spam.
+		try {
+			$result = $this->Scorer->score_submission( $fields );
+		} catch ( \Throwable $e ) {
+			$this->get_logger()->error( 'Gibberish scoring failed, submission passed through.', [
+				'plugin' => 'f12-cf7-captcha',
+				'error'  => $e->getMessage(),
+				'file'   => $e->getFile(),
+				'line'   => $e->getLine(),
+			] );
+
+			return false;
+		}
+
 		$min_fields = $this->get_min_fields();
 
 		// Two ways in. The field count is the primary rule and the one that resists a single

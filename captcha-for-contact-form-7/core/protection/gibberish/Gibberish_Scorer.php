@@ -13,6 +13,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * heuristic is the part of this feature that can be *wrong*, and a pure function is the only
  * shape in which it can be run against a few hundred real submissions to find out.
  *
+ * ## No mbstring
+ *
+ * Unicode handling here goes through PCRE's `/u` mode — `\p{L}`, `\p{Latin}`, `\p{Lu}` — and
+ * never through `mb_*`. mbstring is an optional PHP extension that WordPress itself does not
+ * require: `wp-includes/compat.php` polyfills exactly `mb_substr` and `mb_strlen` and nothing
+ * else. A host without the extension therefore ran this class happily until it reached the
+ * first unpolyfilled call and killed the submission with a fatal, which is what happened to a
+ * customer on 2026-08-14. Do not reintroduce an `mb_*` call: the polyfilled two are no safer
+ * than the rest, because that polyfill is WordPress's and this class is tested without it.
+ *
  * ## What it detects
  *
  * Exactly one thing: tokens produced by a random-character generator. It has no idea what a
@@ -51,8 +61,14 @@ class Gibberish_Scorer {
 	 *
 	 * Recorded with every observation. Without it, rows scored under different rules look
 	 * alike in the log and any later calibration silently mixes two measurement series.
+	 *
+	 * 3 — dropping mbstring rebuilt the vowel test around {@see FOLD}, which recognises
+	 * `ı`, `İ`, `ā ē ī ō ū` and `ø` as vowels where the old hand-written list did not. Only
+	 * those characters moved, and only towards a higher vowel ratio, so PRONOUNCE fires less
+	 * often on Baltic, Turkish and Nordic names than it did under 2. Every other measurement is
+	 * unchanged, verified token by token against the previous implementation.
 	 */
-	public const VERSION = 2;
+	public const VERSION = 3;
 
 	/** Signal identifiers, recorded per flagged field. */
 	public const SIGNAL_PRONOUNCE = 'PRONOUNCE';
@@ -140,8 +156,21 @@ class Gibberish_Scorer {
 	 * `y` is a vowel in Polish, Czech and Welsh, and counting it raises the ratio of exactly
 	 * the tokens we are least sure about — it makes the scorer more forgiving, which is the
 	 * direction an error should point.
+	 *
+	 * Keyed on the *folded* character, so this short ASCII list covers every accented form
+	 * {@see FOLD} knows: `ä`, `Ä`, `à` and `ā` all arrive here as `a`. The two-letter keys are
+	 * the ligatures FOLD expands — `æ` and `Æ` become `ae`, `œ` and `Œ` become `oe`.
 	 */
-	private const VOWELS = 'aeiouyäöüàáâãåèéêëìíîïòóôõùúûýÿæœ';
+	private const VOWELS = [
+		'a'  => true,
+		'e'  => true,
+		'i'  => true,
+		'o'  => true,
+		'u'  => true,
+		'y'  => true,
+		'ae' => true,
+		'oe' => true,
+	];
 
 	/**
 	 * Letter-pair plausibility, 676 digits for `aa`…`zz` in row-major order.
@@ -168,6 +197,12 @@ class Gibberish_Scorer {
 
 	/**
 	 * Accent folding, so accented input still finds its row in the ASCII bigram table.
+	 *
+	 * Both cases are listed. Folding used to run after `mb_strtolower()`, which made the
+	 * uppercase half unnecessary — but this class must not depend on mbstring (see the class
+	 * docblock), and byte-wise `strtolower()` cannot lower a multibyte `Ä`. Without a key for
+	 * it, `Ärztekammer` would fold to `rztekammer` and score a word that was never submitted.
+	 * ASCII `A`–`Z` are deliberately absent: `strtolower()` handles those correctly.
 	 */
 	private const FOLD = [
 		'ä' => 'a', 'ö' => 'o', 'ü' => 'u', 'ß' => 'ss', 'à' => 'a', 'á' => 'a', 'â' => 'a',
@@ -179,6 +214,16 @@ class Gibberish_Scorer {
 		'ō' => 'o', 'ğ' => 'g', 'ı' => 'i', 'ş' => 's', 'ř' => 'r', 'ď' => 'd', 'ť' => 't',
 		'ň' => 'n', 'ů' => 'u', 'ė' => 'e', 'į' => 'i', 'ų' => 'u', 'ą' => 'a', 'ě' => 'e',
 		'ő' => 'o', 'ű' => 'u', 'æ' => 'ae', 'ø' => 'o', 'œ' => 'oe', 'þ' => 't', 'ð' => 'd',
+
+		'Ä' => 'a', 'Ö' => 'o', 'Ü' => 'u', 'ẞ' => 'ss', 'À' => 'a', 'Á' => 'a', 'Â' => 'a',
+		'Ã' => 'a', 'Å' => 'a', 'È' => 'e', 'É' => 'e', 'Ê' => 'e', 'Ë' => 'e', 'Ì' => 'i',
+		'Í' => 'i', 'Î' => 'i', 'Ï' => 'i', 'Ñ' => 'n', 'Ò' => 'o', 'Ó' => 'o', 'Ô' => 'o',
+		'Õ' => 'o', 'Ù' => 'u', 'Ú' => 'u', 'Û' => 'u', 'Ý' => 'y', 'Ÿ' => 'y', 'Ç' => 'c',
+		'Ć' => 'c', 'Č' => 'c', 'Ę' => 'e', 'Ł' => 'l', 'Ń' => 'n', 'Ś' => 's', 'Š' => 's',
+		'Ż' => 'z', 'Ź' => 'z', 'Ž' => 'z', 'Ā' => 'a', 'Ē' => 'e', 'Ī' => 'i', 'Ū' => 'u',
+		'Ō' => 'o', 'Ğ' => 'g', 'İ' => 'i', 'Ş' => 's', 'Ř' => 'r', 'Ď' => 'd', 'Ť' => 't',
+		'Ň' => 'n', 'Ů' => 'u', 'Ė' => 'e', 'Į' => 'i', 'Ų' => 'u', 'Ą' => 'a', 'Ě' => 'e',
+		'Ő' => 'o', 'Ű' => 'u', 'Æ' => 'ae', 'Ø' => 'o', 'Œ' => 'oe', 'Þ' => 't', 'Ð' => 'd',
 	];
 
 	/**
@@ -291,7 +336,7 @@ class Gibberish_Scorer {
 		return [
 			'is_gibberish' => $is_gibberish,
 			'summary'      => [
-				'len'            => mb_strlen( $value ),
+				'len'            => $this->length( $value ),
 				'tokens'         => count( $tokens ),
 				'tokens_flagged' => $gibberish,
 				'signals'        => array_values( array_unique( $signals ) ),
@@ -356,7 +401,7 @@ class Gibberish_Scorer {
 	 * Whether a token is long enough and written in a script these signals apply to.
 	 */
 	public function is_eligible( string $token ): bool {
-		if ( mb_strlen( $token ) < self::MIN_TOKEN_LENGTH ) {
+		if ( $this->length( $token ) < self::MIN_TOKEN_LENGTH ) {
 			return false;
 		}
 
@@ -368,7 +413,8 @@ class Gibberish_Scorer {
 	 * Share of characters that are vowels, 0.0 to 1.0.
 	 */
 	public function vowel_ratio( string $token ): float {
-		$length = mb_strlen( $token );
+		$chars  = $this->characters( $token );
+		$length = count( $chars );
 
 		if ( $length === 0 ) {
 			return 0.0;
@@ -376,7 +422,7 @@ class Gibberish_Scorer {
 
 		$vowels = 0;
 
-		foreach ( $this->characters( $token ) as $char ) {
+		foreach ( $chars as $char ) {
 			if ( $this->is_vowel( $char ) ) {
 				$vowels ++;
 			}
@@ -441,7 +487,7 @@ class Gibberish_Scorer {
 	 * accuse them of anything.
 	 */
 	public function bigram_score( string $token ): float {
-		$folded = preg_replace( '/[^a-z]/', '', strtr( mb_strtolower( $token ), self::FOLD ) );
+		$folded = preg_replace( '/[^a-z]/', '', $this->fold( $token ) );
 
 		if ( $folded === null || strlen( $folded ) < 3 ) {
 			return 9.0;
@@ -466,18 +512,38 @@ class Gibberish_Scorer {
 	 * 'upper', 'lower', or null when the character has no case at all.
 	 */
 	private function case_of( string $char ): ?string {
-		$upper = mb_strtoupper( $char );
-		$lower = mb_strtolower( $char );
-
-		if ( $upper === $lower ) {
-			return null;
+		if ( preg_match( '/^\p{Lu}$/u', $char ) === 1 ) {
+			return 'upper';
 		}
 
-		return $char === $upper ? 'upper' : 'lower';
+		if ( preg_match( '/^\p{Ll}$/u', $char ) === 1 ) {
+			return 'lower';
+		}
+
+		return null;
 	}
 
 	private function is_vowel( string $char ): bool {
-		return mb_strpos( self::VOWELS, mb_strtolower( $char ) ) !== false;
+		return isset( self::VOWELS[ $this->fold( $char ) ] );
+	}
+
+	/**
+	 * Lowercase ASCII, as far as {@see FOLD} can get us.
+	 *
+	 * `strtolower()` is byte-wise and touches only `A`–`Z`; every multibyte letter is mapped by
+	 * FOLD instead, which lists both cases for that reason. Anything neither knows survives
+	 * unchanged and is dropped by the callers' `[^a-z]` filter — the same outcome the previous
+	 * `mb_strtolower()` produced for scripts the bigram table has no row for.
+	 */
+	private function fold( string $text ): string {
+		return strtolower( strtr( $text, self::FOLD ) );
+	}
+
+	/**
+	 * Length in characters rather than bytes.
+	 */
+	private function length( string $text ): int {
+		return (int) preg_match_all( '/./us', $text );
 	}
 
 	/**

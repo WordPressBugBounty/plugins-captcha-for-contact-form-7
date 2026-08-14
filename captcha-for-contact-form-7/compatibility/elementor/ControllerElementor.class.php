@@ -339,6 +339,8 @@ class ControllerElementor extends BaseController
             $Protection->clear_context();
             $this->get_logger()->warning('Spam detected! Message: ' . $message);
 
+            // Elementor's own field list, so a foreign plugin's honeypot cannot end up here the
+            // way it could in ControllerAvada before 2.15.0 — that one guessed from $_POST.
             $field_name = '';
             foreach ($fields as $key => $data) {
                 if (isset($data['type']) && 'hidden' !== $data['type']) {
@@ -347,7 +349,19 @@ class ControllerElementor extends BaseController
                 }
             }
 
-            $ajax_handler->add_error($field_name, sprintf(esc_html__('Spam detected: %s', 'captcha-for-contact-form-7'), $message));
+            $text = sprintf(esc_html__('Spam detected: %s', 'captcha-for-contact-form-7'), $message);
+
+            // A form of nothing but hidden fields left no field to hang the message on, and
+            // add_error('') attaches it to a field that does not exist — the submission is
+            // refused and the visitor is told nothing. Elementor's form-level slot says it
+            // above the form instead, which is the same call ControllerAvada makes with
+            // 'general'.
+            if ($field_name === '' && method_exists($ajax_handler, 'add_error_message')) {
+                $ajax_handler->add_error_message($text);
+                return true;
+            }
+
+            $ajax_handler->add_error($field_name, $text);
             return true;
         }
 

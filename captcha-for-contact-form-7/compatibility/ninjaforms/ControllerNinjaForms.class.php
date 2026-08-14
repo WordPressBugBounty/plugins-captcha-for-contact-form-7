@@ -154,11 +154,21 @@ class ControllerNinjaForms extends BaseController {
 	}
 
 	/**
-	 * The field an error can be attached to.
+	 * The field an error can be attached to — one the visitor can actually see.
 	 *
 	 * Ninja Forms only surfaces per-field errors to this filter, so a form-wide rejection has to
 	 * borrow one. The first field is the one nearest the top of the form, which is where a
 	 * visitor will look.
+	 *
+	 * "First" alone is not enough. A form that opens with a hidden field — a tracking value, a
+	 * pre-filled id — would have the refusal attached to something nobody can see, and the
+	 * visitor gets no mail and no message: the same silent failure ControllerAvada was fixed for
+	 * in 2.15.0. Ninja Forms cannot pick up a foreign plugin's honeypot the way Avada could,
+	 * because this list is Ninja Forms' own, but its hidden fields are in it.
+	 *
+	 * The payload we have seen carries `id`, `key` and `value` and no type at all, so the check
+	 * only applies where a `type` is present. Where nothing marks a field as hidden the first
+	 * one still wins, which is no worse than before.
 	 *
 	 * @param array $form_data
 	 *
@@ -169,8 +179,23 @@ class ControllerNinjaForms extends BaseController {
 			return null;
 		}
 
-		$ids = array_keys( $form_data['fields'] );
+		$first = null;
 
-		return $ids[0];
+		foreach ( $form_data['fields'] as $id => $field ) {
+			if ( $first === null ) {
+				$first = $id;
+			}
+
+			if ( is_array( $field ) && isset( $field['type'] ) && is_string( $field['type'] )
+			     && strtolower( $field['type'] ) === 'hidden' ) {
+				continue;
+			}
+
+			return $id;
+		}
+
+		// Every field declared itself hidden. Borrowing the first one anyway still rejects the
+		// submission, which matters more than where the message lands.
+		return $first;
 	}
 }

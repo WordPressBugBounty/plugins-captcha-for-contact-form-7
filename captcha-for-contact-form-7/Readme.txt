@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.15.1
+Stable tag: 2.15.2
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -217,6 +217,12 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.2 =
+- Fix [Protection]: **On some hosts, every form submission failed with a server error.** The gibberish detection used PHP's `mbstring` extension, which is optional and which WordPress itself does not require — it supplies replacements for the two functions it needs and no more. Where the extension was missing, the check ran until it reached a function nobody had replaced and stopped the request dead. The visitor pressed Send and got an error page; no email arrived, and nothing in the plugin's own logs said why. It made no difference that the detection ships in monitoring mode and was not entitled to reject anything: it never got as far as a verdict. The check no longer uses the extension at all. Separately, the gibberish detection can now no longer end a submission by failing, whatever the reason — if it cannot finish, the submission is let through and the reason is written to the log. Only hosts without `mbstring` were affected; sites where forms have been working are unaffected.
+- Improvement [Protection]: While rewriting the above, six characters turned out to have been counted as consonants: the Turkish `ı` and `İ`, the Nordic `ø`, and long vowels such as `ā` and `ū`. Names written with them looked slightly less pronounceable to the detection than they are — a small bias against Turkish, Baltic and Scandinavian names, in the one direction that costs a real enquiry rather than a spam. They now count as the vowels they are.
+- Fix [Forminator, Ninja Forms]: When a submission was refused, the explanation was attached to the form's first field so it would appear next to it — but "first" was taken literally, and a form that begins with a hidden field (a tracking value, a pre-filled ID) had the message attached to something nobody can see. The visitor pressed Send, no email arrived, and nothing at all appeared on screen. Hidden fields are now skipped. This is the same silent failure fixed for Avada in 2.15.0, arrived at by a different route; it was found by checking whether that bug could exist elsewhere, and these two are where it could.
+- Fix [Elementor]: The same check on a form built entirely from hidden fields left nowhere to put the message, and it was dropped. It is now shown above the form instead.
+
 = 2.15.1 =
 - Fix [Translations]: **French sites were not seeing the plugin's own translations at all.** When WordPress.org publishes a community translation for a plugin, WordPress uses it *instead of* the one the plugin ships — not in addition to it. Anything the community translation happens not to cover then falls back to English, even where the plugin has a complete translation for that language sitting right there. French has had a community translation since 7 August, so French sites had quietly been showing English wherever it had a gap. Both are now used together: the community translation still comes first, and the plugin's own fills whatever is left. Nothing changes for languages without a community translation. This affects Persian in the same way, and would have hit any other language the moment one appeared.
 - Fix [Translations]: The list of integrations under Forms was in English no matter what language your site is in — "WordPress Comments", "WooCommerce Checkout", "Password Reset (WordPress & WooCommerce)" and the other twenty-four. The names had never been marked as translatable, so no translation of them existed in any language, and there was nothing a translator could have done about it. They are translated now in all twenty-five languages the plugin ships. Product names stay as they are: bbPress is still bbPress, only the part in brackets is translated.
