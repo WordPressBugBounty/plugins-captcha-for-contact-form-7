@@ -45,10 +45,7 @@ class ControllerAvada extends BaseController {
 		$form_id = is_array( $args_el ) && isset( $args_el['form_id'] ) ? (string) $args_el['form_id'] : null;
 		$this->get_logger()->info( 'Adding spam protection elements to Avada form HTML.' );
 
-		$Protection = $this->Controller->get_module( 'protection' );
-		$Protection->set_context( $this->id, $form_id );
-		$captcha_html = $Protection->get_captcha();
-		$Protection->clear_context();
+		$captcha_html = $this->get_captcha_html( $form_id );
 
 		$is_captcha_added = false;
 

@@ -80,10 +80,7 @@ class ControllerGravityForms extends BaseController {
 		$form        = $args[1] ?? null;
 		$form_id     = is_array( $form ) && isset( $form['id'] ) ? (string) $form['id'] : null;
 
-		$Protection = $this->Controller->get_module( 'protection' );
-		$Protection->set_context( $this->id, $form_id );
-		$captcha = $Protection->get_captcha();
-		$Protection->clear_context();
+		$captcha = $this->get_captcha_html( $form_id );
 
 		if ( empty( $captcha ) ) {
 			return $form_string;

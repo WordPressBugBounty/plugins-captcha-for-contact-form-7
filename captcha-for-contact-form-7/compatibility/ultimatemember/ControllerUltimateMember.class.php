@@ -44,7 +44,7 @@ class ControllerUltimateMember extends BaseController
         $this->get_logger()->info('Starting captcha code output for Ultimate Member forms.');
 
         $Protection = $this->Controller->get_module('protection');
-        $captcha = $Protection->get_captcha();
+        $captcha = $this->get_captcha_html();
 
         // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captcha HTML is generated internally
         echo $captcha;

@@ -125,7 +125,7 @@ class ControllerElementor extends BaseController
             return $item;
         }
 
-        $captcha = $this->Controller->get_module('protection')->get_captcha();
+        $captcha = $this->get_captcha_html();
 
         if (!empty($captcha)) {
             $wrapped_captcha = sprintf('<div class="elementor-field-type-text elementor-field-group elementor-column elementor-field-group-text elementor-col-100 elementor-field-required">%s</div>', $captcha);
@@ -185,7 +185,7 @@ class ControllerElementor extends BaseController
             return;
         }
 
-        $captcha = $this->Controller->get_module('protection')->get_captcha();
+        $captcha = $this->get_captcha_html();
 
         if (empty($captcha)) {
             // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Elementor's own markup, unchanged.

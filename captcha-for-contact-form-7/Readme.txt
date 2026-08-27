@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.15.3
+Stable tag: 2.15.4
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -217,6 +217,10 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.4 =
+- Fix [Elementor, JetFormBuilder, Avada, Gravity Forms, Ultimate Member]: **With the SilentShield API switched on, every genuine submission on these five was refused as a bot.** The API decides using a token the plugin puts into the form, and on these five integrations that field was never added — so nothing arrived, and a submission with no token is refused by design. The visitor filled in the form correctly, pressed Send, and was told it looked automated. Where the API was the only protection in use, the effect was worse still: the plugin then placed nothing at all in the form, so the page looked as though no protection were installed while the server refused everything that came from it. The field is now added on all five, the same way it always was on the other twenty-one integrations. If you use one of these five together with the API, this restores your forms; nothing needs to be configured. Sites not using the API were never affected, and neither were Contact Form 7, WPForms, WooCommerce or any of the other integrations.
+- Fix [JetFormBuilder]: Settings made for a single JetFormBuilder form applied only when a submission was checked, not when the form was drawn. A protection switched on for one particular form was therefore expected by the check but never placed in the form — and every submission of that form was refused, with no way to tell from the page why. Both halves now read the same settings. Only forms with their own settings under Forms were affected; sites using the same settings everywhere were not.
+
 = 2.15.3 =
 - Fix [Privacy]: **The plugin's own settings screens loaded a font from Google's servers.** Opening any SilentShield page in the WordPress admin fetched the "Inter" typeface from `fonts.googleapis.com`, and a request to Google's servers carries the IP address of whoever made it. On a plugin whose purpose is data protection this should never have been the case, and under the GDPR it is the kind of transfer that needs a legal basis nobody had established. The font now ships inside the plugin and is loaded from your own server; not a single request leaves your site any more. Only administrators opening SilentShield's settings were affected — never visitors, and never anyone filling in one of your forms, because the file was only ever loaded inside the admin area. Nothing changes in how the settings look, and nothing needs to be configured. The font has been part of the plugin since version 2.10.0, so any site running that version or later was affected; if your data protection documentation lists the services your site contacts, this entry can be removed from it.
 

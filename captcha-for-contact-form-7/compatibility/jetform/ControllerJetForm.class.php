@@ -86,7 +86,7 @@ class ControllerJetForm extends BaseController
 			return;
 		}
 
-		$captcha = $this->Controller->get_module( 'protection' )->get_captcha();
+		$captcha = $this->get_captcha_html( $this->get_live_form_id() );
 
 		if ( empty( $captcha ) ) {
 			return;
@@ -111,7 +111,7 @@ class ControllerJetForm extends BaseController
 			return $html;
 		}
 
-		$captcha = $this->Controller->get_module( 'protection' )->get_captcha();
+		$captcha = $this->get_captcha_html( $this->get_live_form_id() );
 
 		if ( empty( $captcha ) ) {
 			return $html;
@@ -120,6 +120,35 @@ class ControllerJetForm extends BaseController
 		$this->captcha_injected = true;
 
 		return $html . '<div class="f12-jetform-captcha-wrapper">' . $captcha . '</div>';
+	}
+
+	/**
+	 * The post ID of the form currently being rendered, or null.
+	 *
+	 * Neither render hook carries it: `before-start-form-row` hands us the block object and
+	 * `before-end-form` an empty string. `Live_Form` does — `Form_Builder::render_form()`
+	 * sets the id on the singleton before the first of the two fires, and the singleton is
+	 * torn down again on `after-end-form`, so it is always the form being rendered and never
+	 * a stale one.
+	 *
+	 * Keep in step with wp_validation(), which reads the same post ID from
+	 * Form_Handler::get_form_id(). If the two disagree they resolve different
+	 * `jetform:<id>` overrides, and a per-form setting applies to only one half of the
+	 * pair: a protection switched on for one form is then demanded by the validator but
+	 * never rendered, which blocks every submission of that form.
+	 *
+	 * @return string|null
+	 */
+	private function get_live_form_id(): ?string
+	{
+		if ( ! function_exists( 'jet_fb_live' ) ) {
+			return null;
+		}
+
+		// The property is `false` outside a render, so cast before comparing.
+		$form_id = (int) ( jet_fb_live()->form_id ?: 0 );
+
+		return $form_id > 0 ? (string) $form_id : null;
 	}
 
 	/**
@@ -133,7 +162,11 @@ class ControllerJetForm extends BaseController
 
 		$form_id = null;
 		if ( is_object( $handler ) && method_exists( $handler, 'get_form_id' ) ) {
-			$form_id = (string) $handler->get_form_id();
+			// Normalised the same way as get_live_form_id(): Form_Handler::get_form_id()
+			// answers 0 for a post that is not a form, and "jetform:0" is not an override
+			// key the render side can ever produce.
+			$handler_form_id = (int) $handler->get_form_id();
+			$form_id         = $handler_form_id > 0 ? (string) $handler_form_id : null;
 		}
 
 		$Protection = $this->Controller->get_module('protection');
