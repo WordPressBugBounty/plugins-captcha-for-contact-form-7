@@ -20,6 +20,52 @@ class Api extends BaseProtection {
 	 */
 	private ?array $last_api_response = null;
 
+	/**
+	 * Whether this submission was put to the SilentShield server.
+	 *
+	 * The server writes a telemetry row keyed by the nonce as soon as it hears about a
+	 * submission, so anything reported on top of that would be a second row for the same
+	 * event — and that number is what the customer is shown and eventually billed for.
+	 * Protection reads this before reporting a local block; see report_local_block().
+	 *
+	 * True from the moment the verify request is *sent*, not when it succeeds: an unreachable
+	 * API does not undo the telemetry the behaviour library already delivered.
+	 */
+	private bool $server_contacted = false;
+
+	/**
+	 * The form this submission belongs to, as `<integration>:<form id>`.
+	 *
+	 * Set by Protection, which owns the render context. Empty when the integration could not
+	 * name the form — the report is still sent, just without saying which form was hit.
+	 */
+	private string $form_key = '';
+
+	/**
+	 * How much of a form key the endpoint accepts.
+	 */
+	private const FORM_KEY_MAX_LENGTH = 64;
+
+	/**
+	 * Labels the surrounding form for behavior-captcha.js.
+	 *
+	 * The library only collects behaviour for a form carrying data-ss-init="1", and no
+	 * behaviour means no nonce, which is_spam() answers with API_NO_NONCE. It has to be
+	 * inline and self-locating (document.currentScript) because the markup is injected into
+	 * forms this plugin does not own and therefore cannot select afterwards.
+	 */
+	private const MARKER_SCRIPT = '<script>
+(function(){
+	var el = document.currentScript;
+	if (!el) return;
+	var form = el.closest("form");
+	if (!form || form.dataset.ssInit === "1") return;
+	form.dataset.ssInit = "1";
+	form.dataset.ssMode = "protect";
+	form.dataset.ssSource = "rule";
+})();
+</script>';
+
 	public function __construct( CF7Captcha $Controller ) {
 		parent::__construct( $Controller );
 		$this->set_message_on_init( function () {
@@ -52,7 +98,45 @@ class Api extends BaseProtection {
 	public function success(): void {
 	}
 
+	/**
+	 * Render the field this module validates.
+	 *
+	 * is_spam() refuses every submission that arrives without a `behavior_nonce`
+	 * (API_NO_NONCE), and the nonce is only ever produced for a form the behaviour library
+	 * was told to track. Both halves of that come from here.
+	 *
+	 * This lived in BaseController::get_captcha_html() until 2.15.4. Five renderers fetched
+	 * Protection::get_captcha() directly, never reached that method, and shipped forms the
+	 * API could only ever reject — every genuine visitor answered as a bot (ticket #7).
+	 * Rendering from the module that validates removes the bypass: no render path can obtain
+	 * a captcha without obtaining this too, and one added tomorrow inherits that for free.
+	 *
+	 * The two guards below are is_spam()'s own, in the same order and deliberately so:
+	 * whatever makes the validator demand the nonce has to be exactly what makes the
+	 * renderer emit it, or the two drift apart again.
+	 *
+	 * @param mixed ...$args Unused. Part of the module render signature.
+	 *
+	 * @return string The nonce field and the marker script, or '' when the API is not
+	 *                validating anything.
+	 */
+	public function get_captcha( ...$args ): string {
+		if ( ! $this->is_enabled() ) {
+			return '';
+		}
+
+		$api_key = $this->Controller->get_settings( 'beta_captcha_api_key', 'beta' );
+
+		if ( $api_key === '' || $api_key === null ) {
+			return '';
+		}
+
+		return '<input type="hidden" name="behavior_nonce" value="" />' . self::MARKER_SCRIPT;
+	}
+
     public function is_spam(): bool {
+
+        $this->server_contacted = false;
 
         if ( ! $this->is_enabled() ) {
             return false;
@@ -107,7 +191,7 @@ class Api extends BaseProtection {
             // counted in the "bots blocked" statistics. Fire-and-forget: the
             // submission is already blocked locally, so we neither wait for nor
             // depend on the response.
-            $this->report_block_to_api( $api_key, 'no_nonce' );
+            $this->report_block_to_api( $api_key, 'no_nonce', $this->form_key );
         } else {
             // Use verbose=1 when detailed tracking is enabled to get score breakdown
             $endpoint = $this->api_endpoint;
@@ -127,6 +211,12 @@ class Api extends BaseProtection {
             if ( is_string( $page_url ) && $page_url !== '' ) {
                 $verify_body['page_url'] = mb_substr( $page_url, 0, 1024 );
             }
+
+            // From here on the server knows about this submission — it has the nonce, and the
+            // behaviour library that produced the nonce has already delivered its telemetry.
+            // Set before the call, not after: whether the request succeeds changes nothing
+            // about what the server already holds, and a second report would double the count.
+            $this->server_contacted = true;
 
             $response = wp_remote_post( $endpoint, [
                 'headers' => [
@@ -233,6 +323,85 @@ class Api extends BaseProtection {
     }
 
     /**
+     * Whether this submission was put to the SilentShield server.
+     *
+     * Protection asks before reporting a local block. True means the server already holds a
+     * telemetry row for this submission, so a report would be a second row for one event.
+     */
+    public function has_contacted_server(): bool {
+        return $this->server_contacted;
+    }
+
+    /**
+     * Name the form this submission belongs to, for the next report.
+     *
+     * Protection owns the render context and hands it over before the modules run, because a
+     * report written from inside this module has no other way of knowing which form was hit.
+     *
+     * @param string $form_key `<integration>:<form id>`, or '' when the form cannot be named.
+     */
+    public function set_form_key( string $form_key ): void {
+        $this->form_key = mb_substr( $form_key, 0, self::FORM_KEY_MAX_LENGTH );
+    }
+
+    /**
+     * Report a block that one of the *local* protection modules decided.
+     *
+     * The caller is Protection, which owns the decision and the reason. Two things are checked
+     * here rather than there, so no future caller can get them wrong:
+     *
+     *  - a key must be configured, or there is nobody to report to;
+     *  - the server must not already know about this submission (see has_contacted_server()).
+     *
+     * The second is the one that matters. Reporting a block on a submission the server has
+     * already seen writes a second row for a single event, and that count is what the customer
+     * is shown and eventually billed on. Under-reporting costs a line in a dashboard;
+     * over-reporting costs money and is nearly impossible to spot afterwards.
+     *
+     * @param string $reason   A value from the server's reason whitelist.
+     * @param string $form_key Which form was hit, or '' when it cannot be named.
+     */
+    public function report_local_block( string $reason, string $form_key = '' ): void {
+        if ( $this->server_contacted ) {
+            return;
+        }
+
+        $api_key = $this->Controller->get_settings( 'beta_captcha_api_key', 'beta' );
+
+        if ( ! is_string( $api_key ) || $api_key === '' ) {
+            return;
+        }
+
+        $this->report_block_to_api( $api_key, $reason, $form_key );
+    }
+
+    /**
+     * Assemble the report body.
+     *
+     * `form_key` is omitted rather than sent empty: an absent field and an empty string are
+     * the same thing to the server, and leaving it out keeps the payload identical to what
+     * older plugin versions send when the form cannot be named.
+     *
+     * @param string $reason   A value from the server's reason whitelist.
+     * @param string $page_url The page the form was submitted from, possibly ''.
+     * @param string $form_key Which form was hit, or ''.
+     *
+     * @return array<string, string> The JSON body.
+     */
+    private function build_report_body( string $reason, string $page_url, string $form_key ): array {
+        $body = [
+            'reason'   => $reason,
+            'page_url' => $page_url,
+        ];
+
+        if ( $form_key !== '' ) {
+            $body['form_key'] = mb_substr( $form_key, 0, self::FORM_KEY_MAX_LENGTH );
+        }
+
+        return $body;
+    }
+
+    /**
      * Report a locally-blocked submission to the SilentShield API.
      *
      * Used for the no-nonce case: a bot that submits a protected form without
@@ -241,10 +410,11 @@ class Api extends BaseProtection {
      * "bots blocked" statistics. Fire-and-forget (non-blocking) so it never
      * delays the request — the submission is already rejected regardless.
      *
-     * @param string $api_key The API key.
-     * @param string $reason  Machine-readable block reason (e.g. "no_nonce").
+     * @param string $api_key  The API key.
+     * @param string $reason   Machine-readable block reason from the server's whitelist.
+     * @param string $form_key  Which form was hit, or '' when the integration could not say.
      */
-    private function report_block_to_api( string $api_key, string $reason ): void {
+    public function report_block_to_api( string $api_key, string $reason, string $form_key = '' ): void {
         $base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
         $endpoint = rtrim( $base_url, '/' ) . '/captcha/report-block';
 
@@ -260,10 +430,7 @@ class Api extends BaseProtection {
                 'Content-Type' => 'application/json',
                 'api-key'      => $api_key,
             ],
-            'body'     => wp_json_encode( [
-                'reason'   => $reason,
-                'page_url' => $page_url,
-            ] ),
+            'body'     => wp_json_encode( $this->build_report_body( $reason, $page_url, $form_key ) ),
             'timeout'  => 1,
             'blocking' => false,
         ] );

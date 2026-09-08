@@ -264,4 +264,31 @@ function on_update() {
 			'moved'  => $moved,
 		] );
 	}
+
+	// 🔹 Upgrade auf 2.15.5 (IP-Log leeren — die Bestandszeilen stehen in der Site-Zeitzone)
+	//
+	// Bis 2.15.4 schrieb IPLog::get_create_time() die Spalte `createtime` mit wp_timezone(),
+	// während jeder Leser sie ohne Zeitzone parst — WordPress fixiert PHP auf UTC. Auf einer
+	// Site mit positivem GMT-Offset lag der gespeicherte Zeitpunkt damit in der Zukunft, die
+	// Differenz in IPValidator wurde negativ, und die Intervallprüfung konnte nie bestehen: die
+	// IP war für die Länge des Offsets gesperrt, bei UTC+2 also zwei Stunden. Bei negativem
+	// Offset kippte es andersherum und das Rate-Limiting griff überhaupt nicht mehr.
+	//
+	// Der Schreibpfad steht jetzt auf UTC. Die vorhandenen Zeilen bleiben aber falsch, und weil
+	// `get_last_entry_by_hash()` nach `createtime DESC` sortiert, wäre eine solche Zeile noch für
+	// die Dauer des Offsets die vermeintlich neueste. Sie zu löschen ist folgenlos: die Tabelle
+	// ist reiner Rate-Limit-Zustand, IPLogCleaner räumt sie ohnehin nach drei Wochen. Die Sperren
+	// in `f12_cf7_ip_ban` bleiben unangetastet, die wurden immer schon in UTC geschrieben.
+	if ( version_compare( $currentVersion, '2.15.5', '<' ) ) {
+		$deleted = ( new \f12_cf7_captcha\core\protection\ip\IPLog( $logger ) )->reset_table();
+
+		update_option( 'f12-cf7-captcha_version', FORGE12_CAPTCHA_VERSION );
+
+		$logger->info( "Upgrade performed: IP log cleared (timezone fix)", [
+			'plugin'  => 'f12-cf7-captcha',
+			'from'    => $currentVersion ?: 'none',
+			'to'      => '2.15.5',
+			'deleted' => $deleted,
+		] );
+	}
 }

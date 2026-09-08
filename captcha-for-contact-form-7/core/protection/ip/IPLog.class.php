@@ -37,6 +37,15 @@ class IPLog
      * @var string
      */
     private $createtime = '';
+
+    /**
+     * Upper bound for the retry window in get_count(), in seconds (30 days).
+     *
+     * The rows themselves are removed after three weeks by IPLogCleaner, so anything beyond this
+     * cannot be a duration the caller meant — it is a unit mix-up.
+     */
+    private const MAX_WINDOW_SECONDS = 2592000;
+
     /**
      * The flag to determine if the data has been submitted or not
      *
@@ -148,8 +157,24 @@ class IPLog
 		$prepare_stmt = '';
 
 		if (!empty($hash) && !empty($previous_hash) && $submitted !== -1) {
+			// Guard against a caller handing over an absolute timestamp instead of a duration.
+			// IPValidator did exactly that until 2.15.5, which pushed the window floor back to
+			// 1970 and made the retry counter span every row the cleaner had not yet removed.
+			$window = (int) $seconds;
+
+			if ($window < 0 || $window > self::MAX_WINDOW_SECONDS) {
+				$this->get_logger()->warning('Retry window out of range - clamped', [
+					'given'  => $seconds,
+					'used'   => $window < 0 ? 0 : self::MAX_WINDOW_SECONDS,
+					'class'  => __CLASS__,
+					'method' => __METHOD__,
+				]);
+
+				$window = $window < 0 ? 0 : self::MAX_WINDOW_SECONDS;
+			}
+
 			$dt = new \DateTime();
-			$dt->sub(new \DateInterval('PT' . (int) $seconds . 'S'));
+			$dt->sub(new \DateInterval('PT' . $window . 'S'));
 			$create_time = $dt->format('Y-m-d H:i:s');
 
 			$prepare_stmt = $wpdb->prepare(
@@ -344,17 +369,20 @@ class IPLog
     /**
      * Returns the create time associated with this object.
      *
-     * If the create time is empty, a new DateTime object is created and the current WordPress timezone is set.
-     * The create time is then formatted as 'Y-m-d H:i:s' and stored in the internal variable $this->createtime.
+     * The value is UTC, because WordPress fixes PHP's default timezone to UTC in wp-settings.php
+     * and every reader of this column parses the string without a timezone. Writing it in the site
+     * timezone instead — which this method did until 2.15.5 — put the stored timestamp ahead of
+     * time() by the GMT offset, so IPValidator's interval check could never pass and every site
+     * east of Greenwich refused legitimate submissions for the length of its offset.
      *
-     * @return string The create time in the format 'Y-m-d H:i:s'.
+     * Sibling tables (IPBan, Salt, Captcha, CaptchaTimer) have always written UTC here.
+     *
+     * @return string The create time in UTC, in the format 'Y-m-d H:i:s'.
      */
 	public function get_create_time(): string
 	{
 		if (empty($this->createtime)) {
-			$dt = new \DateTime();
-			$dt->setTimezone(wp_timezone());
-			$this->createtime = $dt->format('Y-m-d H:i:s');
+			$this->createtime = ( new \DateTime() )->format('Y-m-d H:i:s');
 		}
 
 		return $this->createtime;
@@ -372,15 +400,41 @@ class IPLog
 	}
 
     /**
-     * Sets the create time for the object.
+     * Sets the create time for the object, in UTC. See get_create_time() for why not the site timezone.
      *
      * @return void
      */
 	public function set_create_time(): void
 	{
-		$dt = new \DateTime();
-		$dt->setTimezone(wp_timezone());
-		$this->createtime = $dt->format('Y-m-d H:i:s');
+		$this->createtime = ( new \DateTime() )->format('Y-m-d H:i:s');
+	}
+
+    /**
+     * Deletes a single record by its identifier.
+     *
+     * Used to drop an entry whose createtime cannot be trusted — a row from before 2.15.5 written
+     * in the site timezone, or one written while the clock was off. Such a row would otherwise stay
+     * the newest entry for the length of the offset and keep the rate limit in its fail-open branch.
+     *
+     * @param int $id The identifier of the record to delete.
+     *
+     * @return int The number of rows affected by the delete operation.
+     */
+	public function delete_by_id(int $id): int
+	{
+		global $wpdb;
+
+		if (null === $wpdb) {
+			throw new \RuntimeException('WPDB not defined');
+		}
+
+		if ($id <= 0) {
+			return 0;
+		}
+
+		$result = $wpdb->delete($this->get_table_name(), ['id' => $id], ['%d']);
+
+		return false === $result ? 0 : (int) $result;
 	}
 
 
@@ -469,14 +523,29 @@ class IPLog
 	/**
      * Returns the submission timestamp associated with this object.
      *
-     * @return int The submission timestamp as a Unix timestamp.
-     * @throws \Exception
+     * Never throws: an unreadable value yields 0, which reads as "long ago" to the caller and so
+     * lets the submission through rather than refusing someone over a row we cannot parse.
+     *
+     * @return int The submission timestamp as a Unix timestamp, or 0 if it cannot be read.
      */
 	public function get_submission_timestamp(): int
 	{
-		$dt = new \DateTime($this->get_create_time());
+		$create_time = $this->get_create_time();
 
-		return $dt->getTimestamp();
+		try {
+			return (new \DateTime($create_time))->getTimestamp();
+		} catch (\Exception $e) {
+			// A row we cannot read must not cost a real enquiry. Returning 0 makes the caller's
+			// difference enormous, which reads as "long ago" and lets the submission through.
+			$this->get_logger()->warning('Unreadable createtime - submission let through', [
+				'createtime' => $create_time,
+				'error'      => $e->getMessage(),
+				'class'      => __CLASS__,
+				'method'     => __METHOD__,
+			]);
+
+			return 0;
+		}
 	}
 
 }

@@ -260,7 +260,10 @@ class IPValidator extends BaseProtection {
 	{
 		// Load settings via resolved context
 		$allowed_time_between = (int) $this->get_protection_setting('protection_ip_period_between_submits');
-		$max_retry_period     = time() - (int) $this->get_protection_setting('protection_ip_max_retries_period');
+		// Seconds, not a timestamp: IPLog::get_count() subtracts this from the current time itself.
+		// Passing `time() - period` here put the window floor in 1970 and let the retry counter
+		// span every row in the table.
+		$max_retry_period     = (int) $this->get_protection_setting('protection_ip_max_retries_period');
 		$max_retries          = (int) $this->get_protection_setting('protection_ip_max_retries');
 		$block_time           = (int) $this->get_protection_setting('protection_ip_block_time');
 
@@ -282,6 +285,20 @@ class IPValidator extends BaseProtection {
 		// Generate Salt
 		$Salt_Current  = $this->create_salt()->get_last();
 		$Salt_Previous = $this->create_salt()->get_one_salt_by_offset(1);
+
+		// get_last() returns null when it could neither read nor create a salt — a database problem,
+		// never anything the visitor did. Calling get_salted() on it would be a fatal error on the
+		// form submit, so the request goes through instead: without a salt there is no hash and
+		// therefore nothing to rate-limit against anyway.
+		if (null === $Salt_Current) {
+			$this->get_logger()->error('No salt available - IP check skipped, submission let through', [
+				'ip'     => $ip,
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+
+			return true;
+		}
 
 		// Generate hash
 		$hash_current  = $Salt_Current->get_salted($ip);
@@ -338,6 +355,31 @@ class IPValidator extends BaseProtection {
 		// the two previous submissions here would ignore the current request entirely
 		// and falsely block every submission once two past submits were close together.
 		$diff = time() - $IP_Log_Last->get_submission_timestamp();
+
+		// A last submission that lies in the future is not something a visitor can cause: it means
+		// a row written under the pre-2.15.5 timezone bug, a clock that moved, or a database in a
+		// different timezone than PHP. Blocking on it refuses people who did nothing wrong — eight
+		// lost enquiries in the report that surfaced this — and it never expires on its own, so the
+		// only safe reading is to let the submission through and record why.
+		if ($diff < 0) {
+			$this->get_logger()->warning('Last submission lies in the future - letting the submission through', [
+				'last_ts' => $IP_Log_Last->get_submission_timestamp(),
+				'now'     => time(),
+				'diff'    => $diff,
+				'class'   => __CLASS__,
+				'method'  => __METHOD__,
+			]);
+
+			// Drop the unusable entry and replace it with one written now. Without the delete the
+			// future-dated row stays the newest for the length of the offset, and the rate limit
+			// would sit in this branch — that is, off — for just as long.
+			$IP_Log_Last->delete_by_id($IP_Log_Last->get_id());
+
+			$IPLog = $this->create_ip_log(['hash' => $hash_current, 'submitted' => 0]);
+			$IPLog->save();
+
+			return true;
+		}
 
 		$this->get_logger()->debug('Time since last submit', [
 			'last_ts'  => $IP_Log_Last->get_submission_timestamp(),
@@ -418,7 +460,23 @@ class IPValidator extends BaseProtection {
 			return false;
 		}
 
-		$result = !$this->validate();
+		try {
+			$result = !$this->validate();
+		} catch (\Throwable $e) {
+			// validate() reaches the database in five places, and any of them can throw — a missing
+			// $wpdb, a failed insert, a table that could not be recreated. Uncaught, that is a fatal
+			// error on the form submit: the visitor gets an error page and the enquiry is gone, with
+			// nothing on screen naming the cause. A protection that cannot run is not evidence of
+			// spam, so the submission goes through and the reason is written to the log. Same rule
+			// the gibberish detection follows since 2.15.2.
+			$this->get_logger()->error('IP check failed to run - submission let through', [
+				'error'  => $e->getMessage(),
+				'class'  => __CLASS__,
+				'method' => __METHOD__,
+			]);
+
+			return false;
+		}
 
 		$this->get_logger()->info('Spam check performed', [
 			'is_spam' => $result,

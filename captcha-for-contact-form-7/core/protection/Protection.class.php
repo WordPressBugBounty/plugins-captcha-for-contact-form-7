@@ -159,9 +159,21 @@ class Protection extends BaseModul {
 		$base_url     = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
 		$api_endpoint = rtrim( $base_url, '/' ) . '/keys/validate';
 
+		// The plugin version rides along on the health check, and this is the only call it can
+		// ride on. The daily telemetry snapshot carries a version too, but it is anonymous — no
+		// key in the body, none in the headers — so SilentShield cannot tie it to a customer,
+		// and it stops entirely when telemetry is switched off. This call is authenticated by
+		// the key itself and runs whenever the API is active, whatever the telemetry setting is,
+		// which makes it the one place a dashboard can learn that an installation is out of date.
+		//
+		// It is a heartbeat, not a schedule: the result is cached for five minutes, and the
+		// cache is only ever refreshed by a request arriving. A site nobody visits sends nothing.
 		$response = wp_remote_post( $api_endpoint, [
 			'headers' => [ 'Content-Type' => 'application/json' ],
-			'body'    => wp_json_encode( [ 'key' => $api_key ] ),
+			'body'    => wp_json_encode( [
+				'key'            => $api_key,
+				'plugin_version' => defined( 'FORGE12_CAPTCHA_VERSION' ) ? FORGE12_CAPTCHA_VERSION : '',
+			] ),
 			'timeout' => 3,
 		] );
 
@@ -539,6 +551,14 @@ class Protection extends BaseModul {
 			return false;
 		}
 
+		// Hand the form over before anything decides. The API module reports its own no-nonce
+		// block from inside itself and has no other way of knowing which form was submitted.
+		if ( $this->has_module( 'api-validator' ) ) {
+			/** @var Api $api_module */
+			$api_module = $this->get_module( 'api-validator' );
+			$api_module->set_form_key( $this->build_form_key() );
+		}
+
 		$is_spam         = false;
 		$spam_modul_name = '';
 		$api_flagged     = false;
@@ -573,6 +593,12 @@ class Protection extends BaseModul {
 
 					// Detailed block log
 					$this->maybe_log_block( $name, $modul );
+
+					// And tell SilentShield, so a block the server never saw still reaches the
+					// customer's statistics. Inside this branch on purpose: it runs for the
+					// module that actually decided, once per submission, however many other
+					// modules go on to agree with it.
+					$this->maybe_report_block_to_api( $name, $modul );
 				}
 			}
 		}
@@ -689,6 +715,39 @@ class Protection extends BaseModul {
 	 * three unrelated failures of the multiple-submission module, the commonest of which was
 	 * not a duplicate at all.
 	 */
+	/**
+	 * Which of the server's block reasons each of our internal codes means.
+	 *
+	 * The endpoint keeps its own whitelist and turns anything it does not recognise into
+	 * "EXTERNAL_BLOCK" — the block is still counted, but it stops saying anything about *why*,
+	 * which is the entire value of sending it. So only mapped codes are sent, and
+	 * {@see ApiBlockReportingTest} fails the suite if a module is added without a mapping.
+	 *
+	 * `API_VERDICT_BOT` is deliberately absent: a verdict the server reached is already a row
+	 * on the server, and reporting it would count one submission twice.
+	 *
+	 * `DUPLICATE_SUBMIT` is the multiple-submission module's fallback, and in practice unused:
+	 * that module sets one of the MS_* codes on every path that rejects, and those are what
+	 * arrive here. It is mapped anyway so the guard can insist that *every* code a module can
+	 * produce has an answer — an entry that is never reached costs nothing, whereas an exemption
+	 * would be a hole the next module could fall through.
+	 */
+	private const API_BLOCK_REASONS = [
+		'NO_JAVASCRIPT'     => 'javascript_missing',
+		'SUBMIT_TOO_FAST'   => 'too_fast',
+		'MS_TOO_FAST'       => 'too_fast',
+		'MS_TOKEN_MISSING'  => 'token_missing',
+		'MS_TOKEN_UNKNOWN'  => 'token_unknown',
+		'MS_TOKEN_REUSED'   => 'token_reused',
+		'GIBBERISH_CONTENT' => 'gibberish',
+		'IP_BLACKLISTED'    => 'ip_blacklisted',
+		'NO_BROWSER'        => 'browser_check',
+		'CAPTCHA_FAILED'    => 'captcha_failed',
+		'IP_RATE_LIMIT'     => 'rate_limited',
+		'BLACKLIST_MATCH'   => 'custom_rule',
+		'DUPLICATE_SUBMIT'  => 'token_reused',
+	];
+
 	private static array $block_reason_map = [
 		'timer-validator'               => [ 'SUBMIT_TOO_FAST',   'Form submitted too quickly (minimum time not reached)' ],
 		'captcha-validator'             => [ 'CAPTCHA_FAILED',    'CAPTCHA verification failed' ],
@@ -768,6 +827,106 @@ class Protection extends BaseModul {
 		}
 
 		$block_log->log( $module_name, $reason_code, $reason_detail, $extra );
+	}
+
+	/**
+	 * Tell SilentShield about a block one of the local modules decided.
+	 *
+	 * Until 2.15.7 only the no-nonce case was reported, so every other rejection this plugin
+	 * makes — captcha, honeypot, timer, gibberish, rate limit, blacklist — was invisible to the
+	 * customer's own dashboard. They are reported now, with one hard rule:
+	 *
+	 * **Nothing the server already knows about may be reported.** Once a submission carries a
+	 * nonce, the behaviour library has delivered telemetry for it and the API module has put it
+	 * to the server; the row exists there. A report on top of that is a second row for one
+	 * submission, and that count is shown to the customer and eventually billed. Under-reporting
+	 * loses a line in a dashboard, over-reporting silently doubles an invoice — so the check is
+	 * for "did the server hear about this", not for "did the API happen to be the module that
+	 * refused". Api::has_contacted_server() answers it, and answers it true even when the verify
+	 * call failed, because an unreachable API does not unsend the telemetry.
+	 *
+	 * @param string         $module_name The module that decided the block.
+	 * @param BaseProtection $modul       The module instance, for its specific reason code.
+	 */
+	private function maybe_report_block_to_api( string $module_name, BaseProtection $modul ): void {
+		// The API module's own verdicts are the server's, never ours to report.
+		if ( $module_name === 'api-validator' ) {
+			return;
+		}
+
+		// The module is only ever missing in one situation: init_modules() drops it when the
+		// API is switched on but unreachable, and the local modules carry the form alone. A
+		// report would be addressed to the same server that just failed to answer, so there is
+		// nothing to gain by trying. With the API merely switched off the module is still here,
+		// and a customer who has a key still gets their local blocks counted.
+		if ( ! $this->has_module( 'api-validator' ) ) {
+			return;
+		}
+
+		/** @var Api $api */
+		$api = $this->get_module( 'api-validator' );
+
+		if ( $api->has_contacted_server() ) {
+			return;
+		}
+
+		[ $reason_code ] = $this->resolve_block_reason( $module_name, $modul );
+		$reason          = $this->to_api_block_reason( $module_name, $reason_code );
+
+		if ( $reason === null ) {
+			// Sending an unmapped code would have the server file it as an unlabelled
+			// "EXTERNAL_BLOCK". Naming the module here instead makes the gap findable; the
+			// guard in the unit suite is what stops it reaching a release.
+			$this->get_logger()->warning( 'No API block reason mapped - block not reported', [
+				'plugin'      => 'f12-cf7-captcha',
+				'module'      => $module_name,
+				'reason_code' => $reason_code,
+			] );
+
+			return;
+		}
+
+		$api->report_local_block( $reason, $this->build_form_key() );
+	}
+
+	/**
+	 * Translate an internal block code into the reason the endpoint understands.
+	 *
+	 * The captcha module is the one case a code alone cannot answer: it reports CAPTCHA_FAILED
+	 * whichever method is configured, but a filled honeypot and a wrong arithmetic answer are
+	 * different events to whoever reads the dashboard — one is a bot that walked into a trap,
+	 * the other a visitor who got a sum wrong. The configured method is what tells them apart.
+	 *
+	 * @param string $module_name The module that decided the block.
+	 * @param string $reason_code The internal code from resolve_block_reason().
+	 *
+	 * @return string|null The whitelisted reason, or null when nothing maps.
+	 */
+	private function to_api_block_reason( string $module_name, string $reason_code ): ?string {
+		if ( $module_name === 'captcha-validator' && $this->get_setting( 'protection_captcha_method' ) === 'honey' ) {
+			return 'honeypot';
+		}
+
+		return self::API_BLOCK_REASONS[ $reason_code ] ?? null;
+	}
+
+	/**
+	 * Name the form this submission belongs to.
+	 *
+	 * `<integration>:<form id>` — enough for the dashboard to say *which* form is being hit,
+	 * which is the whole point of sending it. Returns '' when the integration named neither,
+	 * and the report then simply omits the field rather than sending a placeholder nobody can
+	 * act on.
+	 *
+	 * @return string The form key, at most 64 characters.
+	 */
+	private function build_form_key(): string {
+		$parts = array_filter( [
+			(string) ( $this->context_integration_id ?? '' ),
+			(string) ( $this->context_form_id ?? '' ),
+		], static fn( string $part ): bool => $part !== '' );
+
+		return mb_substr( implode( ':', $parts ), 0, 64 );
 	}
 
 	/**

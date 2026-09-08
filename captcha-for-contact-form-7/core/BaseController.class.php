@@ -218,6 +218,18 @@ abstract class BaseController {
 	/**
 	 * Get the captcha HTML from the Protection module.
 	 *
+	 * This method adds no markup of its own, and that is deliberate: every field the plugin
+	 * expects back is rendered by the module that validates it. The SilentShield API's
+	 * `behavior_nonce` used to be appended here instead, and that is exactly how five
+	 * renderers came to ship forms the API could only ever reject — they fetched
+	 * Protection::get_captcha() directly and never reached this method (2.15.4, ticket #7).
+	 * A new protection with a field of its own belongs in its own get_captcha(), never here.
+	 *
+	 * What this method does own is the context. set_context() decides which per-integration
+	 * and per-form settings apply, so a renderer that bypasses it resolves different settings
+	 * than the validator will — the same failure arriving from the other end, and what
+	 * ControllerJetForm did until 2.15.4.
+	 *
 	 * @param string|null $form_id Optional form ID for per-form settings resolution.
 	 *
 	 * @return string
@@ -229,25 +241,6 @@ abstract class BaseController {
 		$protection->set_context( $this->id, $form_id );
 		$html = $protection->get_captcha();
 		$protection->clear_context();
-
-		// When the SilentShield API is enabled, inject a hidden behavior_nonce field
-		// and a small script that labels the parent form for the behavior-captcha.js
-		// library. The library only tracks forms with data-ss-init="1" — without this,
-		// no behavior data is collected and no nonce is generated.
-		if ( $protection->has_module( 'api-validator' ) ) {
-			$html .= '<input type="hidden" name="behavior_nonce" value="" />';
-			$html .= '<script>
-(function(){
-	var el = document.currentScript;
-	if (!el) return;
-	var form = el.closest("form");
-	if (!form || form.dataset.ssInit === "1") return;
-	form.dataset.ssInit = "1";
-	form.dataset.ssMode = "protect";
-	form.dataset.ssSource = "rule";
-})();
-</script>';
-		}
 
 		return $html;
 	}
