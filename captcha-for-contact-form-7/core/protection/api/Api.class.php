@@ -203,13 +203,13 @@ class Api extends BaseProtection {
             // name a form the server checks but no scan ever found — this
             // server-to-server call carries no Referer of its own, so this is
             // the only way that page reaches SilentShield. It never affects the
-            // verdict. wp_get_referer() checks the _wp_http_referer field and
-            // the HTTP_REFERER header; false (stripped / direct POST) simply
-            // means no page is sent.
+            // verdict. Page_Url answers from what this server was asked for
+            // rather than from a header the sender picks; '' when even that
+            // cannot say, and the field is then left out entirely.
             $verify_body = [ 'nonce' => $nonce ];
-            $page_url    = wp_get_referer();
-            if ( is_string( $page_url ) && $page_url !== '' ) {
-                $verify_body['page_url'] = mb_substr( $page_url, 0, 1024 );
+            $page_url    = Page_Url::resolve();
+            if ( $page_url !== '' ) {
+                $verify_body['page_url'] = $page_url;
             }
 
             // From here on the server knows about this submission — it has the nonce, and the
@@ -382,8 +382,11 @@ class Api extends BaseProtection {
      * the same thing to the server, and leaving it out keeps the payload identical to what
      * older plugin versions send when the form cannot be named.
      *
+     * `page_url` keeps its place in the body even when empty, because the endpoint's field
+     * list was given and a report is never held back over a page nobody could name.
+     *
      * @param string $reason   A value from the server's reason whitelist.
-     * @param string $page_url The page the form was submitted from, possibly ''.
+     * @param string $page_url The page the form was submitted from, from Page_Url, possibly ''.
      * @param string $form_key Which form was hit, or ''.
      *
      * @return array<string, string> The JSON body.
@@ -418,19 +421,12 @@ class Api extends BaseProtection {
         $base_url = defined( 'F12_CAPTCHA_API_URL' ) ? F12_CAPTCHA_API_URL : 'https://api.silentshield.io/api/v1';
         $endpoint = rtrim( $base_url, '/' ) . '/captcha/report-block';
 
-        $page_url = '';
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only stats report; no state change
-        if ( ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- esc_url_raw sanitizes
-            $page_url = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
-        }
-
         wp_remote_post( $endpoint, [
             'headers'  => [
                 'Content-Type' => 'application/json',
                 'api-key'      => $api_key,
             ],
-            'body'     => wp_json_encode( $this->build_report_body( $reason, $page_url, $form_key ) ),
+            'body'     => wp_json_encode( $this->build_report_body( $reason, Page_Url::resolve(), $form_key ) ),
             'timeout'  => 1,
             'blocking' => false,
         ] );

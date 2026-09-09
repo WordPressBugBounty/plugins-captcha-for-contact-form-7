@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.15.7
+Stable tag: 2.15.8
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -217,6 +217,11 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.8 =
+- Fix [SilentShield API]: **The page shown next to a blocked submission is now the page your site actually served, not one the sender claimed.** That address was taken from the browser's referrer header, which whoever sends the request is free to set to anything at all, or to leave out entirely. A bot doing either cost you the one detail that says where to go and look: the block still counted, but it arrived carrying somebody else's domain — which has to be discarded — or carrying nothing. The plugin works the page out on the server that served it now. Where a form is sent in the background, as Contact Form 7, the comment form, Elementor and others do, the page is resolved from the post the form sits on, so a blocked comment names the article it was posted under rather than whichever address happened to arrive. Nothing about how submissions are checked has changed, and sites without an API key send nothing either way.
+- Fix [Ultimate Member]: **Blocked sign-ins and blocked registrations are counted separately now.** Both forms were reported under a single name, so your statistics could not say whether you were looking at attempts to guess passwords for existing accounts or at attempts to create fake ones — two rather different problems, needing rather different answers. Each form is now named in its own right.
+- Fix [Ultimate Member]: **A refused sign-in was counted three times.** Ultimate Member checks the entered credentials itself, and doing so set this plugin's WordPress-login protection going a second and a third time on the very same submission. One refused sign-in therefore produced three entries in your statistics and three rows in the block log, and spent three captcha challenges on its own. It is judged once now, and counted once. Sites not using Ultimate Member were never affected.
+
 = 2.15.7 =
 - Improvement [SilentShield API]: **Your dashboard now counts every submission this plugin turns away, not just one kind of it.** Until now only a single case was reported — a submission that arrived without the behaviour token, typically a bot running no JavaScript. Everything else the plugin refuses on your site (a failed captcha, a filled honeypot, a form sent faster than anyone could read it, a duplicate submission, gibberish content, a blocked address, your own content rules) was handled correctly but never mentioned to SilentShield, so none of it appeared in your statistics. All of it is reported now, each with its own reason, so the dashboard shows what is actually being stopped rather than a fraction of it. Sites not using the SilentShield API are unaffected — nothing is sent from them, and nothing about how submissions are checked has changed on any site.
 - Improvement [SilentShield API]: Reports now name the form that was hit, so a dashboard can show *which* of your forms is under attack instead of only that something was. Forms whose integration cannot name them are still reported, just without the name.
