@@ -6,6 +6,7 @@
  * @var string $wrapper_classes
  * @var string $wrapper_attributes  Pre-escaped attribute string (each key/value escaped via esc_attr at construction)
  * @var string $label
+ * @var string|null $image_hint     Hint above the image captcha; unset or empty keeps the built-in text
  * @var string $classes
  * @var string $attributes          Pre-escaped attribute string (each key/value escaped via esc_attr at construction)
  * @var string $captcha_id
@@ -58,7 +59,10 @@ $allowed_captcha_html = [
 				<?php if ( $method === 'image' ): ?>
                     <!-- CAPTCHA description for screen readers -->
                     <div class="c-hint" id="captcha-image-hint">
-						<?php esc_html_e( 'Enter the characters shown in the image:', 'captcha-for-contact-form-7' ); ?>
+						<?php
+						$image_hint = isset( $image_hint ) ? trim( (string) $image_hint ) : '';
+						echo esc_html( $image_hint !== '' ? $image_hint : __( 'Enter the characters shown in the image:', 'captcha-for-contact-form-7' ) );
+						?>
                     </div>
 				<?php endif; ?>
 

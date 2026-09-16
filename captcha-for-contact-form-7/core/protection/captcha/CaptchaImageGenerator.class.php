@@ -526,6 +526,9 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 			'wrapper_classes'       => $atts['wrapper_classes'],
 			'wrapper_attributes'    => $wrapper_attributes,
 			'label'                 => $label,
+			// Templates 1 and 6 show this above the image instead of the label. Empty (the
+			// default, and every install from before the setting existed) keeps the built-in text.
+			'image_hint'            => (string) $this->get_protection_setting( 'protection_captcha_image_hint' ),
 			'classes'               => $atts['classes'],
 			'attributes'            => $attributes,
 			'captcha_id'            => $captcha_id,

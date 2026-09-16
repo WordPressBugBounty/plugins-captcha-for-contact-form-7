@@ -26,6 +26,7 @@ class Settings_Resolver {
 		'protection_captcha_template',
 		'protection_captcha_label',
 		'protection_captcha_placeholder',
+		'protection_captcha_image_hint',
 		'protection_captcha_reload_icon',
 		'protection_captcha_reload_bg_color',
 		'protection_captcha_reload_padding',

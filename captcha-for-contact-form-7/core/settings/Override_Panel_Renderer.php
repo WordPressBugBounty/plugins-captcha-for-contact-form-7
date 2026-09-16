@@ -27,6 +27,7 @@ class Override_Panel_Renderer {
 				'protection_captcha_template'    => __( 'Captcha Template', 'captcha-for-contact-form-7' ),
 				'protection_captcha_label'       => __( 'Captcha Label', 'captcha-for-contact-form-7' ),
 				'protection_captcha_placeholder' => __( 'Captcha Placeholder', 'captcha-for-contact-form-7' ),
+				'protection_captcha_image_hint'  => __( 'Image Captcha Hint', 'captcha-for-contact-form-7' ),
 				'protection_captcha_reload_icon'          => __( 'Reload Icon Style', 'captcha-for-contact-form-7' ),
 				'protection_captcha_reload_bg_color'      => __( 'Reload Background Color', 'captcha-for-contact-form-7' ),
 				'protection_captcha_reload_padding'       => __( 'Reload Padding (px)', 'captcha-for-contact-form-7' ),

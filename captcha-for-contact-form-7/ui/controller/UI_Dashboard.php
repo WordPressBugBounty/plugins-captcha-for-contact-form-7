@@ -68,6 +68,8 @@ namespace f12_cf7_captcha {
 				'protection_captcha_enable'      => 1,
 				'protection_captcha_label'       => __( 'Captcha', 'captcha-for-contact-form-7' ),
 				'protection_captcha_placeholder' => __( 'Captcha', 'captcha-for-contact-form-7' ),
+				// Empty on purpose: the templates then show their own translated hint.
+				'protection_captcha_image_hint'  => '',
 				'protection_captcha_reload_icon' => 'black',
 				'protection_captcha_template'    => 2,
 				'protection_captcha_method'      => 'honey',

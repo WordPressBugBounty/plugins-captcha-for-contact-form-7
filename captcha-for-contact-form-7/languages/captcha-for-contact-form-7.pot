@@ -3522,3 +3522,6 @@ msgid_plural "%d forms found"
 msgstr[0] ""
 msgstr[1] ""
 
+#: core/settings/Override_Panel_Renderer.php
+msgid "Image Captcha Hint"
+msgstr ""

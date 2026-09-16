@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.15.8
+Stable tag: 2.15.9
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -217,6 +217,9 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.9 =
+- Improvement [Captcha]: **The hint above the image captcha can now be changed.** Templates 1 and 6 show "Enter the characters shown in the image:" above the image instead of the captcha label, and that text was fixed — the label setting had no effect on it, and the only way to change it was a translation override. It is now a setting of its own, "Image Captcha Hint", next to label and placeholder, and it can also be set per integration or per form. Leave it empty and the built-in, translated text stays exactly as it was, so nothing changes on your site until you fill it in.
+
 = 2.15.8 =
 - Fix [SilentShield API]: **The page shown next to a blocked submission is now the page your site actually served, not one the sender claimed.** That address was taken from the browser's referrer header, which whoever sends the request is free to set to anything at all, or to leave out entirely. A bot doing either cost you the one detail that says where to go and look: the block still counted, but it arrived carrying somebody else's domain — which has to be discarded — or carrying nothing. The plugin works the page out on the server that served it now. Where a form is sent in the background, as Contact Form 7, the comment form, Elementor and others do, the page is resolved from the post the form sits on, so a blocked comment names the article it was posted under rather than whichever address happened to arrive. Nothing about how submissions are checked has changed, and sites without an API key send nothing either way.
 - Fix [Ultimate Member]: **Blocked sign-ins and blocked registrations are counted separately now.** Both forms were reported under a single name, so your statistics could not say whether you were looking at attempts to guess passwords for existing accounts or at attempts to create fake ones — two rather different problems, needing rather different answers. Each form is now named in its own right.
