@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.15.9
+Stable tag: 2.15.10
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -25,7 +25,7 @@ It works with the most popular form builders and protects login, registration, a
 - **Invisible defense** – Captcha, honeypot, and blacklists working silently.
 - **Instant results** – Install, activate, and stop spam.
 - **Universal support** – Works with Contact Form 7, WPForms, Elementor, Formidable, Ninja Forms, Forminator, Kadence, WooCommerce, and more.
-- **Privacy-first** – No cookies, no tracking, fully GDPR / DSGVO compliant.
+- **Privacy-first** – No cookies, no tracking, built for GDPR / DSGVO-compliant use.
 
 SilentShield doesn't just protect forms.
 It protects your time, your customers, your business.
@@ -158,7 +158,7 @@ For detailed setup instructions, see [docs/installation.md](docs/installation.md
 Not all, but it drastically reduces it. SilentShield combines multiple detection layers (captcha, honeypot, IP blocking, JavaScript detection, timer, content rules) for maximum coverage.
 
 = Is it GDPR compliant? =
-Yes – no cookies, no tracking, only anonymized data. IPs are stored encrypted for max 2 months (only for spam defense). See the Privacy section below.
+It can be used in a GDPR-compliant way: no cookies, no tracking. IP addresses are stored encrypted (pseudonymised, not anonymised) for at most 2 months, only for spam defense. If you use the SilentShield API, a data processing agreement is available and the Privacy page gives you a ready-made privacy-policy snippet. See the Privacy section below.
 
 = Do I need coding skills? =
 No. Everything is managed via WordPress Dashboard.
@@ -217,6 +217,11 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.10 =
+- Fix [Captcha]: **After a typo, the corrected answer now goes through — in Elementor, Jetpack, Ninja Forms, Forminator and Kadence forms.** Each captcha can be answered once: the attempt uses it up, whether the answer was right or wrong. These five form plugins send the form in the background and leave the page as it is, and the captcha on screen was not replaced after the answer came back. So a visitor who mistyped the code, fixed it and pressed send again was turned away a second time, with the correct answer, and could only get through by clicking the reload icon or by reloading the page and losing everything they had typed. The same happened to a second message sent from a page that stays after a success. A fresh captcha now appears as soon as the form has its answer, whatever that answer was. Forms that reload the page after sending were never affected.
+- Fix [Captcha]: **The captcha no longer stops reloading for visitors who share an address.** Loading a new captcha is limited to 30 times per minute per IP address, to keep bots from farming them. That limit was meant to start over every minute but only did so after a full minute without a single request. Everyone behind one office or mobile network address — or a single visitor moving quickly between pages with forms — could therefore use it up for good and see "Could not load a new captcha" until the address fell silent for a minute. It starts over every minute now, as intended.
+- Fix [Privacy]: **The privacy-policy text on the Privacy page now describes the SilentShield API correctly.** It said, in all languages, that data is processed exclusively on servers in Germany by Hetzner, never transferred to third countries, and kept for at most 14 days. The servers are STRATO's; Cloudflare (USA) can sit in front of the standard endpoint api.silentshield.io, while the EU endpoint api-eu.silentshield.io reaches the servers without a US provider in between — the text now covers both, with the legal basis for a transfer; and data is kept for the retention period of your plan (7 to 90 days; individually agreed plans may differ), IP addresses only as a hash. If you copied the earlier text into your privacy policy, please replace it. The plugin description no longer calls itself "fully GDPR compliant" or says it stores "only anonymized data": IP addresses are stored encrypted, which makes them pseudonymised, not anonymous.
+
 = 2.15.9 =
 - Improvement [Captcha]: **The hint above the image captcha can now be changed.** Templates 1 and 6 show "Enter the characters shown in the image:" above the image instead of the captcha label, and that text was fixed — the label setting had no effect on it, and the only way to change it was a translation override. It is now a setting of its own, "Image Captcha Hint", next to label and placeholder, and it can also be set per integration or per form. Leave it empty and the built-in, translated text stays exactly as it was, so nothing changes on your site until you fill it in.
 

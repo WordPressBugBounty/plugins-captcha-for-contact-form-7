@@ -2447,7 +2447,17 @@ class RestController extends BaseModul {
 	}
 
 	/**
-	 * IP-based rate limiter using transients.
+	 * IP-based rate limiter using transients: at most `$limit` calls per fixed window.
+	 *
+	 * The window's start is stored next to the count. set_transient() restarts the expiry on
+	 * every write, so a counter kept as a bare number never expired while calls kept coming
+	 * less than a minute apart — "30 per minute" was really "30, until the address has been
+	 * silent for a whole minute". An office or carrier NAT, or one visitor clicking through a
+	 * site whose forms reload their captcha on every page, then lost the captcha for everyone
+	 * behind that address, with no end in sight.
+	 *
+	 * A bare number is still read, as the count of a window starting now: counters written
+	 * before this change, and the e2e helper that primes one, keep working.
 	 *
 	 * @param string   $endpoint  Identifier for the endpoint being rate-limited.
 	 * @param int|null $max_limit Optional custom limit. Defaults to RATE_LIMIT_MAX.
@@ -2458,8 +2468,22 @@ class RestController extends BaseModul {
 		$limit = $max_limit ?? self::RATE_LIMIT_MAX;
 		$ip    = $this->get_client_ip();
 		$key   = 'f12_rl_' . md5( $endpoint . '|' . $ip );
+		$now   = time();
 
-		$count = (int) get_transient( $key );
+		$stored = get_transient( $key );
+
+		if ( is_array( $stored ) ) {
+			$count = (int) ( $stored['count'] ?? 0 );
+			$start = (int) ( $stored['start'] ?? $now );
+		} else {
+			$count = (int) $stored;
+			$start = $now;
+		}
+
+		if ( $now - $start >= self::RATE_LIMIT_WINDOW ) {
+			$count = 0;
+			$start = $now;
+		}
 
 		if ( $count >= $limit ) {
 			$this->get_logger()->warning(
@@ -2488,7 +2512,8 @@ class RestController extends BaseModul {
 			);
 		}
 
-		set_transient( $key, $count + 1, self::RATE_LIMIT_WINDOW );
+		// The expiry only clears the row away; the window itself is decided by `start`.
+		set_transient( $key, [ 'count' => $count + 1, 'start' => $start ], self::RATE_LIMIT_WINDOW );
 
 		return null;
 	}
