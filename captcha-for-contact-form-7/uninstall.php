@@ -46,6 +46,7 @@ delete_option('f12-cf7-captcha-settings');
 delete_option('f12_captcha_settings');
 delete_option('f12-cf7-captcha-settings-backup');
 delete_option('f12-cf7-captcha_version');
+delete_option('f12_cf7_captcha_field_detection');
 
 /*
  * Clear logs

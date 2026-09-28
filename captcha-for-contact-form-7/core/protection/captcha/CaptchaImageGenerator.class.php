@@ -259,7 +259,11 @@ class CaptchaImageGenerator extends CaptchaGenerator {
 		$image_data = ob_get_contents();
 		ob_end_clean();
 
-		imagedestroy( $image );
+		// Frees nothing since PHP 8.0 (images are objects now) and is deprecated in 8.5; still
+		// needed on 7.4, where the image is a resource that would otherwise live until the request ends.
+		if ( PHP_VERSION_ID < 80000 ) {
+			imagedestroy( $image );
+		}
 
 		$rand = uniqid('cpi_', true);
 		// Attributes to prevent lazy-loading plugins from breaking data: URLs

@@ -10,7 +10,7 @@ use f12_cf7_captcha\CF7Captcha;
 
 abstract class Validator extends \f12_cf7_captcha\core\BaseController
 {
-	public function __construct(CF7Captcha $Controller = null, Log_WordPress_Interface $Logger = null)
+	public function __construct(?CF7Captcha $Controller = null, ?Log_WordPress_Interface $Logger = null)
 	{
 		// The Logger property is initialized by the parent class.
 		// Therefore, only the Controller needs to be initialized here.

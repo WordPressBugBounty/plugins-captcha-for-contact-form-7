@@ -10,6 +10,8 @@ use f12_cf7_captcha\core\log\MailLog;
 use f12_cf7_captcha\core\Log_WordPress;
 use f12_cf7_captcha\core\protection\captcha\CaptchaAjax;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
+use f12_cf7_captcha\core\protection\gibberish\Field_Detection;
+use f12_cf7_captcha\core\protection\gibberish\Gibberish_Validator;
 use f12_cf7_captcha\core\protection\rules\RulesAjax;
 use f12_cf7_captcha\core\protection\rules\RulesHandler;
 use f12_cf7_captcha\core\settings\Settings_Resolver;
@@ -1556,18 +1558,54 @@ class RestController extends BaseModul {
 				}
 
 				$integrations[] = [
-					'id'           => $id,
-					'name'         => $name,
-					'detected'     => $detected,
-					'enabled'      => $enabled,
-					'settings_key' => $settings_key,
-					'forms'        => $forms,
+					'id'              => $id,
+					'name'            => $name,
+					'detected'        => $detected,
+					'enabled'         => $enabled,
+					'settings_key'    => $settings_key,
+					'forms'           => $forms,
+					'field_detection' => $detected ? $this->field_detection_for( $id ) : null,
 				];
 			}
 
 			return new WP_REST_Response( [ 'integrations' => $integrations ], 200 );
 		} catch ( \Throwable $e ) {
 			return new WP_Error( 'forms_error', $e->getMessage(), [ 'status' => 500 ] );
+		}
+	}
+
+	/**
+	 * Field-detection status for one integration, plus how gibberish detection is set for it.
+	 *
+	 * The mode belongs next to the status: "fields recognised" means little to an owner whose
+	 * integration override still has the module in `monitor`.
+	 *
+	 * @return array<string, mixed>|null Null when the status cannot be built; the list still loads.
+	 */
+	private function field_detection_for( string $integration_id ): ?array {
+		try {
+			$report = Field_Detection::report( $integration_id );
+
+			/** @var \f12_cf7_captcha\core\protection\Protection $protection */
+			$protection = $this->Controller->get_module( 'protection' );
+			$protection->set_context( $integration_id, null );
+
+			try {
+				$raw_enabled = $protection->get_setting( 'protection_gibberish_enable' );
+				$mode        = (string) $protection->get_setting( 'protection_gibberish_mode' );
+			} finally {
+				$protection->clear_context();
+			}
+
+			$report['gibberish'] = [
+				// Absent means "never saved", and the module ships enabled.
+				'enabled' => ( $raw_enabled === '' || $raw_enabled === null ) ? true : (int) $raw_enabled === 1,
+				'mode'    => $mode === Gibberish_Validator::MODE_BLOCK ? Gibberish_Validator::MODE_BLOCK : Gibberish_Validator::MODE_MONITOR,
+			];
+
+			return $report;
+		} catch ( \Throwable $e ) {
+			return null;
 		}
 	}
 

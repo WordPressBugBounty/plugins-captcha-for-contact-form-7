@@ -7,7 +7,6 @@ use f12_cf7_captcha\core\BaseProtection;
 use f12_cf7_captcha\core\log\ObservationLog;
 use f12_cf7_captcha\core\log\Pseudonymizer;
 use f12_cf7_captcha\core\protection\Observation_Provider;
-use f12_cf7_captcha\core\protection\Protection;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -47,19 +46,6 @@ class Gibberish_Validator extends BaseProtection implements Observation_Provider
 
 	/** One in N passing submissions is recorded as a negative sample. */
 	public const DEFAULT_SAMPLE_RATE = 20;
-
-	/**
-	 * Field names that never carry prose, whatever the form plugin calls them.
-	 *
-	 * Protection::strip_internal_fields() already removes this plugin's own hidden fields;
-	 * this catches the form plugins' bookkeeping that would otherwise be scored as if a person
-	 * had typed it.
-	 */
-	private const IGNORED_FIELDS = [
-		'action', 'post_id', 'form_id', 'referer', 'referrer', 'redirect_to', 'submit',
-		'wpforms', 'et_pb_contact_email_fields', 'g-recaptcha-response', 'h-captcha-response',
-		'cf-turnstile-response', 'ajaxurl', 'nonce', 'security', 'locale', 'timezone',
-	];
 
 	private Gibberish_Scorer $Scorer;
 
@@ -263,44 +249,14 @@ class Gibberish_Validator extends BaseProtection implements Observation_Provider
 	/**
 	 * Reduce the submitted data to the values a person would have typed.
 	 *
+	 * @see Field_Collector for how nested payloads (Elementor, WPForms, Formidable) are read.
+	 *
 	 * @param array<string, mixed> $post_data
 	 *
 	 * @return array<string, string>
 	 */
 	private function collect_text_fields( array $post_data ): array {
-		$fields = Protection::strip_internal_fields( $post_data );
-		$text   = [];
-
-		foreach ( $fields as $key => $value ) {
-			if ( ! is_string( $key ) || $key === '' ) {
-				continue;
-			}
-
-			// Form plugins prefix their own bookkeeping with an underscore.
-			if ( $key[0] === '_' ) {
-				continue;
-			}
-
-			if ( in_array( strtolower( $key ), self::IGNORED_FIELDS, true ) ) {
-				continue;
-			}
-
-			// Checkbox and multi-select groups arrive as arrays of chosen option labels; those
-			// come from the form's own markup, not from the sender.
-			if ( ! is_scalar( $value ) ) {
-				continue;
-			}
-
-			$value = trim( (string) $value );
-
-			if ( $value === '' ) {
-				continue;
-			}
-
-			$text[ $key ] = $value;
-		}
-
-		return $text;
+		return Field_Collector::collect( $post_data );
 	}
 
 	/**

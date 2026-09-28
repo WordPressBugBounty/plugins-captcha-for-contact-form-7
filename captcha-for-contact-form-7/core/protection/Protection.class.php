@@ -14,6 +14,7 @@ use f12_cf7_captcha\core\protection\api\Api;
 use f12_cf7_captcha\core\protection\Shadow_Mode;
 use f12_cf7_captcha\core\protection\browser\Browser;
 use f12_cf7_captcha\core\protection\captcha\Captcha_Validator;
+use f12_cf7_captcha\core\protection\gibberish\Field_Detection;
 use f12_cf7_captcha\core\protection\gibberish\Gibberish_Validator;
 use f12_cf7_captcha\core\protection\ip\IPValidator;
 use f12_cf7_captcha\core\protection\ip_blacklist\IP_Blacklist_Validator;
@@ -544,8 +545,17 @@ class Protection extends BaseModul {
 		$this->schedule_counter_flush();
 
 		// Check whitelist
-		$whitelist = $this->get_module( 'whitelist-validator' );
-		if ( $whitelist->is_whitelisted( $array_post_data ) ) {
+		$whitelist      = $this->get_module( 'whitelist-validator' );
+		$is_whitelisted = $whitelist->is_whitelisted( $array_post_data );
+
+		// Feeds the field-detection status on the Forms screen. Recorded for whitelisted
+		// submissions too: an owner testing their own form while logged in as admin is skipped
+		// right here, and that is exactly what the status has to be able to tell them.
+		if ( is_array( $array_post_data ) && $this->context_integration_id !== null ) {
+			Field_Detection::record( $this->context_integration_id, $array_post_data, $is_whitelisted );
+		}
+
+		if ( $is_whitelisted ) {
 			self::$pending_deltas['checks_clean'] = ( self::$pending_deltas['checks_clean'] ?? 0 ) + 1;
 
 			return false;
