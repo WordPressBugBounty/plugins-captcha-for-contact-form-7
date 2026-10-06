@@ -322,7 +322,7 @@ class IPValidator extends BaseProtection {
 			// left the message empty, and the form plugin fell back to its own generic wording
 			// ("Invalid input detected."). A site owner then has a form that refuses everything
 			// and names no reason; the one report of this cost hours of bisecting the modules.
-			$this->set_message(__('ip-protection', 'captcha-for-contact-form-7'));
+			$this->set_message($this->get_refusal_message());
 
 			$this->get_logger()->info('IP is blocked', [
 				'hash_current'  => $hash_current,
@@ -431,8 +431,22 @@ class IPValidator extends BaseProtection {
 			$IPBan = $this->create_ip_ban(['hash' => $hash_current, 'blockedtime' => $block_time]);
 			$IPBan->save();
 		}
+		elseif ($this->is_login_form()) {
+			// The waiting period is there to slow a form flood. A login is not one: someone who
+			// logs out and back in, or mistypes the password and tries again, would be turned
+			// away for the whole period — a visitor refused by the check that exists to let
+			// them through. Failed attempts still count towards the ban above.
+			$this->get_logger()->debug('Login form: waiting period does not apply', [
+				'diff'    => $diff,
+				'allowed' => $allowed_time_between,
+				'class'   => __CLASS__,
+				'method'  => __METHOD__,
+			]);
 
-		$this->set_message(__('ip-protection', 'captcha-for-contact-form-7'));
+			return true;
+		}
+
+		$this->set_message($this->get_refusal_message());
 
 		$this->get_logger()->info('Validation failed - message set', [
 			'message' => 'ip-protection',
@@ -443,6 +457,37 @@ class IPValidator extends BaseProtection {
 		return false;
 	}
 
+
+	/**
+	 * What the visitor is told. A sentence, not a slug: the slug read "IP check" and named nothing
+	 * a visitor could act on, while the actual remedy is to wait a moment.
+	 */
+	protected function get_refusal_message(): string {
+		return __('Too many attempts in a short time. Please wait a moment and try again.', 'captcha-for-contact-form-7');
+	}
+
+	/**
+	 * Whether the form being checked is a login form.
+	 *
+	 * Read from the context the integration set on the Protection module. Anything unknown is
+	 * "not a login", which keeps the stricter behaviour.
+	 */
+	protected function is_login_form(): bool {
+		try {
+			/** @var \f12_cf7_captcha\core\protection\Protection $protection */
+			$protection  = $this->Controller->get_module('protection');
+			$integration = (string) $protection->get_context_integration_id();
+			$form        = (string) $protection->get_context_form_id();
+		} catch (\Throwable $e) {
+			return false;
+		}
+
+		if ($integration === 'ultimatemember') {
+			return $form === 'login';
+		}
+
+		return substr($integration, -6) === '_login';
+	}
 
 	/**
 	 * Check if the submission is considered as spam.

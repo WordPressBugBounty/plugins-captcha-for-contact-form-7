@@ -3525,3 +3525,7 @@ msgstr[1] ""
 #: core/settings/Override_Panel_Renderer.php
 msgid "Image Captcha Hint"
 msgstr ""
+
+#: core/protection/ip/IPValidator.class.php
+msgid "Too many attempts in a short time. Please wait a moment and try again."
+msgstr ""

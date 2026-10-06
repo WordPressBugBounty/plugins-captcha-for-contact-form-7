@@ -272,6 +272,20 @@ class Protection extends BaseModul {
 	}
 
 	/**
+	 * The integration the current check runs for, or null outside any integration.
+	 */
+	public function get_context_integration_id(): ?string {
+		return $this->context_integration_id;
+	}
+
+	/**
+	 * The form the current check runs for, or null when only the integration is known.
+	 */
+	public function get_context_form_id(): ?string {
+		return $this->context_form_id;
+	}
+
+	/**
 	 * Clear the current context (revert to global settings).
 	 */
 	public function clear_context(): void {

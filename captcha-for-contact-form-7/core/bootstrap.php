@@ -17,6 +17,7 @@ require_once __DIR__ . '/credit_link.php';
 require_once __DIR__ . '/credit_nudge.php';
 require_once __DIR__ . '/review.php';
 require_once __DIR__ . '/setup_notice.php';
+require_once __DIR__ . '/insecure_context_notice.php';
 require_once __DIR__ . '/deactivation_survey.php';
 
 // Passive AI-agent observation (plan/54 Inc1). The class is autoloaded; boot()

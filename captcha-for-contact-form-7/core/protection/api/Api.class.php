@@ -134,7 +134,14 @@ class Api extends BaseProtection {
 		return '<input type="hidden" name="behavior_nonce" value="" />' . self::MARKER_SCRIPT;
 	}
 
-    public function is_spam(): bool {
+    /**
+     * @param mixed $submitted The data Protection was handed, when the caller has any.
+     *                         Protection passes it to every module. It matters where `$_POST`
+     *                         is structurally empty — the WooCommerce block checkout posts JSON
+     *                         to the Store API — and is only consulted when `$_POST` carries no
+     *                         nonce, so a classic form is read exactly as before.
+     */
+    public function is_spam( $submitted = null ): bool {
 
         $this->server_contacted = false;
 
@@ -165,6 +172,11 @@ class Api extends BaseProtection {
 	        if ( is_string( $raw ) && preg_match( '/(?:^|&)behavior_nonce=([^&]*)/', $raw, $matches ) ) {
 		        $nonce = sanitize_text_field( urldecode( $matches[1] ) );
 	        }
+        }
+
+        // Transports without a populated $_POST hand the fields over as data instead.
+        if ( empty( $nonce ) && is_array( $submitted ) && ! empty( $submitted['behavior_nonce'] ) && is_scalar( $submitted['behavior_nonce'] ) ) {
+            $nonce = sanitize_text_field( (string) $submitted['behavior_nonce'] );
         }
 
         if ( empty( $nonce ) ) {

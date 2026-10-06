@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.15.12
+Stable tag: 2.15.14
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -224,6 +224,17 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.14 =
+- Fix [Protection]: **IP protection no longer turns away people who log in again shortly after.** The waiting period between two submissions is meant to slow down form floods, but it also applied to the login form: anyone who logged out and straight back in, or who mistyped a password and tried again, was refused for the whole period and saw only "IP check". Login forms are now exempt from the waiting period. Repeated failed attempts still count towards the temporary block, so brute-force protection is unchanged.
+- Improvement [Protection]: When the IP protection does refuse a submission, the visitor now reads what to do — "Too many attempts in a short time. Please wait a moment and try again." — instead of the bare label "IP check". The text is translated in all 26 languages.
+- Improvement [Admin]: SilentChat is live: the "Coming soon" label on the API page is now a link to silentchat.de.
+
+= 2.15.13 =
+- Fix [WooCommerce]: **Block checkout: orders are no longer refused when the SilentShield API protection is switched on.** The block checkout hands its form data to the plugin separately instead of through the regular form submission, so the API protection never saw the behaviour token the page had produced and rejected every order. The token is now read from the data the checkout provides.
+- Fix [WPForms]: **WPForms forms could fail to send a second time right after a submission attempt.** The form was stopped before the plugin had decided whether to let it through, so a resubmit within the protection window was swallowed. The check now runs first, and if anything is unclear the form is released.
+- Improvement [Admin]: The API page and the Analytics screen no longer show detection-rate figures (such as 99 %) that could not be backed up. The dashboard now tells apart "active", "key present but protection off" and "key missing".
+- Improvement [Admin]: When the API protection is on and the site is served over plain http, an admin notice explains that the protection needs a secure connection (localhost is exempt).
+
 = 2.15.12 =
 - Fix [Protection]: **Jetpack and WPForms: with gibberish detection set to block, genuine messages are no longer turned away.** Both form plugins send an encoded status value along with every form — Jetpack a long security token, WPForms a block of usage data. Gibberish detection read these values as text and scored them as dozens of random words, which on its own was enough to reject the submission. For Jetpack forms this was the case since gibberish detection was introduced in version 2.13.0; for WPForms it started with 2.15.11, when the detection began reading the fields WPForms nests inside its form. Only sites that had switched gibberish detection from observing to blocking were affected — in the default observation mode nothing was ever rejected. Values like these are now recognised and ignored, whatever a form plugin calls them, while what your visitors type is checked as before.
 - Fix [Protection]: In the WordPress comment form, gibberish detection checks the commenter's name again. Version 2.15.11 had stopped reading it.

@@ -70,7 +70,7 @@ namespace f12_cf7_captcha {
 						<?php esc_html_e( 'How many bots are getting through?', 'captcha-for-contact-form-7' ); ?>
 					</div>
 					<div style="font-size:13px; color:#475569; line-height:1.5;">
-						<?php esc_html_e( 'Rule-based protection (CAPTCHA, Timer, IP) catches simple bots but misses advanced ones like headless Chrome or Puppeteer. SilentShield API uses AI behavior analysis, browser fingerprinting, and adaptive challenges to detect 99% of bots — invisibly, without CAPTCHAs.', 'captcha-for-contact-form-7' ); ?>
+						<?php esc_html_e( 'Rule-based protection (CAPTCHA, Timer, IP) catches simple bots but misses advanced ones like headless Chrome or Puppeteer. SilentShield API uses AI behavior analysis, browser fingerprinting, and adaptive challenges to detect bots — invisibly, without CAPTCHAs.', 'captcha-for-contact-form-7' ); ?>
 					</div>
 				</div>
 				<div style="text-align:center; min-width:180px;">
@@ -221,10 +221,6 @@ namespace f12_cf7_captcha {
 							<div style="font-size:12px; color:#94a3b8;"><?php esc_html_e( 'Reason Codes', 'captcha-for-contact-form-7' ); ?></div>
 							<div style="font-size:14px; color:#475569;"><?php esc_html_e( 'Generic ("JS failed", "Timer expired")', 'captcha-for-contact-form-7' ); ?></div>
 						</div>
-						<div style="margin-bottom:14px;">
-							<div style="font-size:12px; color:#94a3b8;"><?php esc_html_e( 'Bot Detection Rate', 'captcha-for-contact-form-7' ); ?></div>
-							<div style="font-size:14px; color:#475569;">~70%</div>
-						</div>
 						<div>
 							<div style="font-size:12px; color:#94a3b8;"><?php esc_html_e( 'Visibility', 'captcha-for-contact-form-7' ); ?></div>
 							<div style="font-size:14px; color:#475569;"><?php esc_html_e( 'CAPTCHA visible to users', 'captcha-for-contact-form-7' ); ?></div>
@@ -251,10 +247,6 @@ namespace f12_cf7_captcha {
 						<div style="margin-bottom:14px;">
 							<div style="font-size:12px; color:#94a3b8;"><?php esc_html_e( 'Reason Codes', 'captcha-for-contact-form-7' ); ?></div>
 							<div style="font-size:14px; color:#065f46;"><?php esc_html_e( '13 specific codes with score breakdown', 'captcha-for-contact-form-7' ); ?></div>
-						</div>
-						<div style="margin-bottom:14px;">
-							<div style="font-size:12px; color:#94a3b8;"><?php esc_html_e( 'Bot Detection Rate', 'captcha-for-contact-form-7' ); ?></div>
-							<div style="font-size:14px; color:#065f46;">~99%</div>
 						</div>
 						<div>
 							<div style="font-size:12px; color:#94a3b8;"><?php esc_html_e( 'Visibility', 'captcha-for-contact-form-7' ); ?></div>

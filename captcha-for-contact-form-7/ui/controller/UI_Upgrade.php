@@ -192,7 +192,7 @@ namespace f12_cf7_captcha {
 						</div>
 						<div style="border-top:1px solid rgba(255,255,255,0.15); padding-top:16px;">
 							<div style="font-size:13px; color:rgba(255,255,255,0.85); margin-bottom:12px;">
-								<?php esc_html_e( 'With SilentShield API (~99% detection):', 'captcha-for-contact-form-7' ); ?>
+								<?php esc_html_e( 'With SilentShield API:', 'captcha-for-contact-form-7' ); ?>
 							</div>
 							<div id="f12-roi-result-saved" style="font-size:20px; font-weight:600; color:#34d399; margin-bottom:16px;">—</div>
 							<a href="<?php echo esc_url( 'https://silentshield.io/register?utm_source=wp-plugin&utm_medium=upgrade-page&utm_campaign=roi-calculator&domain=' . rawurlencode( $site_url ) ); ?>"
