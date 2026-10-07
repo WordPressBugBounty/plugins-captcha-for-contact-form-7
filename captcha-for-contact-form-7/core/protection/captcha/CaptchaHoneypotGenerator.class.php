@@ -143,9 +143,11 @@ class CaptchaHoneypotGenerator extends CaptchaGenerator {
 		// that becomes visible would get filled in by real people and block them).
 		//
 		// tabindex/aria-hidden keep keyboard and screen-reader users from ever reaching it;
-		// autocomplete="off" plus the opaque rotated name keep browser autofill out.
+		// autocomplete="off" plus the opaque rotated name keep browser autofill out. Bitwarden
+		// ignores autocomplete="off" and fills off-screen text inputs in login forms, which
+		// fails the honeypot; data-bwignore is its documented opt-out.
 		$captcha = sprintf(
-			'<input id="%s" type="text" name="%s" value="" tabindex="-1" aria-hidden="true" autocomplete="off" style="position:absolute!important; left:-9999px!important; top:auto!important; height:1px!important; width:1px!important; overflow:hidden!important;"/>',
+			'<input id="%s" type="text" name="%s" value="" tabindex="-1" aria-hidden="true" autocomplete="off" data-bwignore="true" style="position:absolute!important; left:-9999px!important; top:auto!important; height:1px!important; width:1px!important; overflow:hidden!important;"/>',
 			esc_attr( $field_name ),
 			esc_attr( $field_name )
 		);

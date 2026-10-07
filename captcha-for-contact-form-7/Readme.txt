@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.15.14
+Stable tag: 2.15.15
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -190,8 +190,7 @@ This helps us understand which features are used, so we can improve usability an
 Telemetry is used **only for optimization and maintenance purposes**.
 
 = Where is the full documentation? =
-See the [docs/](docs/) directory in the plugin folder for complete documentation of all settings, hooks, REST API, and developer reference.
-
+The step-by-step setup guide, the settings reference, the hooks and the REST API are documented at [silentshield.io/docs](https://silentshield.io/docs/integration/wordpress).
 ---
 
 == Privacy & Telemetry ==
@@ -224,6 +223,9 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.15 =
+- Fix [Protection]: **Logging in with a password manager's autofill no longer fails with the honeypot method.** Bitwarden ignores `autocomplete="off"` and filled the invisible honeypot field together with the login form, so the plugin took the login for a bot and refused it. The field now carries Bitwarden's opt-out attribute and is left alone.
+
 = 2.15.14 =
 - Fix [Protection]: **IP protection no longer turns away people who log in again shortly after.** The waiting period between two submissions is meant to slow down form floods, but it also applied to the login form: anyone who logged out and straight back in, or who mistyped a password and tried again, was refused for the whole period and saw only "IP check". Login forms are now exempt from the waiting period. Repeated failed attempts still count towards the temporary block, so brute-force protection is unchanged.
 - Improvement [Protection]: When the IP protection does refuse a submission, the visitor now reads what to do — "Too many attempts in a short time. Please wait a moment and try again." — instead of the bare label "IP check". The text is translated in all 26 languages.

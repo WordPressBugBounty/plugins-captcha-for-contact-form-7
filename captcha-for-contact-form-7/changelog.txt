@@ -2,6 +2,9 @@
 
 The complete version history of SilentShield – Captcha & Anti-Spam. The plugin readme shows the most recent versions only.
 
+= 2.15.15 =
+- Fix [Protection]: **Logging in with a password manager's autofill no longer fails with the honeypot method.** Bitwarden ignores `autocomplete="off"` and filled the invisible honeypot field together with the login form, so the plugin took the login for a bot and refused it. The field now carries Bitwarden's opt-out attribute and is left alone.
+
 = 2.15.14 =
 - Fix [Protection]: **IP protection no longer turns away people who log in again shortly after.** The waiting period between two submissions is meant to slow down form floods, but it also applied to the login form: anyone who logged out and straight back in, or who mistyped a password and tried again, was refused for the whole period and saw only "IP check". Login forms are now exempt from the waiting period. Repeated failed attempts still count towards the temporary block, so brute-force protection is unchanged.
 - Improvement [Protection]: When the IP protection does refuse a submission, the visitor now reads what to do — "Too many attempts in a short time. Please wait a moment and try again." — instead of the bare label "IP check". The text is translated in all 26 languages.
