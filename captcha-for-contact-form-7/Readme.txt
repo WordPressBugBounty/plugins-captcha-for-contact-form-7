@@ -5,7 +5,7 @@ Tags: captcha, spam protection, honeypot, contact form 7, fluentform, wpforms, e
 Requires at least: 5.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.15.15
+Stable tag: 2.15.16
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -223,6 +223,9 @@ See the API snippet on the plugin's Privacy page for the full description.
 ---
 
 == Changelog ==
+= 2.15.16 =
+- Fix [Formidable Forms]: **The captcha now appears above the submit button.** Current Formidable versions print the submit button as a form field, so the captcha was added underneath it. It is now placed directly in front of the button.
+
 = 2.15.15 =
 - Fix [Protection]: **Logging in with a password manager's autofill no longer fails with the honeypot method.** Bitwarden ignores `autocomplete="off"` and filled the invisible honeypot field together with the login form, so the plugin took the login for a bot and refused it. The field now carries Bitwarden's opt-out attribute and is left alone.
 

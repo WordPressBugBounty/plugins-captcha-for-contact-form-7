@@ -15,10 +15,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * compared (hCaptcha, Cloudflare Turnstile, CleanTalk, Google Captcha, Friendly Captcha) list
  * it, which made it the clearest gap in the integration set.
  *
- * Mercifully ordinary to integrate. `frm_entry_form` fires inside the form, after Formidable's
- * own honeypot and state fields and before the submit button, so the captcha lands in the right
- * place without any markup surgery. Formidable submits the form element itself, so the fields
+ * Mercifully ordinary to integrate. Formidable submits the form element itself, so the fields
  * arrive in `$_POST` and no JavaScript module is needed.
+ *
+ * Placement hangs off `frm_before_submit_btn`, not `frm_entry_form`. Since Formidable 6.x the
+ * submit button is a field of type `submit` printed inside `show_fields()`, and `frm_entry_form`
+ * fires after that — the captcha ended up underneath the button. `frm_before_submit_btn`
+ * (since 5.5.1) fires directly in front of the button on both paths: inside the submit field
+ * and in the fallback for forms without one.
  */
 class ControllerFormidable extends BaseController {
 
@@ -35,7 +39,7 @@ class ControllerFormidable extends BaseController {
 	private const ERROR_KEY = 'f12_captcha';
 
 	protected array $hooks = [
-		[ 'type' => 'action', 'hook' => 'frm_entry_form', 'method' => 'wp_add_spam_protection', 'priority' => 100, 'args' => 3 ],
+		[ 'type' => 'action', 'hook' => 'frm_before_submit_btn', 'method' => 'wp_add_spam_protection', 'priority' => 100, 'args' => 1 ],
 		[ 'type' => 'filter', 'hook' => 'frm_validate_entry', 'method' => 'wp_is_spam', 'priority' => 100, 'args' => 2 ],
 	];
 
@@ -52,10 +56,10 @@ class ControllerFormidable extends BaseController {
 	 *
 	 * An action, not a filter: Formidable prints whatever is echoed at this point.
 	 *
-	 * @param mixed ...$args object $form, string $form_action, array $errors.
+	 * @param mixed ...$args array{form: object} — Formidable passes `compact( 'form' )`.
 	 */
 	public function wp_add_spam_protection( ...$args ) {
-		$form    = $args[0] ?? null;
+		$form    = is_array( $args[0] ?? null ) ? ( $args[0]['form'] ?? null ) : ( $args[0] ?? null );
 		$form_id = is_object( $form ) && isset( $form->id ) ? (string) $form->id : null;
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captcha HTML is generated internally
